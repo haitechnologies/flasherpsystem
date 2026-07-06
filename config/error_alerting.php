@@ -25,7 +25,7 @@ function send_critical_error_alert($errorType, $message, $context = []) {
     // Get admin email from system settings
     $adminEmail = getTableAttrv('email', DB::SYSTEM_SETTINGS, 'id', '1');
     if (empty($adminEmail)) {
-        $adminEmail = 'admin@flashlogisticsserver.com'; // Fallback
+        $adminEmail = 'admin@flasherpsystem.com'; // Fallback
     }
     
     // Check if we've already sent this error recently (throttle duplicate alerts)

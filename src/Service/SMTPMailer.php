@@ -197,12 +197,12 @@ class SMTPMailer
         } else {
             $domain = preg_replace('/^.*@/', '', (string)$this->from_address);
             if ($domain === '' || strpos($domain, '.') === false) {
-                $domain = defined('APP_DOMAIN') ? APP_DOMAIN : 'flashlogisticsserver.com';
+                $domain = defined('APP_DOMAIN') ? APP_DOMAIN : 'flasherpsystem.com';
             }
             $mail_headers .= "Message-ID: <" . uniqid('hai-', true) . "@{$domain}>\r\n";
         }
 
-        $replyTo = !empty($headers['Reply-To']) ? $headers['Reply-To'] : (defined('SUPPORT_EMAIL') ? SUPPORT_EMAIL : 'support@flashlogisticsserver.com');
+        $replyTo = !empty($headers['Reply-To']) ? $headers['Reply-To'] : (defined('SUPPORT_EMAIL') ? SUPPORT_EMAIL : 'support@flasherpsystem.com');
         $mail_headers .= "Reply-To: {$replyTo}\r\n";
         if (!empty($headers['CC'])) {
             $mail_headers .= "CC: {$headers['CC']}\r\n";

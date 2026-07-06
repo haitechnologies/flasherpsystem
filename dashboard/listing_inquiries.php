@@ -258,9 +258,9 @@ if (($_POST['action'] ?? null) == 'update_inquiries' && !empty($_POST['id'])) {
 			. '<p style="color:#888;font-size:13px;margin-top:24px;">This is a reply to your inquiry submitted on Flash Logistics.</p>'
 			. '</div>';
 
-		$supportEmail  = $_ENV['MAIL_FROM_ADDRESS'] ?? 'support@flashlogisticsserver.com';
-		$originalMsgId = '<inquiry-' . $inquiryId . '@flashlogisticsserver.com>';
-		$replyMsgId    = '<inquiry-' . $inquiryId . '-r-' . time() . '@flashlogisticsserver.com>';
+		$supportEmail  = $_ENV['MAIL_FROM_ADDRESS'] ?? 'support@flasherpsystem.com';
+		$originalMsgId = '<inquiry-' . $inquiryId . '@flasherpsystem.com>';
+		$replyMsgId    = '<inquiry-' . $inquiryId . '-r-' . time() . '@flasherpsystem.com>';
 
 		$headers = [
 			'Reply-To' => $supportEmail,

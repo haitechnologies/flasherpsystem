@@ -128,7 +128,7 @@ function extract_seo_data($record, $overrides = []) {
  */
 function generate_json_ld_organization() {
     $name = defined('APP_NAME') ? APP_NAME : 'HAIZON';
-    $domain = defined('APP_DOMAIN') ? APP_DOMAIN : 'flashlogisticsserver.com';
+    $domain = defined('APP_DOMAIN') ? APP_DOMAIN : 'flasherpsystem.com';
     $name_lower = strtolower($name);
     
     $data = [
@@ -204,7 +204,7 @@ function generate_json_ld_article($article) {
             "name" => (defined('APP_NAME') ? APP_NAME : 'HAIZON'),
             "logo" => [
                 "@type" => "ImageObject",
-                "url" => "https://" . (defined('APP_DOMAIN') ? APP_DOMAIN : 'flashlogisticsserver.com') . "/assets/images/logo.png",
+                "url" => "https://" . (defined('APP_DOMAIN') ? APP_DOMAIN : 'flasherpsystem.com') . "/assets/images/logo.png",
             ],
         ],
         "datePublished" => $article['published_date'] ?? date('c'),

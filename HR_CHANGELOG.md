@@ -16,6 +16,8 @@ and this project uses **date-based versioning** (`YYYY-MM-DD`).
 - `src/DataTable/*.php`: Fixed SR column in 53 DataTable files — replaced `$id` with `$this->rowNumber` at return array index 0 so serial numbers show 1,2,3 instead of DB IDs
 - `dashboard/items.php`, `src/` (Model, Repository, Service, Controller), `resources/views/items/form.php`, `src/DataTable/ItemsDataTable.php`, `dashboard/listing_items.php`: Cloned enhanced Items CRUD from flashlogisticsserver — added sale_account, sale_description, purchase_account, purchase_description fields with Sales/Purchase account dropdowns from Chart of Accounts
 - Items form: Added selling price (mandatory), tax dropdown (optional), cost price (mandatory), preferred vendor dropdown (optional). Added DB columns selling_price, tax_treatment_id, cost_price, preferred_vendor_id. Updated DataTable listing with new columns and JOINs.
+- `erp_ports`: Replaced 1,577 rows with 1,579 rows from uaehscodes (added Jebel Ali custom rows, country_id now populated)
+- `erp_carriers`: Replaced 43 rows with 5,969 rows from uaehscodes (global carrier directory, 96 duplicate names skipped)
 - `docs/MANPOWER_FLOW.md`: 6 Mermaid manpower flow charts (Org Hierarchy, Employee Lifecycle, Sales-to-Cash, Procure-to-Pay, Shipping Ops, Approval Workflows) designed from existing data model — **protected file, do not delete**
 - `.opencode/skills/create-crud.md`: Full 6-step CRUD creation skill with Model→Repository→Service→Controller→View→Dashboard workflow and code templates
 - `.opencode/skills/migrate-repo.md`: Migration skill covering the 8-phase plan, layered pattern conventions, and per-module migration checklist
@@ -25,6 +27,7 @@ and this project uses **date-based versioning** (`YYYY-MM-DD`).
 ### Changed
 - `docs/AGENTS.md`: Trimmed from 171 to 144 lines — moved CRUD creation workflow, convention violations, listing template, and page header standard into skills (loaded on demand via @skill). Added Skills reference table. Truncated migration status to essentials.
 - `docs/MANPOWER_FLOW.md`: Moved from root to `docs/` with protected file banner
+- `config/constants.php`, `config/seo_helpers.php`, `config/error_alerting.php`, `src/Service/SMTPMailer.php`, `dashboard/listing_inquiries.php`, `dashboard/seo_auto_populate.php`: Updated all domain references from `flashlogisticsserver.com` to `flasherpsystem.com` (10 occurrences across 6 files)
 
 ## [2026-06-26]
 

@@ -96,7 +96,7 @@ class SEOAutoPopulator {
     /**
      * Generate canonical URL
      */
-    private function generateCanonicalUrl($slug, $baseUrl = 'https://flashlogisticsserver.com') {
+    private function generateCanonicalUrl($slug, $baseUrl = 'https://flasherpsystem.com') {
         return rtrim($baseUrl, '/') . '/' . ltrim($slug, '/');
     }
     

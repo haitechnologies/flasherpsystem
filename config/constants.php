@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 $app_name = $_ENV['APP_NAME'] ?? getenv('APP_NAME') ?: 'Flash Logistics';
 $project_prefix = $_ENV['PROJECT_PREFIX'] ?? getenv('PROJECT_PREFIX') ?: 'flashlogistics';
-$app_domain = $_ENV['APP_DOMAIN'] ?? getenv('APP_DOMAIN') ?: 'flashlogisticsserver.com';
+$app_domain = $_ENV['APP_DOMAIN'] ?? getenv('APP_DOMAIN') ?: 'flasherpsystem.com';
 
 define('APP_NAME', $app_name);
 define('PROJECT_PREFIX', $project_prefix);
