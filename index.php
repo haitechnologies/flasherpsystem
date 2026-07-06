@@ -81,7 +81,7 @@ p {
 <div class="card">
     <div class="logo">FE</div>
     <h1>We're launching soon</h1>
-    <p>Flash ERP is under development. The dashboard is available for authorized users at the direct URL.</p>
+    <p>Flash ERP is under development.</p>
     <div class="pulse">
         <span></span><span></span><span></span>
         System is live
