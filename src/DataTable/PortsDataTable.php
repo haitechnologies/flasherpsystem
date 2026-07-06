@@ -78,7 +78,7 @@ class PortsDataTable extends BaseDataTable
 
         $portLink = '<a href="#" class="view-port-details text-primary fw-semibold" data-id="' . $id . '">' . htmlspecialchars($portName) . '</a>';
         return [
-            $id,
+            $this->rowNumber,
             $portLink,
             htmlspecialchars($portCode),
             htmlspecialchars($countryName),

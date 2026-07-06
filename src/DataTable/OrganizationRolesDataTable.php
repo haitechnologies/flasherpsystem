@@ -23,7 +23,7 @@ class OrganizationRolesDataTable extends BaseDataTable
         $created  = (string)($row['created_at'] ?? '');
         $badge    = $active ? BadgeHelper::success('Active') : BadgeHelper::danger('Inactive');
         return [
-            $id,
+            $this->rowNumber,
             htmlspecialchars($roleName),
             htmlspecialchars($desc),
             0,

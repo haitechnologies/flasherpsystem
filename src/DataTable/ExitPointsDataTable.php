@@ -18,7 +18,7 @@ class ExitPointsDataTable extends BaseDataTable
     {
         $id = (int)($row['id'] ?? 0);
         return [
-            $id,
+            $this->rowNumber,
             htmlspecialchars((string)($row['exit_point'] ?? '')),
             $this->getActionButtons($id, 'exit_points'),
         ];

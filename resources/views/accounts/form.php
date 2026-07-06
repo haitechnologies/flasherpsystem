@@ -41,6 +41,11 @@ include 'admin_elements/admin_header.php';
     <div class="content-inner">
         <div class="content">
             <?php include 'admin_elements/breadcrumb.php'; ?>
+            <div class="alert alert-info alert-dismissible fade show" role="alert">
+                <i class="ph-info me-2"></i>
+                <strong>How this works:</strong> Accounts are the building blocks of your accounting system. Every transaction posts to an account. The account type (Asset, Liability, Equity, Income, Expense) determines how it appears in financial reports.
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
             <form class="steps-basic clearfix" method="post" id="frm<?php echo $module; ?>" name="frm<?php echo $module; ?>" action="<?php echo $module; ?>.php">
                 <input type="hidden" name="csrf_token" value="<?php echo csrf_token(); ?>">
                 <?php if ($id > 0) { ?>

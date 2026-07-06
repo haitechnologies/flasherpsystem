@@ -36,7 +36,7 @@ class AlertsDataTable extends BaseDataTable
         $badgeClass = $badgeMap[$type] ?? 'bg-secondary';
 
         return [
-            $id,
+            $this->rowNumber,
             htmlspecialchars($alertName),
             '<span class="badge ' . $badgeClass . '">' . htmlspecialchars(ucfirst($type)) . '</span>',
             $this->formatTimeAgo($createdAt),

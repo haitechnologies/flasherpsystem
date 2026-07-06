@@ -78,7 +78,7 @@ class ShippingAdvicesDataTable extends BaseDataTable
         $statusBadge = ($publish === 1) ? BadgeHelper::success('Published') : BadgeHelper::warning('Draft');
 
         return [
-            $id,
+            $this->rowNumber,
             '<a href="view_shipping_advice.php?id=' . $id . '" class="text-primary">' . htmlspecialchars($invoiceNo) . '</a>',
             htmlspecialchars($invoiceDate),
             htmlspecialchars($customerName),

@@ -4,20 +4,10 @@
                 <?php if (isset($module) && !empty($module)): ?>
                     <h1 class="h5 mb-0 d-inline-flex align-items-center gap-2">
                         <a href="listing_<?php echo $module; ?>.php" class="text-dark">All <?php echo ucwords(str_ireplace('_', " ", $module)); ?></a>
-                        <?php if (!empty($pageHelpData)): ?>
-                            <button type="button" class="page-help-trigger-btn" data-bs-toggle="offcanvas" data-bs-target="#pageHelpPanel" title="How to use this page" aria-label="Page help">
-                                <i class="ph-question"></i>
-                            </button>
-                        <?php endif; ?>
                     </h1>
                 <?php else: ?>
                     <h1 class="h5 mb-0 d-inline-flex align-items-center gap-2">
                         Dashboard
-                        <?php if (!empty($pageHelpData)): ?>
-                            <button type="button" class="page-help-trigger-btn" data-bs-toggle="offcanvas" data-bs-target="#pageHelpPanel" title="How to use this page" aria-label="Page help">
-                                <i class="ph-question"></i>
-                            </button>
-                        <?php endif; ?>
                     </h1>
                 <?php endif; ?>
             </div>

@@ -72,7 +72,7 @@ class LeadQuotationsDataTable extends BaseDataTable
         }
 
         return [
-            $id,
+            $this->rowNumber,
             htmlspecialchars($date),
             htmlspecialchars($no),
             htmlspecialchars($jobRef),

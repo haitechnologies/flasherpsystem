@@ -60,14 +60,9 @@ $_ltGridId     = 'grid-' . $_ltModule;
     <div class="page-header page-header-light shadow carriers-page-header">
         <div class="page-header-content border-top py-2 px-3 carriers-page-header-content">
             <div class="my-1">
-                <h1 class="h5 mb-0 d-inline-flex align-items-center gap-2">
-                    <a href="listing_<?php echo htmlspecialchars($_ltModule); ?>.php" class="text-dark">All <?php echo htmlspecialchars($_ltCaption); ?></a>
-                    <?php if (!empty($pageHelpData)): ?>
-                        <button type="button" class="page-help-trigger-btn" data-bs-toggle="offcanvas" data-bs-target="#pageHelpPanel" title="How to use this page" aria-label="Page help">
-                            <i class="ph-question"></i>
-                        </button>
-                    <?php endif; ?>
-                </h1>
+                    <h1 class="h5 mb-0 d-inline-flex align-items-center gap-2">
+                        <a href="listing_<?php echo htmlspecialchars($_ltModule); ?>.php" class="text-dark">All <?php echo htmlspecialchars($_ltCaption); ?></a>
+                    </h1>
             </div>
 
             <div class="my-1">

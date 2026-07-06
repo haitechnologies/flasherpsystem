@@ -38,7 +38,7 @@ class CustomerContactsDataTable extends BaseDataTable
         $timeAgoStr = !empty($createdAt) ? $this->formatTimeAgo($createdAt) : '';
 
         return [
-            $id,
+            $this->rowNumber,
             $fullName,
             $email,
             $phone,

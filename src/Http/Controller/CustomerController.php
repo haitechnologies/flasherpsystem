@@ -116,6 +116,7 @@ class CustomerController extends BaseController
             'mobile' => $request->getString('mobile'),
             'tax_treatment' => $request->getString('tax_treatment'),
             'trn' => $request->getString('trn'),
+            'corporate_tax_number' => $request->getString('corporate_tax_number'),
             'license_number' => $request->getString('license_number'),
             'license_expiry' => $request->getString('license_expiry'),
             'currency' => $request->getString('currency'),
@@ -187,6 +188,7 @@ class CustomerController extends BaseController
         $mobile = '';
         $tax_treatment = '0';
         $trn = '';
+        $corporate_tax_number = '';
         $license_number = '';
         $license_expiry = '';
         $currency = '0';
@@ -229,6 +231,7 @@ class CustomerController extends BaseController
                 $mobile = (string)$customer->mobile;
                 $tax_treatment = (string)$customer->taxTreatment;
                 $trn = (string)$customer->trn;
+                $corporate_tax_number = (string)$customer->corporateTaxNumber;
                 $license_number = (string)$customer->licenseNumber;
                 $license_expiry = $customer->licenseExpiry === '1970-01-01' ? '' : DateHelper::toDbDate($customer->licenseExpiry);
                 $currency = (string)$customer->currency;
@@ -318,6 +321,7 @@ class CustomerController extends BaseController
             'taxTreatmentsList' => $taxTreatmentsList,
             'tax_treatment' => $tax_treatment,
             'trn' => $trn,
+            'corporate_tax_number' => $corporate_tax_number,
             'license_number' => $license_number,
             'license_expiry' => $license_expiry,
             'currencyList' => $currencyList,

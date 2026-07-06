@@ -43,6 +43,7 @@ $setupSections = [
 			['href' => 'listing_commodity_types.php', 'label' => 'Commodity Types', 'desc' => 'Product and materials classification.', 'icon' => 'ph-box', 'visible' => setupCanSee('commodity_types')],
 			['href' => 'listing_exit_points.php', 'label' => 'Exit Points', 'desc' => 'Customs and shipping exit gate locations.', 'icon' => 'ph-door-open', 'visible' => setupCanSee('exit_points')],
 			['href' => 'listing_services.php', 'label' => 'Services', 'desc' => 'Service catalog and service definitions.', 'icon' => 'ph-lightning', 'visible' => setupCanSee('services')],
+			['href' => 'listing_job_statuses.php', 'label' => 'Job Statuses', 'desc' => 'Job status definitions for projects.', 'icon' => 'ph-tag', 'visible' => setupCanSee('job_statuses')],
 		],
 	],
 	[

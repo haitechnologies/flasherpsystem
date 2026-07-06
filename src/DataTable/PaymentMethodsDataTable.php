@@ -31,7 +31,7 @@ class PaymentMethodsDataTable extends BaseDataTable
         }
 
         return [
-            $id,
+            $this->rowNumber,
             $paymentMethod,
             $timeAgoStr,
             $publishBadge,

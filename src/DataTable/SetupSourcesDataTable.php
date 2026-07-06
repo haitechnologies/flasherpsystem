@@ -37,7 +37,7 @@ class SetupSourcesDataTable extends BaseDataTable
         $publishBadge = $publish == 0 ? BadgeHelper::danger('Inactive') : BadgeHelper::success('Active');
 
         return [
-            $id,
+            $this->rowNumber,
             htmlspecialchars($source),
             ucwords($sourceType),
             $this->formatTimeAgo($createdAt),

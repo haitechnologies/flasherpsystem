@@ -185,12 +185,24 @@
                                                     <div id="receivables_chart_div" style="width: 100%; height: 400px;"></div>
 
 
-                                                    <script type="text/javascript">
+                                                        <script type="text/javascript">
                                                         google.charts.load('current', {
                                                             'packages': ['corechart']
                                                         });
-                                                        google.charts.setOnLoadCallback(function() {
-                                                            updateReceivablesChart();
+
+                                                        function loadReceivablesChart() {
+                                                            if (typeof google !== 'undefined' && google.charts && google.visualization) {
+                                                                updateReceivablesChart();
+                                                            } else {
+                                                                google.charts.setOnLoadCallback(updateReceivablesChart);
+                                                            }
+                                                        }
+
+                                                        document.addEventListener('DOMContentLoaded', function() {
+                                                            loadReceivablesChart();
+                                                            document.querySelectorAll('.update-receivables').forEach(function(el) {
+                                                                el.addEventListener('change', loadReceivablesChart);
+                                                            });
                                                         });
 
                                                         function updateReceivablesChart() {

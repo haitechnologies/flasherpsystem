@@ -27,7 +27,7 @@ if (!function_exists('hasModuleAccess')) {
 }
 
 if (!function_exists('fetchAccountsDropdown')) {
-	function fetchAccountsDropdown($accountType = null, $prefix = '', $selectedId = 0)
+	function fetchAccountsDropdown($accountType = null, $prefix = '', $selected = null)
 	{
 		global $mysqli;
 
@@ -35,54 +35,75 @@ if (!function_exists('fetchAccountsDropdown')) {
 			return '';
 		}
 
-		$selectedId = (int)$selectedId;
-		$options = '';
-		$types = [];
-
-		if (is_array($accountType)) {
-			foreach ($accountType as $type) {
-				$type = (int)$type;
-				if ($type > 0) {
-					$types[] = $type;
-				}
-			}
-		} elseif ($accountType !== null && $accountType !== '') {
-			$type = (int)$accountType;
-			if ($type > 0) {
-				$types[] = $type;
-			}
+		if ($accountType === null || $accountType === '') {
+			return '';
 		}
 
-		$sql = "SELECT id, account_name, account_code, account_type FROM `" . DB::ACCOUNTS . "`";
-		if (!empty($types)) {
-			$sql .= " WHERE account_type IN (" . implode(',', $types) . ")";
-		}
-		$sql .= " ORDER BY account_name ASC";
+		$accountTypes = is_array($accountType) ? $accountType : [$accountType];
 
+		// Escape string values for IN clause
+		$escaped = [];
+		foreach ($accountTypes as $t) {
+			$t = (string)$t;
+			if ($t !== '') {
+				$escaped[] = "'" . $mysqli->real_escape_string($t) . "'";
+			}
+		}
+		if (empty($escaped)) {
+			return '';
+		}
+
+		$typeList = implode(',', $escaped);
+		$sql = "SELECT id, parent_id, account_name, account_code, account_type, level
+		        FROM `" . DB::ACCOUNTS . "`
+		        WHERE account_type IN ($typeList) AND (parent_id IS NULL OR parent_id = 0)
+		        ORDER BY account_name ASC";
 		$result = $mysqli->query($sql);
 		if (!$result) {
-			return $options;
+			return '';
 		}
 
+		$html = '';
 		while ($row = $result->fetch_assoc()) {
 			$id = (int)($row['id'] ?? 0);
-			if ($id <= 0) {
-				continue;
-			}
-
-			$name = (string)($row['account_name'] ?? '');
-			$code = trim((string)($row['account_code'] ?? ''));
-			$label = $name;
-			if ($code !== '') {
-				$label = $name . ' (' . $code . ')';
-			}
-
-			$selected = ($id === $selectedId) ? ' selected' : '';
-			$options .= '<option value="' . $id . '"' . $selected . '>' . htmlspecialchars((string)$prefix . $label, ENT_QUOTES, 'UTF-8') . '</option>';
+			if ($id <= 0) continue;
+			$label = htmlspecialchars((string)($row['account_name'] ?? ''));
+			$selectedAttr = ($id === (int)$selected) ? ' selected' : '';
+			$html .= '<option value="' . $id . '"' . $selectedAttr . ' class="fw-semibold text-black">' . $prefix . $label . '</option>';
+			$html .= fetchAccountsDropdownChildren($id, $prefix . '- ', $selected);
 		}
-
 		$result->free();
-		return $options;
+		return $html;
+	}
+}
+
+if (!function_exists('fetchAccountsDropdownChildren')) {
+	function fetchAccountsDropdownChildren($parentId, $prefix = '', $selected = null)
+	{
+		global $mysqli;
+		if (!$mysqli instanceof mysqli) return '';
+
+		$parentId = (int)$parentId;
+		if ($parentId <= 0) return '';
+
+		$sql = "SELECT id, account_name, account_code, level
+		        FROM `" . DB::ACCOUNTS . "`
+		        WHERE parent_id = $parentId
+		        ORDER BY account_name ASC";
+		$result = $mysqli->query($sql);
+		if (!$result || $result->num_rows === 0) return '';
+
+		$html = '';
+		while ($row = $result->fetch_assoc()) {
+			$id = (int)$row['id'];
+			if ($id <= 0) continue;
+			$label = htmlspecialchars((string)($row['account_name'] ?? ''));
+			$selectedAttr = ($id === (int)$selected) ? ' selected' : '';
+			$html .= '<option value="' . $id . '"' . $selectedAttr . '>' . $prefix . $label . '</option>';
+			$html .= fetchAccountsDropdownChildren($id, $prefix . '- ', $selected);
+		}
+		$result->free();
+		return $html;
 	}
 }
 
@@ -273,8 +294,7 @@ $page_url = $_SERVER['REQUEST_URI'] ?? '';
 $current_page = basename(parse_url($page_url, PHP_URL_PATH) ?? '');
 $base_url = $base_url ?? ($admin_base_url ?? '');
 
-$pageHelpConfig = @include(__DIR__ . '/../../config/page_help_config.php');
-$pageHelpData = is_array($pageHelpConfig) ? ($pageHelpConfig[$current_page] ?? null) : null;
+$pageHelpData = [];
 
 $emailModuleLinks = [
 	[
@@ -662,7 +682,6 @@ if (!function_exists('renderEmailQuickbar')) {
 	<link rel="stylesheet" type="text/css" href="<?php echo $base_url; ?>/assets/css/action-buttons.css">
 	<link rel="stylesheet" type="text/css" href="<?php echo $base_url; ?>/assets/css/datatable-error-handler.css?v=<?php echo @filemtime(__DIR__ . '/../../assets/css/datatable-error-handler.css'); ?>">
 	<link rel="stylesheet" type="text/css" href="<?php echo $base_url; ?>/assets/css/responsive-bootstrap-redesign.css?v=<?php echo @filemtime(__DIR__ . '/../../assets/css/responsive-bootstrap-redesign.css'); ?>">
-	<link rel="stylesheet" type="text/css" href="<?php echo $base_url; ?>/assets/css/page-help.css?v=<?php echo @filemtime(__DIR__ . '/../../assets/css/page-help.css'); ?>">
 	<script src="<?php echo $base_url; ?>/assets/js/dashboard-datatable-standard.js?v=<?php echo @filemtime(__DIR__ . '/../../assets/js/dashboard-datatable-standard.js'); ?>"></script>
 	<script src="<?php echo $base_url; ?>/assets/js/datatable-error-handler.js?v=<?php echo @filemtime(__DIR__ . '/../../assets/js/datatable-error-handler.js'); ?>"></script>
 	<script src="<?php echo $base_url; ?>/assets/js/dashboard-datatable-initializer.js?v=<?php echo @filemtime(__DIR__ . '/../../assets/js/dashboard-datatable-initializer.js'); ?>"></script>
@@ -1185,7 +1204,7 @@ if (!function_exists('renderEmailQuickbar')) {
 	?>
 
 
-	<?php if ($current_page == 'dashboard_shipping.php' || $current_page == 'dashboard_accounting.php' || $current_page == 'dashboard_crm.php' || $current_page == 'dashboard_hr.php' ||  $current_page == 'customer_overview.php') { ?>
+	<?php if (in_array($current_page, ['dashboard_shipping.php', 'dashboard_crm.php', 'dashboard_hr.php'], true)) { ?>
 		<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
 	<?php } ?>
 
@@ -1445,6 +1464,12 @@ if (!function_exists('renderEmailQuickbar')) {
 
 				<?php } ?>
 
+				<li class="nav-item ms-lg-2">
+					<a href="email_history.php" class="navbar-nav-link navbar-nav-link-icon rounded-pill position-relative d-inline-flex align-items-center" title="Email History">
+						<i class="ph-envelope-simple"></i>
+					</a>
+				</li>
+
 				<!-- User Profile Divider -->
 				<div class="vr flex-shrink-0 my-1 mx-3"></div>
 
@@ -1472,12 +1497,6 @@ if (!function_exists('renderEmailQuickbar')) {
 						</a>
 					</li>
 				<?php endif; ?>
-
-				<li class="nav-item ms-lg-2">
-					<a href="email_history.php" class="navbar-nav-link navbar-nav-link-icon rounded-pill position-relative d-inline-flex align-items-center" title="Email History">
-						<i class="ph-envelope-simple"></i>
-					</a>
-				</li>
 
 				<li class="nav-item dropdown ms-lg-2">
 					<a href="#" class="navbar-nav-link d-flex align-items-center rounded-pill p-1 dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" title="Account">

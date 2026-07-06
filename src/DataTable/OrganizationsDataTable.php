@@ -29,7 +29,7 @@ class OrganizationsDataTable extends BaseDataTable
         $createdAt = $row['created_at'] ?? '';
 
         return [
-            $id,
+            $this->rowNumber,
             htmlspecialchars($warehouseName),
             htmlspecialchars($phone),
             htmlspecialchars($email),

@@ -90,7 +90,7 @@ class ShippingInvoicesDataTable extends BaseDataTable
         }
 
         return [
-            $id,
+            $this->rowNumber,
             '<a href="view_shipping_invoice.php?id=' . $id . '" class="text-primary">' . htmlspecialchars($invoiceNo) . '</a>',
             htmlspecialchars($invoiceDate),
             htmlspecialchars($customerName),

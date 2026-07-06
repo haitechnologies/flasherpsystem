@@ -130,7 +130,7 @@ class CategoriesDataTable extends BaseDataTable
         $publishBadge = $publish == 0 ? BadgeHelper::danger('Inactive') : BadgeHelper::success('Active');
 
         return [
-            $id,
+            $this->rowNumber,
             $name,
             BadgeHelper::info($subCount),
             BadgeHelper::primary($itemCount),

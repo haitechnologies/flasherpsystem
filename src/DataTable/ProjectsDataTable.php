@@ -38,7 +38,7 @@ class ProjectsDataTable extends BaseDataTable
         $customerId = (int)($row['customer_id'] ?? 0);
 
         return [
-            $id,
+            $this->rowNumber,
             htmlspecialchars((string)($row['created_at'] ?? '')),
             $id,
             htmlspecialchars((string)($row['project_name'] ?? '')),

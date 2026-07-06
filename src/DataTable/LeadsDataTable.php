@@ -56,7 +56,7 @@ class LeadsDataTable extends BaseDataTable
         $statusLabel = (string)($this->relatedDataCache['statuses'][$statusId] ?? '');
 
         return [
-            $id,
+            $this->rowNumber,
             '<a href="lead.php?id=' . $id . '">' . htmlspecialchars($companyName) . '</a>',
             htmlspecialchars((string)($row['address'] ?? '')),
             htmlspecialchars((string)($row['email'] ?? '')),

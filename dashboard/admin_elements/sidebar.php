@@ -182,14 +182,20 @@ $menuConfig = [
                 'condition' => function() { return has_full_access() && hasModuleAccess('hscodes'); }
             ],
             [
-                'href' => '#shipping-master-data-submenu',
-                'label' => 'Shipping Master Data',
+                'href' => '#shipping-settings-submenu',
+                'label' => 'Settings',
                 'icon' => 'ph-database',
                 'pages' => ['listing_ports.php', 'ports.php', 'listing_carriers.php', 'carriers.php', 'listing_consignees.php', 'consignees.php', 'listing_shippers.php', 'shippers.php'],
                 'type' => 'submenu',
                 'condition' => function() {
                     return has_full_access() || hasModuleAccess('ports') || hasModuleAccess('carriers') || hasModuleAccess('consignees') || hasModuleAccess('shippers');
-                }
+                },
+                'children' => [
+                    ['href' => 'listing_ports.php', 'label' => 'Ports', 'pages' => ['listing_ports.php', 'ports.php'], 'condition' => function() { return has_full_access() || hasModuleAccess('ports'); }],
+                    ['href' => 'listing_carriers.php', 'label' => 'Carriers', 'pages' => ['listing_carriers.php', 'carriers.php'], 'condition' => function() { return has_full_access() || hasModuleAccess('carriers'); }],
+                    ['href' => 'listing_consignees.php', 'label' => 'Consignees', 'pages' => ['listing_consignees.php', 'consignees.php'], 'condition' => function() { return has_full_access() || hasModuleAccess('consignees'); }],
+                    ['href' => 'listing_shippers.php', 'label' => 'Shippers', 'pages' => ['listing_shippers.php', 'shippers.php'], 'condition' => function() { return has_full_access() || hasModuleAccess('shippers'); }],
+                ]
             ],
         ]
     ],
@@ -267,7 +273,7 @@ $menuConfig = [
             ],
             [
                 'href' => '#hr-settings-submenu',
-                'label' => 'HR Settings',
+                'label' => 'Settings',
                 'icon' => 'ph-gear',
                 'pages' => ['listing_departments.php', 'departments.php', 'listing_designations.php', 'designations.php', 'listing_leave_types.php', 'leave_types.php', 'listing_document_categories.php', 'document_categories.php', 'listing_payroll_components.php', 'payroll_components.php'],
                 'type' => 'submenu',
@@ -294,6 +300,13 @@ $menuConfig = [
     'accounting' => [
         'label' => 'Accounting',
         'items' => [
+            [
+                'href' => 'listing_items.php',
+                'label' => 'Items',
+                'icon' => 'ph-archive',
+                'pages' => ['listing_items.php', 'items.php'],
+                'condition' => function() { return has_full_access() || hasModuleAccess('items'); }
+            ],
             [
                 'href' => 'listing_banks.php',
                 'label' => 'Banking',
@@ -360,14 +373,14 @@ $menuConfig = [
             [
                 'href' => 'listing_journals.php',
                 'label' => 'Manual Journal',
-                'icon' => 'ph-journal',
+                'icon' => 'ph-notebook',
                 'pages' => ['listing_journals.php', 'journals.php'],
                 'condition' => function() { return has_full_access() || hasModuleAccess('journals'); }
             ],
             [
                 'href' => 'listing_accounts.php',
                 'label' => 'Chart of Accounts',
-                'icon' => 'ph-book-open-text',
+                'icon' => 'ph-book-open',
                 'pages' => ['listing_accounts.php', 'accounts.php', 'listing_accounts_report_categories.php', 'accounts_report_categories.php', 'accounts_report_subcategories.php'],
                 'condition' => function() { return has_full_access() || hasModuleAccess('accounts'); }
             ],
@@ -390,11 +403,6 @@ $menuConfig = [
                 'pages' => ['listing_lead_quotations.php', 'lead_quotations.php', 'lead_quotation.php'],
                 'condition' => function() { return has_full_access() || hasModuleAccess('lead_quotations'); }
             ],
-        ]
-    ],
-    'projects_jobs' => [
-        'label' => 'Projects & Jobs',
-        'items' => [
             [
                 'href' => 'listing_projects.php',
                 'label' => 'Projects',
@@ -408,13 +416,6 @@ $menuConfig = [
                 'icon' => 'ph-wrench',
                 'pages' => ['listing_jobs.php', 'jobs.php', 'view_job.php'],
                 'condition' => function() { return has_full_access() || hasModuleAccess('jobs'); }
-            ],
-            [
-                'href' => 'listing_job_statuses.php',
-                'label' => 'Job Statuses',
-                'icon' => 'ph-tag',
-                'pages' => ['listing_job_statuses.php'],
-                'condition' => function() { return has_full_access() || hasModuleAccess('job_statuses'); }
             ],
         ]
     ],
@@ -430,9 +431,8 @@ $menuConfig = [
 // ============================================================================
 // RENDER SIDEBAR
 // ============================================================================
-$sectionOrder = ['dashboard', 'projects_jobs', 'shipping', 'accounting', 'crm', 'hr', 'content'];
+$sectionOrder = ['dashboard', 'crm', 'shipping', 'accounting', 'hr', 'content'];
 $sectionSystemMap = [
-    'projects_jobs' => 'projects',
     'shipping' => 'shipping',
     'accounting' => 'accounting',
     'crm' => 'crm',
@@ -440,9 +440,8 @@ $sectionSystemMap = [
 ];
 
 $sectionModuleMap = [
-    'projects_jobs' => ['projects', 'jobs', 'job_statuses'],
     'shipping' => ['shipping_advices', 'shipping_invoices', 'shipping_stocks', 'shipping_customers', 'hscodes', 'ports', 'carriers', 'consignees', 'shippers'],
-    'accounting' => ['banks', 'customers', 'quotations', 'sale_orders', 'invoices', 'payments_received', 'credit_notes', 'vendors', 'expenses', 'purchase_orders', 'purchases', 'payments_made', 'debit_notes', 'journals', 'accounts'],
+    'accounting' => ['items', 'banks', 'customers', 'quotations', 'sale_orders', 'invoices', 'payments_received', 'credit_notes', 'vendors', 'expenses', 'purchase_orders', 'purchases', 'payments_made', 'debit_notes', 'journals', 'accounts'],
     'crm' => ['leads', 'lead_quotations'],
     'hr' => ['departments', 'designations', 'attendance', 'leave_requests', 'leave_types', 'annual_leave_entitlements', 'payroll_components', 'salary_structures', 'employee_salaries', 'payroll_runs', 'payslips', 'user_documents', 'document_categories', 'air_tickets', 'gratuity_settlements', 'report_hr'],
 ];
@@ -487,12 +486,6 @@ $sectionModuleMap = [
                             echo '<span>' . $item['label'] . '</span>';
                             echo '</a>';
                             echo '<ul class="nav-group-sub collapse ' . ($isOpen ? 'show' : '') . '">';
-                            if ($sectionKey === 'shipping' && $item['label'] === 'Shipping Master Data'):
-                                echo '<li class="nav-item"><a href="listing_ports.php" class="nav-link ' . (isMenuActive(['listing_ports.php','ports.php']) ? 'active' : '') . '"><i class="ph-map-pin-line"></i><span>Ports</span></a></li>';
-                                echo '<li class="nav-item"><a href="listing_carriers.php" class="nav-link ' . (isMenuActive(['listing_carriers.php','carriers.php']) ? 'active' : '') . '"><i class="ph-truck"></i><span>Carriers</span></a></li>';
-                                echo '<li class="nav-item"><a href="listing_consignees.php" class="nav-link ' . (isMenuActive(['listing_consignees.php','consignees.php']) ? 'active' : '') . '"><i class="ph-buildings"></i><span>Consignees</span></a></li>';
-                                echo '<li class="nav-item"><a href="listing_shippers.php" class="nav-link ' . (isMenuActive(['listing_shippers.php','shippers.php']) ? 'active' : '') . '"><i class="ph-user-square"></i><span>Shippers</span></a></li>';
-                            endif;
                             // No submenu for Companies; direct link only
                             if ($sectionKey === 'admin' && $item['label'] === 'Geo Locations'):
                                 echo '<li class="nav-item"><a href="listing_geo_countries.php" class="nav-link ' . ($current_page === 'listing_geo_countries.php' ? 'active' : '') . '"><i class="ph-globe"></i><span>Countries</span></a></li>';

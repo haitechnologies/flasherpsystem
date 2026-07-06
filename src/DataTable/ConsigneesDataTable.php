@@ -35,7 +35,7 @@ class ConsigneesDataTable extends BaseDataTable
 
         $consigneeLink = '<a href="#" class="view-consignee-details text-primary fw-semibold" data-id="' . $id . '">' . htmlspecialchars($name) . '</a>';
         return [
-            $id,
+            $this->rowNumber,
             $consigneeLink,
             htmlspecialchars($address1),
             $timeAgoStr,

@@ -35,7 +35,7 @@ class StorageSubtypesDataTable extends BaseDataTable
         $active  = (int)($row['is_active'] ?? 0);
         $badge   = $active ? BadgeHelper::success('Active') : BadgeHelper::danger('Inactive');
         return [
-            $id,
+            $this->rowNumber,
             htmlspecialchars($sub),
             htmlspecialchars($type),
             $this->formatTimeAgo($created),

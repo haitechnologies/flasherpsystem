@@ -77,6 +77,11 @@ foreach ($warehouseOptions as $w) {
     <div class="content-inner">
         <div class="content">
             <?php include('admin_elements/breadcrumb.php'); ?>
+            <div class="alert alert-info alert-dismissible fade show" role="alert">
+                <i class="ph-info me-2"></i>
+                <strong>How this works:</strong> Purchase orders are commitments to buy from vendors. They do not affect accounting until converted to a purchase or bill.
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
 
             <form class="steps-basic clearfix" method="post" id="frm<?php echo $module; ?>" name="frm<?php echo $module; ?>" action="<?php echo $module; ?>.php" enctype="multipart/form-data">
                 <?php if ($id > 0): ?>

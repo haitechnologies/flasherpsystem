@@ -62,8 +62,13 @@ class BankController extends BaseController
         $data = [
             'account_name' => $request->getString('account_name'),
             'account_code' => $request->getString('account_code'),
+            'opening_balance' => $request->getString('opening_balance'),
+            'account_id' => $request->getString('account_id'),
             'currency' => $request->getString('currency'),
             'bank_name' => $request->getString('bank_name'),
+            'branch' => $request->getString('branch'),
+            'address' => $request->getString('address'),
+            'iban' => $request->getString('iban'),
             'routing_number' => $request->getString('routing_number'),
             'description' => $request->getString('description'),
             'is_primary' => $request->get('is_primary') ? 1 : 0,
@@ -92,8 +97,13 @@ class BankController extends BaseController
         $data = [
             'account_name' => $request->getString('account_name'),
             'account_code' => $request->getString('account_code'),
+            'opening_balance' => $request->getString('opening_balance'),
+            'account_id' => $request->getString('account_id'),
             'currency' => $request->getString('currency'),
             'bank_name' => $request->getString('bank_name'),
+            'branch' => $request->getString('branch'),
+            'address' => $request->getString('address'),
+            'iban' => $request->getString('iban'),
             'routing_number' => $request->getString('routing_number'),
             'description' => $request->getString('description'),
             'is_primary' => $request->get('is_primary') ? 1 : 0,
@@ -118,8 +128,13 @@ class BankController extends BaseController
     {
         $accountName = '';
         $accountCode = '';
+        $openingBalance = '0.00';
+        $accountId = '';
         $currency = '0';
         $bankName = '';
+        $branch = '';
+        $address = '';
+        $iban = '';
         $routingNumber = '';
         $description = '';
         $isPrimary = 0;
@@ -135,8 +150,13 @@ class BankController extends BaseController
                 $bank = $this->bankService->getById($id, $this->orgId);
                 $accountName = $bank->accountName;
                 $accountCode = $bank->accountCode;
+                $openingBalance = (string)$bank->openingBalance;
+                $accountId = $bank->accountId !== null ? (string)$bank->accountId : '';
                 $currency = (string)$bank->currency;
                 $bankName = $bank->bankName;
+                $branch = $bank->branch;
+                $address = $bank->address;
+                $iban = $bank->iban;
                 $routingNumber = $bank->routingNumber;
                 $description = $bank->description;
                 $isPrimary = $bank->isPrimary ? 1 : 0;
@@ -155,12 +175,26 @@ class BankController extends BaseController
             $allCurrencies = [];
         }
 
+        $allAccounts = [];
+        try {
+            $allAccounts = $this->db->fetchAll(
+                "SELECT id, account_name, account_code FROM `" . DB::ACCOUNTS . "` WHERE is_active=1 AND account_type IN ('Assets') ORDER BY account_name"
+            );
+        } catch (\Throwable $e) {
+            $allAccounts = [];
+        }
+
         return Response::html($this->view->render('banks/form.php', [
             'id' => $id,
             'accountName' => $accountName,
             'accountCode' => $accountCode,
+            'openingBalance' => $openingBalance,
+            'accountId' => $accountId,
             'currency' => $currency,
             'bankName' => $bankName,
+            'branch' => $branch,
+            'address' => $address,
+            'iban' => $iban,
             'routingNumber' => $routingNumber,
             'description' => $description,
             'isPrimary' => $isPrimary,
@@ -171,6 +205,7 @@ class BankController extends BaseController
             'moduleId' => $moduleId,
             'session_user_id' => $session_user_id,
             'allCurrencies' => $allCurrencies,
+            'allAccounts' => $allAccounts,
             'canCreate' => $this->canCreate(),
             'canEdit' => $this->canEdit(),
         ]));

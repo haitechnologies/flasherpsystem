@@ -131,7 +131,7 @@ class HSCodesDataTable extends BaseDataTable
 
             // Return sequential array (not associative with numeric keys)
             return [
-                $id,                                                    // ID (position 0)
+                $this->rowNumber,                                                    // ID (position 0)
                 '<strong>' . htmlspecialchars($code, ENT_QUOTES, 'UTF-8') . '</strong>',     // HS CODE (position 1)
                 $oldCodeDisplay,                                        // OLD CODE (position 2)
                 $descEnDisplay,                                         // DESCRIPTION (EN) (position 3)

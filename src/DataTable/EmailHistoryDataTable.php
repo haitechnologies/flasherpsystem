@@ -54,7 +54,7 @@ class EmailHistoryDataTable extends BaseDataTable
         };
 
         return [
-            $id,
+            $this->rowNumber,
             '<a href="mailto:' . htmlspecialchars($recipientEmail) . '">' . htmlspecialchars($recipientEmail) . '</a>',
             $statusBadge,
             !empty($sentAt) ? $this->formatTimeAgo($sentAt) : '-',

@@ -31,7 +31,7 @@ class AttendanceDataTable extends BaseDataTable
     {
         $id = (int)$row['id'];
         return [
-            $id,
+            $this->rowNumber,
             getTableAttr('full_name', DB::USERS, $row['employee_id']),
             s__($row['work_date']),
             s__($row['check_in']),

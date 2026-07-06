@@ -22,7 +22,7 @@ class VendorsDataTable extends BaseDataTable
         $email   = (string)($row['email'] ?? '');
         $phone   = (string)($row['phone'] ?? '');
         return [
-            '<a href="vendor_overview.php?id=' . $id . '" class="text-decoration-none">' . htmlspecialchars($name) . '</a>',
+            '<a href="vendor_overview.php?vendor_id=' . $id . '" class="text-decoration-none">' . htmlspecialchars($name) . '</a>',
             htmlspecialchars($company),
             htmlspecialchars($email),
             htmlspecialchars($phone),

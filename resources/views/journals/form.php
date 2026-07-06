@@ -78,6 +78,11 @@ $treeOptionsJs = addslashes($treeOptions);
     <div class="content-inner">
         <div class="content">
             <?php include('admin_elements/breadcrumb.php'); ?>
+            <div class="alert alert-info alert-dismissible fade show" role="alert">
+                <i class="ph-info me-2"></i>
+                <strong>How this works:</strong> Journals let you make direct adjustments to any account. Every entry must balance (total debits = total credits). Affects all reports: General Ledger, Trial Balance, P&amp;L, Balance Sheet.
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
 
             <form class="steps-basic clearfix" method="post" id="frm<?php echo $module; ?>" name="frm<?php echo $module; ?>" action="<?php echo $module; ?>.php" enctype="multipart/form-data">
                 <input type="hidden" name="journal_status" id="journal_status" value="<?php echo $journal_status; ?>" />

@@ -45,7 +45,7 @@ class DocumentCategoriesDataTable extends BaseDataTable
         $nameHtml = htmlspecialchars($name) . $mandatoryBadge;
 
         return [
-            $id,
+            $this->rowNumber,
             $nameHtml,
             htmlspecialchars($type),
             $this->formatTimeAgo($created),

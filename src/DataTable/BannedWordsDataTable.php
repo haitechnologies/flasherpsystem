@@ -30,7 +30,7 @@ class BannedWordsDataTable extends BaseDataTable
         $publishBadge = $publish == 0 ? BadgeHelper::danger('Inactive') : BadgeHelper::success('Active');
 
         return [
-            $id,
+            $this->rowNumber,
             '<code>' . htmlspecialchars($bannedWord) . '</code>',
             !empty($createdAt) ? $this->formatTimeAgo($createdAt) : '',
             $publishBadge,

@@ -55,7 +55,7 @@ class CustomerTransactionsDataTable extends BaseDataTable
             default     => BadgeHelper::secondary($status),
         };
         return [
-            $id,
+            $this->rowNumber,
             htmlspecialchars($customer),
             $amount,
             $date,

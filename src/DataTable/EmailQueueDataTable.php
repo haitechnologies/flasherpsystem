@@ -129,7 +129,7 @@ class EmailQueueDataTable extends BaseDataTable
         }
 
         return [
-            $id,
+            $this->rowNumber,
             $recipient,
             $subjectDisplay,
             $statusBadge,

@@ -74,6 +74,7 @@ opencode.json
 docs/
 CHANGELOG.md
 !HR_CHANGELOG.md
+!ACCOUNTING_CHANGELOG.md
 CHANGE_SUMMARY_EMAIL.md
 CONTRIBUTING.md
 ZKTeco-attendance-integration-plan.md

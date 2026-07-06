@@ -40,7 +40,7 @@ class SystemSettingsDataTable extends BaseDataTable
         $publishBadge = $publish ? BadgeHelper::success('Active') : BadgeHelper::danger('Inactive');
 
         return [
-            $id,
+            $this->rowNumber,
             htmlspecialchars($slug),
             htmlspecialchars($name),
             $value,

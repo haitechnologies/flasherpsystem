@@ -45,7 +45,7 @@ class AuthenticationActivityDataTable extends BaseDataTable
         $createdAt = $row['created_at'] ?? '';
 
         return [
-            $id,
+            $this->rowNumber,
             $userId . ' (' . htmlspecialchars($fullName) . ')',
             htmlspecialchars($activityType),
             htmlspecialchars($ipAddress),

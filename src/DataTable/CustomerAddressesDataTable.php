@@ -112,7 +112,7 @@ class CustomerAddressesDataTable extends BaseDataTable
         $createdDisplay = !empty($createdAt) ? date('d M Y', strtotime($createdAt)) : '-';
 
         return [
-            $id,
+            $this->rowNumber,
             '<a href="customer_overview.php?customer_id=' . $customerId . '" class="text-primary">' . htmlspecialchars($displayName) . '</a>',
             $typeBadge,
             htmlspecialchars($attention),

@@ -42,7 +42,7 @@ class PurchaseOrdersDataTable extends BaseDataTable
         $vendorName = $this->relatedDataCache['vendors'][$vendorId] ?? '';
         $badge      = BadgeHelper::info(htmlspecialchars($status));
         return [
-            $id,
+            $this->rowNumber,
             htmlspecialchars($date),
             '<a href="purchase_order_overview.php?id=' . $id . '" class="text-decoration-none">' . htmlspecialchars($no) . '</a>',
             htmlspecialchars($ref),

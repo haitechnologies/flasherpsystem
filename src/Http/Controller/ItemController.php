@@ -25,6 +25,28 @@ class ItemController extends BaseController
         $this->service = $service;
     }
 
+    private function getTaxTreatments(): array
+    {
+        try {
+            return $this->db->fetchAll(
+                "SELECT id, tax_treatment FROM `" . \App\Core\DB::TAX_TREATMENTS . "` WHERE is_active = 1 ORDER BY tax_treatment ASC"
+            );
+        } catch (\Throwable) {
+            return [];
+        }
+    }
+
+    private function getVendors(): array
+    {
+        try {
+            return $this->db->fetchAll(
+                "SELECT id, display_name FROM `" . \App\Core\DB::VENDORS . "` WHERE is_active = 1 ORDER BY display_name ASC"
+            );
+        } catch (\Throwable) {
+            return [];
+        }
+    }
+
     public function __invoke(Request $request): Response
     {
         $this->requiresModule('items', 'Item');
@@ -57,8 +79,16 @@ class ItemController extends BaseController
                 'item_type' => $request->post('item_type', 'services'),
                 'item_name' => $request->post('item_name', ''),
                 'unit_price' => $request->post('unit_price', '0'),
+                'selling_price' => $request->post('selling_price', ''),
+                'tax_treatment_id' => (int)$request->post('tax_treatment_id', 0),
                 'is_excise' => $request->has('is_excise') ? 1 : 0,
                 'is_active' => $request->has('is_active') ? 1 : 0,
+                'sale_account' => (int)$request->post('sale_account', 0),
+                'sale_description' => $request->post('sale_description', ''),
+                'purchase_account' => (int)$request->post('purchase_account', 0),
+                'purchase_description' => $request->post('purchase_description', ''),
+                'cost_price' => $request->post('cost_price', ''),
+                'preferred_vendor_id' => (int)$request->post('preferred_vendor_id', 0),
             ], $this->userId);
             flash_success('Item updated successfully.');
             return Response::redirect('listing_items.php');
@@ -79,8 +109,16 @@ class ItemController extends BaseController
                 'item_type' => $request->post('item_type', 'services'),
                 'item_name' => $request->post('item_name', ''),
                 'unit_price' => $request->post('unit_price', '0'),
+                'selling_price' => $request->post('selling_price', ''),
+                'tax_treatment_id' => (int)$request->post('tax_treatment_id', 0),
                 'is_excise' => $request->has('is_excise') ? 1 : 0,
                 'is_active' => $request->has('is_active') ? 1 : 0,
+                'sale_account' => (int)$request->post('sale_account', 0),
+                'sale_description' => $request->post('sale_description', ''),
+                'purchase_account' => (int)$request->post('purchase_account', 0),
+                'purchase_description' => $request->post('purchase_description', ''),
+                'cost_price' => $request->post('cost_price', ''),
+                'preferred_vendor_id' => (int)$request->post('preferred_vendor_id', 0),
             ], $this->userId);
             flash_success('Item saved successfully.');
             return Response::redirect('listing_items.php');
@@ -99,8 +137,16 @@ class ItemController extends BaseController
         $itemType = 'services';
         $itemName = '';
         $unitPrice = '0';
+        $sellingPrice = '';
+        $taxTreatmentId = 0;
         $isExcise = false;
         $publish = 1;
+        $saleAccount = 0;
+        $saleDescription = '';
+        $purchaseAccount = 0;
+        $purchaseDescription = '';
+        $costPrice = '';
+        $preferredVendorId = 0;
 
         if ($id > 0) {
             $item = $this->service->getById($id);
@@ -111,21 +157,42 @@ class ItemController extends BaseController
             $itemType = $item->itemType;
             $itemName = $item->itemName;
             $unitPrice = $item->unitPrice;
+            $sellingPrice = $item->sellingPrice;
+            $taxTreatmentId = $item->taxTreatmentId;
             $isExcise = $item->isExcise;
             $publish = $item->isActive ? 1 : 0;
+            $saleAccount = $item->saleAccount;
+            $saleDescription = $item->saleDescription;
+            $purchaseAccount = $item->purchaseAccount;
+            $purchaseDescription = $item->purchaseDescription;
+            $costPrice = $item->costPrice;
+            $preferredVendorId = $item->preferredVendorId;
         }
+
+        $taxTreatments = $this->getTaxTreatments();
+        $vendors = $this->getVendors();
 
         return Response::html($this->view->render('items/form.php', [
             'id' => $id,
             'itemType' => $itemType,
             'itemName' => $itemName,
             'unitPrice' => $unitPrice,
+            'sellingPrice' => $sellingPrice,
+            'taxTreatmentId' => $taxTreatmentId,
             'isExcise' => $isExcise,
             'publish' => $publish,
             'moduleCaption' => $this->moduleCaption,
             'module' => 'items',
             'canCreate' => $this->canCreate(),
             'canEdit' => $this->canEdit(),
+            'saleAccount' => $saleAccount,
+            'saleDescription' => $saleDescription,
+            'purchaseAccount' => $purchaseAccount,
+            'purchaseDescription' => $purchaseDescription,
+            'costPrice' => $costPrice,
+            'preferredVendorId' => $preferredVendorId,
+            'taxTreatments' => $taxTreatments,
+            'vendors' => $vendors,
         ]));
     }
 }

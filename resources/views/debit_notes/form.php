@@ -71,6 +71,11 @@ include 'admin_elements/admin_header.php';
     <div class="content-inner">
         <div class="content">
             <?php include 'admin_elements/breadcrumb.php'; ?>
+            <div class="alert alert-info alert-dismissible fade show" role="alert">
+                <i class="ph-info me-2"></i>
+                <strong>How this works:</strong> Debit notes increase what a vendor owes you or correct an undercharge. They affect your purchase records and vendor balances.
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
             <form class="steps-basic clearfix" method="post" id="frm<?php echo $module; ?>" name="frm<?php echo $module; ?>" action="<?php echo $module; ?>.php" enctype="multipart/form-data">
                 <input type="hidden" name="csrf_token" value="<?php echo csrf_token(); ?>">
                 <input type="hidden" name="debit_note_status" id="debit_note_status" value="<?php echo $debit_note_status; ?>" />

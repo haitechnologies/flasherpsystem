@@ -96,7 +96,7 @@ class ModulesDataTable extends BaseDataTable
 
         // Return indexed array format (position-based)
         return [
-            0 => $id,
+            $this->rowNumber,
             1 => $moduleInfo,
             2 => $permissionsDisplay,
             3 => $systemsDisplay,

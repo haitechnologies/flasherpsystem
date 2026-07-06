@@ -28,7 +28,7 @@ class SetupGroupsDataTable extends BaseDataTable
         $publish = (int)($row['is_active'] ?? 0);
         $badge   = $publish ? BadgeHelper::success('Active') : BadgeHelper::danger('Inactive');
         return [
-            $id,
+            $this->rowNumber,
             htmlspecialchars($name),
             htmlspecialchars($desc),
             $this->formatTimeAgo($created),

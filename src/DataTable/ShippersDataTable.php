@@ -38,7 +38,7 @@ class ShippersDataTable extends BaseDataTable
 
         $shipperLink = '<a href="#" class="view-shipper-details text-primary fw-semibold" data-id="' . $id . '">' . htmlspecialchars($name) . '</a>';
         return [
-            $id,
+            $this->rowNumber,
             $shipperLink,
             htmlspecialchars($address1),
             $timeAgoStr,

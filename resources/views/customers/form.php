@@ -29,6 +29,7 @@ declare(strict_types=1);
  * @var array $taxTreatmentsList
  * @var string $tax_treatment
  * @var string $trn
+ * @var string $corporate_tax_number
  * @var string $license_number
  * @var string $license_expiry
  * @var array $currencyList
@@ -53,8 +54,14 @@ include 'admin_elements/admin_header.php';
 <div class="content-wrapper">
     <div class="page-header page-header-light shadow carriers-page-header">
         <div class="page-header-content border-top py-2 px-3 carriers-page-header-content">
-            <div class="my-1">
+            <div class="my-1 d-flex align-items-center">
                 <h5 class="mb-0"><?php echo ($id > 0) ? 'Edit' : 'New'; ?> <?php echo $moduleCaption; ?></h5>
+                <?php if ($id > 0) { ?>
+                    <div class="form-check form-switch ms-3 mb-0">
+                        <input type="checkbox" class="form-check-input form-check-input-success" name="publish" id="publish" <?php echo $is_active == 1 ? 'checked="checked"' : ''; ?>>
+                        <label class="form-check-label fw-semibold" for="publish">Active Status</label>
+                    </div>
+                <?php } ?>
             </div>
             <div class="my-1">
                 <?php if ($canCreate) { ?>
@@ -221,14 +228,7 @@ include 'admin_elements/admin_header.php';
                                         </div>
                                     </div>
                                 </div>
-                                <div class="row mt-3">
-                                    <div class="col-lg-12">
-                                        <div class="form-check form-switch mt-2">
-                                            <input type="checkbox" class="form-check-input form-check-input-success" name="publish" id="publish" <?php echo $is_active == 1 ? 'checked="checked"' : ''; ?>>
-                                            <label class="form-check-label fw-semibold" for="publish">Active Status</label>
-                                        </div>
-                                    </div>
-                                </div>
+
                             </div>
                         </div>
                     </div>
@@ -270,10 +270,18 @@ include 'admin_elements/admin_header.php';
                                         </select>
                                     </div>
                                 </div>
+                                <div id="vat_fields" style="display: none;">
+                                    <div class="row mb-2">
+                                        <label class="col-lg-4 col-form-label">TRN #:</label>
+                                        <div class="col-lg-8">
+                                            <input type="text" name="trn" id="trn" value="<?php echo $trn; ?>" class="form-control">
+                                        </div>
+                                    </div>
+                                </div>
                                 <div class="row mb-2">
-                                    <label class="col-lg-4 col-form-label">TRN #:</label>
+                                    <label class="col-lg-4 col-form-label">Corporate Tax #:</label>
                                     <div class="col-lg-8">
-                                        <input type="text" name="trn" id="trn" value="<?php echo $trn; ?>" class="form-control">
+                                        <input type="text" name="corporate_tax_number" id="corporate_tax_number" value="<?php echo $corporate_tax_number; ?>" class="form-control">
                                     </div>
                                 </div>
                                 <div class="row mb-2">
@@ -414,6 +422,20 @@ include 'admin_elements/admin_header.php';
         <?php include 'admin_elements/copyright.php'; ?>
     </div>
 </div>
+<script>
+    $(function() {
+        function toggleVatFields() {
+            var val = $('#tax_treatment').val();
+            if (val === '2' || val === '4') {
+                $('#vat_fields').show();
+            } else {
+                $('#vat_fields').hide();
+            }
+        }
+        $('#tax_treatment').on('change', toggleVatFields);
+        toggleVatFields();
+    });
+</script>
 <?php if ($canView && !$canCreate && !$canEdit) { ?>
     <script>
         $(function() {

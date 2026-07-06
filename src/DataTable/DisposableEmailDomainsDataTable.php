@@ -39,7 +39,7 @@ class DisposableEmailDomainsDataTable extends BaseDataTable
         $allowlistedBadge = $isAllowlisted ? BadgeHelper::success('Allowlisted') : BadgeHelper::secondary('No');
 
         return [
-            $id,
+            $this->rowNumber,
             '<code>' . $domain . '</code>',
             !empty($source) ? '<span class="text-muted small">' . $source . '</span>' : '—',
             $disposableBadge,

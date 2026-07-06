@@ -31,7 +31,7 @@ class AttendanceDevicesDataTable extends BaseDataTable
     {
         $id = (int)$row['id'];
         return [
-            $id,
+            $this->rowNumber,
             s__($row['device_name'] ?? ''),
             s__($row['ip_address'] ?? '') . ':' . (int)($row['port'] ?? 4370),
             s__($row['serial_number'] ?? ''),

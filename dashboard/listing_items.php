@@ -62,9 +62,14 @@ $listingConfig = [
         ['data' => 1],
         ['data' => 2],
         ['data' => 3],
-        ['data' => 4, 'orderable' => false, 'searchable' => false]
+        ['data' => 4],
+        ['data' => 5],
+        ['data' => 6],
+        ['data' => 7],
+        ['data' => 8],
+        ['data' => 9, 'orderable' => false, 'searchable' => false]
     ],
-    'thead' => '<th width="40">SR.</th><th>NAME</th><th width="150">PRICE</th><th width="90">CREATED AT</th><th width="90">ACTION</th>',
+    'thead' => '<th width="40">SR.</th><th>NAME</th><th width="120">SELLING PRICE</th><th>SALE ACCOUNT</th><th>TAX</th><th width="120">COST PRICE</th><th>PURCHASE ACCOUNT</th><th>PREFERRED VENDOR</th><th width="90">CREATED AT</th><th width="90">ACTION</th>',
     'page_length' => 10,
     'order' => [[0, 'desc']],
     'custom_dt_init' => true,
@@ -94,7 +99,12 @@ $listingConfig = [
             { data: 1 },
             { data: 2 },
             { data: 3 },
-            { data: 4, orderable: false, searchable: false }
+            { data: 4 },
+            { data: 5 },
+            { data: 6 },
+            { data: 7 },
+            { data: 8 },
+            { data: 9, orderable: false, searchable: false }
         ],
         order: [[0, "desc"]]
     });

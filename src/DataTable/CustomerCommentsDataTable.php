@@ -103,7 +103,7 @@ class CustomerCommentsDataTable extends BaseDataTable
         $createdDisplay = $this->formatDate($createdAt, 'd M Y') ?: '-';
 
         return [
-            $id,
+            $this->rowNumber,
             '<a href="customer_overview.php?customer_id=' . $customerId . '" class="text-primary">' . htmlspecialchars($displayName) . '</a>',
             htmlspecialchars($commentPreview),
             $createdDisplay,

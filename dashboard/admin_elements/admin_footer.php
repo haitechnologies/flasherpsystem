@@ -625,9 +625,6 @@ foreach ($footerSystemCandidates as $systemKey => $systemMeta) {
 </div>
 <!-- /systems panel -->
 
-<?php if (!empty($pageHelpData)): ?>
-    <?php include(__DIR__ . '/page_help_panel.php'); ?>
-<?php endif; ?>
 
 </main>
 <!-- /main content -->

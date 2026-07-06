@@ -22,7 +22,7 @@ class AccountsReportCategoriesDataTable extends BaseDataTable
         $publish = (int)($row['is_active'] ?? 0);
         $badge   = $publish ? BadgeHelper::success('Active') : BadgeHelper::danger('Inactive');
         return [
-            $id,
+            $this->rowNumber,
             htmlspecialchars($name),
             0,
             $this->formatTimeAgo($created),

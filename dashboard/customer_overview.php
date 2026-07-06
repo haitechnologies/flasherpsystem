@@ -185,6 +185,7 @@ $mobile                     = s__($customerObj->mobile);
 
 $tax_treatment              = s__($customerObj->taxTreatment);
 $trn                        = s__($customerObj->trn);
+$corporate_tax_number       = s__($customerObj->corporateTaxNumber);
 $license_number             = s__($customerObj->licenseNumber);
 $license_expiry             = s__($customerObj->licenseExpiry);
 $license_expiry             = ($license_expiry == '1970-01-01' ? '' : processDateYtoD($license_expiry));
