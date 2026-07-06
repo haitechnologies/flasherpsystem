@@ -28,6 +28,10 @@ and this project uses **date-based versioning** (`YYYY-MM-DD`).
 - `docs/AGENTS.md`: Trimmed from 171 to 144 lines — moved CRUD creation workflow, convention violations, listing template, and page header standard into skills (loaded on demand via @skill). Added Skills reference table. Truncated migration status to essentials.
 - `docs/MANPOWER_FLOW.md`: Moved from root to `docs/` with protected file banner
 - `config/constants.php`, `config/seo_helpers.php`, `config/error_alerting.php`, `src/Service/SMTPMailer.php`, `dashboard/listing_inquiries.php`, `dashboard/seo_auto_populate.php`: Updated all domain references from `flashlogisticsserver.com` to `flasherpsystem.com` (10 occurrences across 6 files)
+- `dashboard/.htaccess`: Updated domain references from `flashlogisticsserver.com` to `flasherpsystem.com`
+
+### Added
+- `index.php`: Replaced redirect-to-login with Coming Soon landing page. Root URL (`/`) shows "We're launching soon" message. Dashboard remains accessible at `/dashboard/` via direct URL — Apache serves `dashboard/index.php` directly since it's a real directory, never hitting root `index.php`.
 
 ## [2026-06-26]
 

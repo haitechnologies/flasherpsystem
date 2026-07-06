@@ -39,7 +39,7 @@ php_value error_log "error_log.txt"
     RewriteRule .* - [E=BASE_PATH:/haizon/dashboard]
 
     # Live environment
-    RewriteCond %{HTTP_HOST} ^(www\.)?flashlogisticsserver\.com$ [NC]
+    RewriteCond %{HTTP_HOST} ^(www\.)?flasherpsystem\.com$ [NC]
     RewriteRule .* - [E=BASE_PATH:/dashboard]
 </IfModule>
 
@@ -57,7 +57,7 @@ php_value error_log "error_log.txt"
     RewriteRule ^(.*)$ /haizon/dashboard/404.php [L]
 
     # Handle 404 for live
-    RewriteCond %{HTTP_HOST} ^(www\.)?flashlogisticsserver\.com$ [NC]
+    RewriteCond %{HTTP_HOST} ^(www\.)?flasherpsystem\.com$ [NC]
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^(.*)$ /dashboard/404.php [L]
