@@ -367,7 +367,21 @@ $menuConfig = [
                 'href' => 'reports.php',
                 'label' => 'Reports - Accounts',
                 'icon' => 'ph-chart-bar',
-                'pages' => ['reports.php', 'report_profit_and_loss.php', 'report_balance_sheet.php', 'report_trial_balance.php', 'report_general_ledger.php'],
+                'pages' => [
+                    'reports.php', 'report_profit_and_loss.php', 'report_balance_sheet.php', 'report_trial_balance.php',
+                    'report_general_ledger.php', 'report_detailed_general_ledger.php', 'report_account_type_summary.php',
+                    'report_account_transactions.php', 'report_cash_flow_statement.php', 'report_movement_of_equity.php',
+                    'report_business_performance_ratios.php', 'report_clients.php', 'report_sales_summary.php',
+                    'report_sales_by_customer.php', 'report_sales_by_item.php', 'report_sales_by_sales_person.php',
+                    'report_journal_report.php', 'report_invoice_details.php', 'report_invoices.php',
+                    'report_recurring_invoice_details.php', 'report_quote_details.php', 'report_reconciliation_status.php',
+                    'report_refund_history.php', 'report_expense_details.php', 'report_expenses_by_customer.php',
+                    'report_expenses_by_category.php', 'report_ar_aging_summary.php', 'report_ar_aging_details.php',
+                    'report_ar_summary.php', 'report_billable_expense_details.php', 'report_customer_balance_summary.php',
+                    'report_credit_note_details.php', 'report_payments_received.php', 'report_payable_summary.php',
+                    'report_payable_details.php', 'report_receivable_summary.php', 'report_receivable_details.php',
+                    'report_time_to_get_paid.php', 'report_vendor_balance_summary.php'
+                ],
                 'condition' => function() { return has_full_access() || hasModuleAccess('journals'); }
             ],
             [

@@ -4,7 +4,7 @@
 use App\Core\DB;
 include('admin_elements/admin_header.php');
 
-$module = 'profit_and_loss';
+$module = 'journals';
 $module_caption = 'Profit & Loss';
 $tbl_name = DB::JOURNALS; // Reports use journal data, no dedicated table needed
 $error_message = '';

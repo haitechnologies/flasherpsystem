@@ -1,7 +1,7 @@
 <?php
 include('admin_elements/admin_header.php');
 
-$module = 'report_sales_summary';
+$module = 'journals';
 $module_caption = 'Sales Summary Report';
 $error_message = '';
 $success_message = '';

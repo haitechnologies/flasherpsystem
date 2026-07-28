@@ -2,7 +2,7 @@
 
 include('admin_elements/admin_header.php');
 
-$module = 'account_type_summary';
+$module = 'journals';
 $module_caption = 'Account Type Summary';
 $tbl_name = $tbl_prefix . $module;
 $error_message = '';

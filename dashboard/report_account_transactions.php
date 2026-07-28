@@ -10,7 +10,7 @@ require '../vendor/autoload.php';
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
-$module = 'account_transactions';
+$module = 'journals';
 $module_caption = 'Account Transactions';
 $tbl_name = $tbl_prefix . $module;
 $error_message = '';

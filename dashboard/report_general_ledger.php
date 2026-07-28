@@ -4,7 +4,7 @@
 use App\Core\DB;
 include('admin_elements/admin_header.php');
 
-$module = 'general_ledger';
+$module = 'journals';
 $module_caption = 'General Ledger';
 $tbl_name = DB::GENERAL_LEDGER;
 $error_message = '';

@@ -4,7 +4,7 @@
 use App\Core\DB;
 include('admin_elements/admin_header.php');
 
-$module = 'balance_sheet';
+$module = 'journals';
 $module_caption = 'Balance Sheet';
 $tbl_name = DB::BALANCE_SHEET;
 $error_message = '';

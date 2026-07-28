@@ -6,7 +6,7 @@ if (function_exists('opcache_invalidate')) {
 
 include('admin_elements/admin_header.php');
 
-$module = 'detailed_general_ledger';
+$module = 'journals';
 $module_caption = 'Detailed General Ledger';
 $tbl_name = $tbl_prefix . $module;
 $error_message = '';

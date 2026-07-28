@@ -2,7 +2,7 @@
 
 include('admin_elements/admin_header.php');
 
-$module = 'business_performance_ratios';
+$module = 'journals';
 $module_caption = 'Business Performance Ratios';
 $tbl_name = $tbl_prefix . $module;
 $error_message = '';

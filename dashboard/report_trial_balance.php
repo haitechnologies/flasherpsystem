@@ -8,7 +8,7 @@ if (function_exists('opcache_invalidate')) {
 
 include('admin_elements/admin_header.php');
 
-$module = 'trial_balance';
+$module = 'journals';
 $module_caption = 'Trial Balance';
 $tbl_name = DB::TRIAL_BALANCE;
 $error_message = '';

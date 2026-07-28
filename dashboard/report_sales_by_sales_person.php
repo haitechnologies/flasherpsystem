@@ -2,7 +2,7 @@
 
 include('admin_elements/admin_header.php');
 
-$module = 'sales_by_sales_person';
+$module = 'journals';
 $module_caption = 'Sales by Sales Person';
 $tbl_name = $tbl_prefix . $module;
 $error_message = '';

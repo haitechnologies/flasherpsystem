@@ -8,7 +8,7 @@ require '../vendor/autoload.php';
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
-$module = 'clients';
+$module = 'journals';
 $module_caption = 'Client';
 $tbl_name = $tbl_prefix . $module;
 $error_message = '';

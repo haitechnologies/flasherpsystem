@@ -2,7 +2,7 @@
 
 include('admin_elements/admin_header.php');
 
-$module = 'cash_flow_statement';
+$module = 'journals';
 $module_caption = 'Cash Flow Statement';
 $tbl_name = $tbl_prefix . $module;
 $error_message = '';

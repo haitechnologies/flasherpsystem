@@ -2,7 +2,7 @@
 
 include('admin_elements/admin_header.php');
 
-$module = 'movement_of_equity';
+$module = 'journals';
 $module_caption = 'Movement of Equity';
 $tbl_name = $tbl_prefix . $module;
 $error_message = '';
