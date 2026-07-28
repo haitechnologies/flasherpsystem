@@ -107,7 +107,7 @@ tests/
 scripts/
 backups/
 migrations/
-database/
+# database/ — removed from gitignore to deploy migrations
 
 # ============================================================
 # GENERATED / TEMPORARY FILES
