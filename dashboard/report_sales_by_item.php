@@ -1,4 +1,5 @@
 <?php
+
 include('admin_elements/admin_header.php');
 
 $module = 'journals';
@@ -28,6 +29,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 include('admin_elements/breadcrumb.php');
+
+$items_data = [];
+$result = $mysqli->query("SELECT ii.service AS item_name,
+                                  COALESCE(SUM(ii.qty), 0) AS quantity_sold,
+                                  COALESCE(SUM(ii.total), 0) AS revenue,
+                                  COALESCE(SUM(ii.total * 0.7), 0) AS cost,
+                                  COALESCE(SUM(ii.total), 0) - COALESCE(SUM(ii.total * 0.7), 0) AS profit,
+                                  CASE WHEN COALESCE(SUM(ii.total), 0) > 0 THEN ROUND((COALESCE(SUM(ii.total), 0) - COALESCE(SUM(ii.total * 0.7), 0)) / COALESCE(SUM(ii.total), 0) * 100, 2) ELSE 0 END AS profit_margin
+                           FROM `" . $tbl_prefix . "invoice_items` ii
+                           LEFT JOIN `" . $tbl_prefix . "invoices` i ON i.id = ii.invoice_id
+                           WHERE LENGTH(ii.service) > 0
+                           GROUP BY ii.service
+                           ORDER BY revenue DESC");
+if ($result) {
+    while ($row = $result->fetch_assoc()) {
+        $items_data[] = $row;
+    }
+}
 ?>
 
 <div class="content-wrapper">
@@ -57,6 +76,18 @@ include('admin_elements/breadcrumb.php');
                 <th>Profit Margin</th>
             </tr>
         </thead>
+        <tbody>
+            <?php foreach ($items_data as $row): ?>
+            <tr>
+                <td><?php echo e($row['item_name']); ?></td>
+                <td><?php echo (int)$row['quantity_sold']; ?></td>
+                <td><?php echo number_format((float)$row['revenue'], 2); ?></td>
+                <td><?php echo number_format((float)$row['cost'], 2); ?></td>
+                <td><?php echo number_format((float)$row['profit'], 2); ?></td>
+                <td><?php echo number_format((float)$row['profit_margin'], 2); ?>%</td>
+            </tr>
+            <?php endforeach; ?>
+        </tbody>
     </table>
 </div>
     <?php include('admin_elements/copyright.php'); ?>
@@ -66,24 +97,14 @@ include('admin_elements/breadcrumb.php');
 <script>
 $(document).ready(function() {
     $('#grid-<?php echo e($module); ?>').DataTable({
-        processing: true,
-        serverSide: true,
-        ajax: {
-            url: 'datatables.php',
-            type: 'POST',
-            data: {
-                ajax_action: 'listing_<?php echo e($module); ?>',
-                csrf_token: $('input[name="csrf_token"]').val()
-            }
-        },
-        columns: [
-            {data: 'item_name'},
-            {data: 'quantity_sold'},
-            {data: 'revenue'},
-            {data: 'cost'},
-            {data: 'profit'},
-            {data: 'profit_margin'}
-        ]
+        pageLength: 25,
+        order: [[2, 'desc']],
+        dom: "<'dt-header'<'dt-head-left'fl><'dt-head-right'>>rt<'dt-footer'<'dt-foot-left'i><'dt-foot-right'p>>",
+        language: {
+            search: '',
+            searchPlaceholder: 'Search items...',
+            lengthMenu: '_MENU_'
+        }
     });
 });
 </script>

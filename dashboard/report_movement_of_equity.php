@@ -435,11 +435,7 @@ if ($accounts_report_subcategory_id > 0) {
 
     </div>
 
-</div>
-</div>
-
-<?php include('admin_elements/copyright.php'); ?>
-</div>
+    <?php include('admin_elements/copyright.php'); ?>
 </div>
 
 <?php include('admin_elements/admin_footer.php'); ?>

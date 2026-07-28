@@ -8,8 +8,9 @@ include('admin_elements/admin_header.php');
 // Removed legacy require for autoloader compatibility: require_once __DIR__ . '/../classes/EmailProviderManager.php';
 // Removed legacy require for autoloader compatibility: require_once __DIR__ . '/../classes/SMTPMailer.php';
 
-$module = '';
-$module_catpion = '';
+$current_module = isset($_REQUEST['current_module']) ? e_s__($_REQUEST['current_module']) : 'invoices';
+$module = $current_module;
+$module_caption = '';
 
 $error_message = '';
 $success_message = '';
@@ -59,7 +60,7 @@ if (empty($id)) exit;
  */
 
 // 1. Capture and Sanitize Module
-$current_module = isset($_REQUEST['current_module']) ? e_s__($_REQUEST['current_module']) : 'invoices';
+// Already set above before permissions check
 
 /**
  * 🛠️ DYNAMIC MODULE CONFIGURATION & CONTACT MAPPING
@@ -73,6 +74,8 @@ $modules_config = [
     'credit_notes'      => ['caption' => 'Credit Note',      'prefix' => 'credit_note',    'type' => 'customer'],
     'purchase_orders'   => ['caption' => 'Purchase Order',   'prefix' => 'purchase_order', 'type' => 'vendor'],
     'purchases'         => ['caption' => 'Purchase',         'prefix' => 'purchase',       'type' => 'vendor'],
+    'quotations'        => ['caption' => 'Quotation',        'prefix' => 'quotation',      'type' => 'customer'],
+    'debit_notes'       => ['caption' => 'Debit Note',       'prefix' => 'debit_note',     'type' => 'vendor'],
 ];
 
 // 2. Resolve Current Module Attributes
@@ -259,7 +262,7 @@ if ($action == 'send_email' && !empty($id)) {
 
             <?php include('admin_elements/breadcrumb.php'); ?>
 
-            <form class="steps-basic clearfix" method="post" id="frm<?php echo $module; ?>" name="frm<?php echo $module; ?>" action="send_email.php" autocomplete="off" enctype="multipart/form-data">
+            <form class="steps-basic clearfix" method="post" id="frmsend_email" name="frmsend_email" action="send_email.php" autocomplete="off" enctype="multipart/form-data">
         <input type="hidden" name="action" id="action" value="send_email" />
         <input type="hidden" name="current_module" id="current_module" value="<?php echo $current_module; ?>" />
         <input type="hidden" name="id" id="id" value="<?php echo $id; ?>" />

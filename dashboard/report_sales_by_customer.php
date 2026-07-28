@@ -1,4 +1,5 @@
 <?php
+
 include('admin_elements/admin_header.php');
 
 $module = 'journals';
@@ -28,6 +29,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 include('admin_elements/breadcrumb.php');
+
+$date_from = !empty($_GET['date_from']) ? e_s__($_GET['date_from']) : '';
+$date_to = !empty($_GET['date_to']) ? e_s__($_GET['date_to']) : '';
+
+$where = '';
+if (!empty($date_from)) {
+    $where .= " AND i.invoice_date >= '" . $date_from . "'";
+}
+if (!empty($date_to)) {
+    $where .= " AND i.invoice_date <= '" . $date_to . "'";
+}
+
+$sales_data = [];
+$result = $mysqli->query("SELECT c.display_name AS customer_name,
+                                  COUNT(i.id) AS order_count,
+                                  COALESCE(SUM(i.grand_total), 0) AS total_sales,
+                                  CASE WHEN COUNT(i.id) > 0 THEN COALESCE(SUM(i.grand_total), 0) / COUNT(i.id) ELSE 0 END AS avg_order_value
+                           FROM `" . $tbl_prefix . "invoices` i
+                           LEFT JOIN `" . $tbl_prefix . "customers` c ON c.id = i.customer_id
+                           WHERE i.customer_id > 0" . $where . "
+                           GROUP BY i.customer_id, c.display_name
+                           ORDER BY total_sales DESC");
+if ($result) {
+    while ($row = $result->fetch_assoc()) {
+        $sales_data[] = $row;
+    }
+}
 ?>
 
 <div class="content-wrapper">
@@ -46,11 +74,11 @@ include('admin_elements/breadcrumb.php');
                         <div class="row">
                             <div class="col-md-4">
                                 <label>Date From</label>
-                                <input type="date" name="date_from" class="form-control">
+                                <input type="date" name="date_from" class="form-control" value="<?php echo e($date_from); ?>">
                             </div>
                             <div class="col-md-4">
                                 <label>Date To</label>
-                                <input type="date" name="date_to" class="form-control">
+                                <input type="date" name="date_to" class="form-control" value="<?php echo e($date_to); ?>">
                             </div>
                             <div class="col-md-4">
                                 <label>&nbsp;</label>
@@ -73,6 +101,16 @@ include('admin_elements/breadcrumb.php');
                 <th>Average Order Value</th>
             </tr>
         </thead>
+        <tbody>
+            <?php foreach ($sales_data as $row): ?>
+            <tr>
+                <td><?php echo e($row['customer_name']); ?></td>
+                <td><?php echo number_format((float)$row['total_sales'], 2); ?></td>
+                <td><?php echo (int)$row['order_count']; ?></td>
+                <td><?php echo number_format((float)$row['avg_order_value'], 2); ?></td>
+            </tr>
+            <?php endforeach; ?>
+        </tbody>
     </table>
 </div>
     <?php include('admin_elements/copyright.php'); ?>
@@ -82,24 +120,14 @@ include('admin_elements/breadcrumb.php');
 <script>
 $(document).ready(function() {
     $('#grid-<?php echo e($module); ?>').DataTable({
-        processing: true,
-        serverSide: true,
-        ajax: {
-            url: 'datatables.php',
-            type: 'POST',
-            data: function(d) {
-                d.ajax_action = 'listing_<?php echo e($module); ?>';
-                d.csrf_token = $('input[name="csrf_token"]').val();
-                d.date_from = '<?php echo isset($_GET["date_from"]) ? e($_GET["date_from"]) : ""; ?>';
-                d.date_to = '<?php echo isset($_GET["date_to"]) ? e($_GET["date_to"]) : ""; ?>';
-            }
-        },
-        columns: [
-            {data: 'customer'},
-            {data: 'total_sales'},
-            {data: 'order_count'},
-            {data: 'avg_order_value'}
-        ]
+        pageLength: 25,
+        order: [[1, 'desc']],
+        dom: "<'dt-header'<'dt-head-left'fl><'dt-head-right'>>rt<'dt-footer'<'dt-foot-left'i><'dt-foot-right'p>>",
+        language: {
+            search: '',
+            searchPlaceholder: 'Search customers...',
+            lengthMenu: '_MENU_'
+        }
     });
 });
 </script>

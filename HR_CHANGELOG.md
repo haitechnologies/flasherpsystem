@@ -200,7 +200,21 @@ and this project uses **date-based versioning** (`YYYY-MM-DD`).
 - `dashboard/admin_elements/sidebar.php`: Recurring Invoices menu item — changed `href` from `listing_invoices.php?view=recurring` (non-functional) to `recurring_invoices.php`, fixed `pages` from `['listing_invoices.php', 'invoices.php']` (wrongly overlapping Invoices) to `['recurring_invoices.php', 'recurring_invoice_overview.php']`
 
 - `dashboard/listing_jobs.php`: Added row click handler via `extra_js` — clicking a job row navigates to `view_job.php?job_id=JOB_ID` (excludes action button clicks)
+- `dashboard/report_movement_of_equity.php`, `dashboard/report_sales_by_sales_person.php`: Fixed copyright footer position — moved `copyright.php` include before `.content-wrapper` close (was after, causing footer to render on the right side)
+- `dashboard/report_sales_by_customer.php`, `dashboard/report_sales_by_item.php`, `dashboard/report_sales_summary.php`: Fixed DataTables "unknown parameter" warning — switched from server-side (`ajax_action = 'listing_journals'` → `JournalsDataTable`) to client-side with PHP data queries (sales by customer grouped by customer, sales by item from invoice_items, sales summary by month)
 
 ---
+
+### Added
+- `dashboard/dashboard_operations.php`: New operations dashboard page — shows total/open leads, projects, jobs stats cards + quick links
+- `migrations/operations_role_migration_20260728.sql`: Migration to revoke non-CRM permissions from Operations role (id=4), keeping only `leads`, `lead_quotations`, `projects`, `jobs`, `job_statuses`
+
+### Changed
+- `dashboard/index.php`: Added redirect for `role_id=4` → `dashboard_operations.php` (ordered before role 5 redirect for consistency)
+- `dashboard/admin_elements/admin_header.php`: Added `role_id=4` mega menu filter — shows only CRM section (matching existing role_id=5 pattern)
+- `migrations/update_email_provider_titan_20260728.sql`: Updated Titan Email provider credentials (`system@flasherpsystem.com`, host `smtp.titan.email:465/SSL`)
+
+### Fixed
+- `dashboard/send_email.php`: Fixed 403 for Accounts role — moved `$current_module` assignment before `permissions.php` include, fixed `$module_catpion` typo, added `quotations` and `debit_notes` to `$modules_config`
 
 *For earlier history, see `docs/archive/` and `docs/MIGRATION-AUDIT-REMAINING.md`.*

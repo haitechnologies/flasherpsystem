@@ -525,10 +525,15 @@ $quickAccessSystemMap = [
 ];
 
 // For role_id=5 (Accounts), show only the Accounting section in mega menu
+// For role_id=4 (Operations), show only the CRM section in mega menu
 $currentRoleId = $session_role_id;
 if ((int)$currentRoleId === 5) {
 	$adminHeaderQuickAccessSections = array_values(array_filter($adminHeaderQuickAccessSections, function ($section) {
 		return strcasecmp((string)($section['title'] ?? ''), 'Accounting') === 0;
+	}));
+} elseif ((int)$currentRoleId === 4) {
+	$adminHeaderQuickAccessSections = array_values(array_filter($adminHeaderQuickAccessSections, function ($section) {
+		return strcasecmp((string)($section['title'] ?? ''), 'CRM') === 0;
 	}));
 } else {
 	$adminHeaderQuickAccessSections = array_values(array_filter($adminHeaderQuickAccessSections, function ($section) use ($quickAccessSystemMap) {

@@ -1,4 +1,5 @@
 <?php
+
 include('admin_elements/admin_header.php');
 
 $module = 'journals';
@@ -28,6 +29,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 include('admin_elements/breadcrumb.php');
+
+$sales_data = [];
+$result = $mysqli->query("SELECT DATE_FORMAT(i.invoice_date, '%Y-%m') AS period,
+                                  COUNT(DISTINCT i.id) AS orders,
+                                  COUNT(DISTINCT i.customer_id) AS customers,
+                                  COALESCE(SUM(i.grand_total), 0) AS revenue,
+                                  CASE WHEN COUNT(DISTINCT i.id) > 0 THEN COALESCE(SUM(i.grand_total), 0) / COUNT(DISTINCT i.id) ELSE 0 END AS avg_order_value
+                           FROM `" . $tbl_prefix . "invoices` i
+                           WHERE i.customer_id > 0
+                           GROUP BY DATE_FORMAT(i.invoice_date, '%Y-%m')
+                           ORDER BY period DESC");
+if ($result) {
+    while ($row = $result->fetch_assoc()) {
+        $sales_data[] = $row;
+    }
+}
+
+$total_revenue = 0;
+$total_orders = 0;
+$total_customers = 0;
+foreach ($sales_data as $row) {
+    $total_revenue += (float)$row['revenue'];
+    $total_orders += (int)$row['orders'];
+    $total_customers += (int)$row['customers'];
+}
+$avg_order_value = $total_orders > 0 ? $total_revenue / $total_orders : 0;
 ?>
 
 <div class="content-wrapper">
@@ -46,25 +73,25 @@ include('admin_elements/breadcrumb.php');
                         <div class="col-md-3">
                             <div class="stat-card">
                                 <h6>Total Revenue</h6>
-                                <p class="h4">$0.00</p>
+                                <p class="h4"><?php echo number_format($total_revenue, 2); ?></p>
                             </div>
                         </div>
                         <div class="col-md-3">
                             <div class="stat-card">
                                 <h6>Total Orders</h6>
-                                <p class="h4">0</p>
+                                <p class="h4"><?php echo $total_orders; ?></p>
                             </div>
                         </div>
                         <div class="col-md-3">
                             <div class="stat-card">
                                 <h6>Average Order Value</h6>
-                                <p class="h4">$0.00</p>
+                                <p class="h4"><?php echo number_format($avg_order_value, 2); ?></p>
                             </div>
                         </div>
                         <div class="col-md-3">
                             <div class="stat-card">
                                 <h6>Total Customers</h6>
-                                <p class="h4">0</p>
+                                <p class="h4"><?php echo $total_customers; ?></p>
                             </div>
                         </div>
                     </div>
@@ -84,6 +111,17 @@ include('admin_elements/breadcrumb.php');
                 <th>Average Order Value</th>
             </tr>
         </thead>
+        <tbody>
+            <?php foreach ($sales_data as $row): ?>
+            <tr>
+                <td><?php echo e($row['period']); ?></td>
+                <td><?php echo number_format((float)$row['revenue'], 2); ?></td>
+                <td><?php echo (int)$row['orders']; ?></td>
+                <td><?php echo (int)$row['customers']; ?></td>
+                <td><?php echo number_format((float)$row['avg_order_value'], 2); ?></td>
+            </tr>
+            <?php endforeach; ?>
+        </tbody>
     </table>
 </div>
     <?php include('admin_elements/copyright.php'); ?>
@@ -93,23 +131,14 @@ include('admin_elements/breadcrumb.php');
 <script>
 $(document).ready(function() {
     $('#grid-<?php echo e($module); ?>').DataTable({
-        processing: true,
-        serverSide: true,
-        ajax: {
-            url: 'datatables.php',
-            type: 'POST',
-            data: {
-                ajax_action: 'listing_<?php echo e($module); ?>',
-                csrf_token: $('input[name="csrf_token"]').val()
-            }
-        },
-        columns: [
-            {data: 'period'},
-            {data: 'revenue'},
-            {data: 'orders'},
-            {data: 'customers'},
-            {data: 'avg_order_value'}
-        ]
+        pageLength: 25,
+        order: [[0, 'desc']],
+        dom: "<'dt-header'<'dt-head-left'fl><'dt-head-right'>>rt<'dt-footer'<'dt-foot-left'i><'dt-foot-right'p>>",
+        language: {
+            search: '',
+            searchPlaceholder: 'Search periods...',
+            lengthMenu: '_MENU_'
+        }
     });
 });
 </script>
