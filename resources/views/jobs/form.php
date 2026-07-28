@@ -261,9 +261,9 @@ include 'admin_elements/admin_header.php';
 
                                     <?php $field = ['name'=>'exchange_rate', 'label'=>'Exchange Rate:', 'value'=>$exchange_rate, 'type'=>'number']; include 'admin_elements/form_field_text.php'; ?>
 
-                                    <?php $field = ['name'=>'transport_mode', 'label'=>'Transport Mode:', 'options'=>[''=>'', 'air'=>'Air', 'sea'=>'Sea', 'land'=>'Land'], 'selected'=>$transport_mode]; include 'admin_elements/form_field_select.php'; ?>
+                                    <?php $field = ['name'=>'transport_mode', 'label'=>'Transport Mode:', 'options'=>['air'=>'Air', 'sea'=>'Sea', 'land'=>'Land'], 'selected'=>$transport_mode]; include 'admin_elements/form_field_select.php'; ?>
 
-                                    <?php $field = ['name'=>'shipment_type', 'label'=>'Type of Shipment:', 'options'=>[''=>'', 'export'=>'Export', 'import'=>'Import', 'transit'=>'Transit'], 'selected'=>$shipment_type]; include 'admin_elements/form_field_select.php'; ?>
+                                    <?php $field = ['name'=>'shipment_type', 'label'=>'Type of Shipment:', 'options'=>['export'=>'Export', 'import'=>'Import', 'transit'=>'Transit'], 'selected'=>$shipment_type]; include 'admin_elements/form_field_select.php'; ?>
 
                                     <?php $field = ['name'=>'job_owner', 'label'=>'Job Owner:', 'required'=>true, 'options'=>$users_options, 'selected'=>$job_owner]; include 'admin_elements/form_field_select.php'; ?>
 
