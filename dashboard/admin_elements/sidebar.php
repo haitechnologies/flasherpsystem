@@ -481,8 +481,8 @@ $sectionModuleMap = [
                     if ($sectionModules !== null && !hasAnyModuleAccess($sectionModules)) {
                         continue;
                     }
-                    // Operations role (4) — only dashboard and CRM
-                    if ((int)(\App\Core\Session::roleId() ?? 0) === 4 && !in_array($sectionKey, ['dashboard', 'crm'], true)) {
+                    // Operations role (4) — only dashboard, CRM and Shipping
+                    if ((int)(\App\Core\Session::roleId() ?? 0) === 4 && !in_array($sectionKey, ['dashboard', 'crm', 'shipping'], true)) {
                         continue;
                     }
                     $visibleItems = array_filter($section['items'], function($item) {

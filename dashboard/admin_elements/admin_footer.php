@@ -474,8 +474,8 @@ $footerSystemCandidates = [
 ];
 
 foreach ($footerSystemCandidates as $systemKey => $systemMeta) {
-  // Operations role (4) — only show CRM in systems panel
-  if ((int)(\App\Core\Session::roleId() ?? 0) === 4 && $systemKey !== 'crm') {
+  // Operations role (4) — only show CRM and Shipping in systems panel
+  if ((int)(\App\Core\Session::roleId() ?? 0) === 4 && !in_array($systemKey, ['crm', 'shipping'], true)) {
     continue;
   }
   $enabled = function_exists('dashboardIsSystemEnabled') ? dashboardIsSystemEnabled($systemKey) : true;
