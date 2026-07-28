@@ -59,7 +59,7 @@ class AccountController extends BaseController
                 'account_name' => $request->post('account_name', ''),
                 'account_code' => $request->post('account_code', ''),
                 'description' => $request->post('description', ''),
-                'is_active' => $request->has('is_active') ? 1 : 0,
+                'is_active' => 1,
             ], $this->userId);
             flash_success('Account updated successfully.');
             return Response::redirect('listing_accounts.php');
@@ -82,7 +82,7 @@ class AccountController extends BaseController
                 'account_name' => $request->post('account_name', ''),
                 'account_code' => $request->post('account_code', ''),
                 'description' => $request->post('description', ''),
-                'is_active' => $request->has('is_active') ? 1 : 0,
+                'is_active' => 1,
             ], $this->userId);
             flash_success('Account saved successfully.');
             return Response::redirect('listing_accounts.php');
@@ -103,7 +103,6 @@ class AccountController extends BaseController
         $accountName = '';
         $accountCode = '';
         $description = '';
-        $publish = 1;
 
         if ($id > 0) {
             $item = $this->service->getById($id);
@@ -116,7 +115,6 @@ class AccountController extends BaseController
             $accountName = $item->accountName;
             $accountCode = $item->accountCode;
             $description = $item->description;
-            $publish = $item->isActive ? 1 : 0;
         }
 
         return Response::html($this->view->render('accounts/form.php', [
@@ -126,7 +124,6 @@ class AccountController extends BaseController
             'accountName' => $accountName,
             'accountCode' => $accountCode,
             'description' => $description,
-            'publish' => $publish,
             'moduleCaption' => $this->moduleCaption,
             'module' => 'accounts',
             'canCreate' => $this->canCreate(),

@@ -77,7 +77,7 @@ class AccountService
             'account_name' => $name,
             'account_code' => (string)($data['account_code'] ?? $existing->accountCode),
             'description' => (string)($data['description'] ?? $existing->description),
-            'is_active' => (bool)($data['is_active'] ?? $existing->isActive) ? 1 : 0,
+            'is_active' => 1,
             'updated_by' => $updatedBy,
         ]);
     }

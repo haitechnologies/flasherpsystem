@@ -22,13 +22,6 @@ include 'admin_elements/admin_header.php';
         <div class="page-header-content border-top py-2 px-3 carriers-page-header-content">
             <div class="my-1 d-flex align-items-center gap-2">
                 <h5 class="mb-0"><?php echo $id > 0 ? 'Edit' : 'New'; ?> <?php echo $moduleCaption; ?></h5>
-                <span class="text-muted small">(<?php echo $publish ? 'Active' : 'InActive'; ?>)</span>
-            </div>
-            <div class="my-1 d-inline-flex align-items-center me-2">
-                <div class="form-check form-check-inline form-switch mb-0">
-                    <input type="checkbox" class="form-check-input form-check-input-success" name="is_active" id="is_active" <?php echo $publish ? 'checked="checked"' : ''; ?> form="frm<?php echo $module; ?>">
-                    <label class="form-check-label" for="is_active">Active</label>
-                </div>
             </div>
             <div class="my-1">
                 <?php if ($id > 0 ? $canEdit : $canCreate) { ?>
