@@ -431,7 +431,7 @@ if (!empty($session_user_id) && function_exists('getTableAttr')) {
 }
 
 $footerSystemModuleMap = [
-  'crm' => ['leads', 'lead_quotations'],
+  'crm' => ['leads', 'lead_quotations', 'projects', 'jobs', 'job_statuses'],
   'shipping' => ['shipping_advices', 'shipping_invoices', 'shipping_stocks', 'shipping_customers', 'hscodes', 'ports', 'carriers', 'consignees', 'shippers'],
   'hr' => ['departments', 'designations', 'attendance', 'leave_requests', 'leave_types', 'payroll_components', 'salary_structures', 'employee_salaries', 'payroll_runs', 'payslips', 'user_documents', 'users', 'report_hr'],
   'accounting' => ['banks', 'customers', 'quotations', 'sale_orders', 'invoices', 'payments_received', 'credit_notes', 'vendors', 'expenses', 'purchase_orders', 'purchases', 'payments_made', 'debit_notes', 'journals', 'accounts'],
@@ -474,6 +474,10 @@ $footerSystemCandidates = [
 ];
 
 foreach ($footerSystemCandidates as $systemKey => $systemMeta) {
+  // Operations role (4) — only show CRM in systems panel
+  if ((int)(\App\Core\Session::roleId() ?? 0) === 4 && $systemKey !== 'crm') {
+    continue;
+  }
   $enabled = function_exists('dashboardIsSystemEnabled') ? dashboardIsSystemEnabled($systemKey) : true;
   $hasAccess = function_exists('dashboardHasSystemAccess') ? dashboardHasSystemAccess($systemKey) : true;
   $hasModulePerm = isset($footerSystemModuleMap[$systemKey]) ? $footerHasSystemAccess($footerSystemModuleMap[$systemKey]) : true;
