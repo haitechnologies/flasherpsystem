@@ -4,11 +4,11 @@
  * Database Migration CLI
  *
  * Usage:
- *   php database/migrate.php                # Run all pending migrations
- *   php database/migrate.php --status       # Show migration status
- *   php database/migrate.php --verify       # Dry-run verification (no recording)
+ *   php migrations/migrate.php                # Run all pending migrations
+ *   php migrations/migrate.php --status       # Show migration status
+ *   php migrations/migrate.php --verify       # Dry-run verification (no recording)
  *
- * Migrations are PHP files in database/migrations/ that return a callable:
+ * Migrations are PHP files in the migrations/ directory that return a callable:
  *
  *   return function (mysqli $conn): void {
  *       // your migration SQL here
@@ -36,7 +36,7 @@ require_once $projectRoot . '/config/database.php';
 
 use App\Database\MigrationRunner;
 
-$migrationsDir = $projectRoot . '/database/migrations';
+$migrationsDir = $projectRoot . '/migrations';
 $runner = new MigrationRunner($mysqli, $migrationsDir);
 
 // Parse CLI arguments
