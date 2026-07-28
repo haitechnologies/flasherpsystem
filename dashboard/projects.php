@@ -177,7 +177,7 @@ $created_by = getTableAttr('created_by', DB::PROJECTS, $id);
 if (
     (!empty($id) && Session::roleId() == '1')
     ||
-    (!empty($id) && $_SESSION[$project_pre]['DASHBOARD']['admin_id'] == $created_by)
+    (!empty($id) && ($_SESSION[$project_pre]['DASHBOARD']['admin_id'] ?? null) == $created_by)
 ) {
 
     // Ensure item arrays are initialized before use
