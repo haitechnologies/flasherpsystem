@@ -17,12 +17,6 @@ include('admin_elements/permissions.php');
 
 $activeOrganizationId = dashboardRequireActiveOrganization();
 
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\SMTP;
-use PHPMailer\PHPMailer\Exception;
-
-require 'vendor/autoload.php';
-
 if (($action == "delete_$module" && !empty($id))) {
     if (Session::roleId() == '1') {
         $mysqli->query("DELETE FROM `" . DB::QUOTATION_ITEMS . "` WHERE quotation_id=$id");
