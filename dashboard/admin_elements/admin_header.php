@@ -473,11 +473,22 @@ $adminHeaderQuickAccessSections = [
 		'icon' => 'ph-currency-circle-dollar',
 		'dashboard' => 'dashboard_accounting.php',
 		'links' => [
+			['href' => 'listing_items.php', 'label' => 'Items', 'icon' => 'ph-cube', 'perm' => 'items'],
 			['href' => 'listing_quotations.php', 'label' => 'Quotations', 'icon' => 'ph-file-text', 'perm' => 'quotations'],
+			['href' => 'listing_sale_orders.php', 'label' => 'Sale Orders', 'icon' => 'ph-shopping-cart', 'perm' => 'sale_orders'],
 			['href' => 'listing_invoices.php', 'label' => 'Invoices', 'icon' => 'ph-receipt', 'perm' => 'invoices'],
 			['href' => 'listing_payments_received.php', 'label' => 'Payments Received', 'icon' => 'ph-arrow-circle-down', 'perm' => 'payments_received'],
+			['href' => 'listing_credit_notes.php', 'label' => 'Credit Notes', 'icon' => 'ph-file-minus', 'perm' => 'credit_notes'],
+			['href' => 'recurring_invoices.php', 'label' => 'Recurring Invoices', 'icon' => 'ph-repeat', 'perm' => 'recurring_invoices'],
+			['href' => 'listing_customers.php', 'label' => 'Customers', 'icon' => 'ph-user-circle', 'perm' => 'customers'],
+			['href' => 'listing_vendors.php', 'label' => 'Vendors', 'icon' => 'ph-truck', 'perm' => 'vendors'],
 			['href' => 'listing_expenses.php', 'label' => 'Expenses', 'icon' => 'ph-wallet', 'perm' => 'expenses'],
+			['href' => 'listing_purchase_orders.php', 'label' => 'Purchase Orders', 'icon' => 'ph-clipboard-text', 'perm' => 'purchase_orders'],
+			['href' => 'listing_purchases.php', 'label' => 'Purchases', 'icon' => 'ph-shopping-bag', 'perm' => 'purchases'],
 			['href' => 'listing_payments_made.php', 'label' => 'Payments Made', 'icon' => 'ph-arrow-circle-up', 'perm' => 'payments_made'],
+			['href' => 'listing_debit_notes.php', 'label' => 'Debit Notes', 'icon' => 'ph-file-plus', 'perm' => 'debit_notes'],
+			['href' => 'listing_banks.php', 'label' => 'Banks', 'icon' => 'ph-bank', 'perm' => 'banks'],
+			['href' => 'listing_journals.php', 'label' => 'Journals', 'icon' => 'ph-notebook', 'perm' => 'journals'],
 		],
 	],
 	[
@@ -1125,6 +1136,16 @@ if (!function_exists('renderEmailQuickbar')) {
 			}
 		}
 
+		/* Multi-column for single-section mega menu (e.g. Accounts role) */
+		.mega-cols-4 {
+			column-count: 4;
+			column-gap: 1.5rem;
+		}
+		.mega-cols-4 .list-group-item {
+			break-inside: avoid;
+			-webkit-column-break-inside: avoid;
+		}
+
 		@keyframes blinkSlow {
 
 			0%,
@@ -1352,7 +1373,7 @@ if (!function_exists('renderEmailQuickbar')) {
 												<i class="<?php echo htmlspecialchars($section['icon'], ENT_QUOTES); ?> fs-5 text-primary"></i>
 												<a href="<?php echo htmlspecialchars($section['dashboard'] ?? '#', ENT_QUOTES); ?>" class="fw-semibold text-dark text-decoration-none"><?php echo htmlspecialchars($section['title'], ENT_QUOTES); ?></a>
 											</div>
-											<div class="list-group list-group-flush">
+											<div class="list-group list-group-flush<?php echo (int)$session_role_id === 5 ? ' mega-cols-4' : ''; ?>">
 												<?php foreach ($section['links'] as $link): ?>
 													<?php if (isset($link['group'])): ?>
 														<div class="list-group-item border-0 px-0 pt-2 pb-0 fw-semibold text-muted" style="font-size: 0.7rem; letter-spacing: 0.5px;"><?php echo htmlspecialchars($link['group'], ENT_QUOTES); ?></div>
