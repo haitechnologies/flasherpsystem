@@ -1550,6 +1550,7 @@ if (!function_exists('renderEmailQuickbar')) {
 							</div>
 						<?php endif; ?>
 
+						<?php if (Roles::hasFullAccess($session_role_id)): ?>
 						<div class="px-3 py-2 border-bottom">
 							<div class="text-muted text-uppercase" style="font-size: 0.7rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 6px;">User Management</div>
 							<div class="d-grid gap-1">
@@ -1561,6 +1562,7 @@ if (!function_exists('renderEmailQuickbar')) {
 								</a>
 							</div>
 						</div>
+						<?php endif; ?>
 
 						<div class="px-3 py-2 border-bottom">
 							<div class="text-muted text-uppercase" style="font-size: 0.7rem; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 6px;">Profile & Security</div>
