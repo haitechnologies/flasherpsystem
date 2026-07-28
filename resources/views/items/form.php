@@ -26,32 +26,31 @@ declare(strict_types=1);
 include 'admin_elements/admin_header.php';
 ?>
 <div class="content-wrapper">
-    <form class="steps-basic clearfix" method="post" id="frm<?php echo $module; ?>" name="frm<?php echo $module; ?>" action="<?php echo $module; ?>.php" autocomplete="off">
-        <input type="hidden" name="csrf_token" value="<?php echo csrf_token(); ?>">
-        <?php if ($id > 0) { ?>
-            <input type="hidden" name="action" value="update_<?php echo $module; ?>">
-            <input type="hidden" name="id" value="<?php echo $id; ?>">
-        <?php } else { ?>
-            <input type="hidden" name="action" value="add_<?php echo $module; ?>">
-        <?php } ?>
-
-        <div class="page-header page-header-light shadow">
-            <div class="page-header-content border-top py-2 px-3 d-flex flex-wrap align-items-center justify-content-between">
-                <div class="d-flex align-items-center gap-3">
-                    <h5 class="mb-0"><?php echo $id > 0 ? 'Edit' : 'New'; ?> <?php echo $moduleCaption; ?></h5>
-                </div>
-                <div class="d-flex align-items-center gap-2">
-                    <?php if ($id > 0 ? $canEdit : $canCreate) { ?>
-                        <button type="submit" form="frm<?php echo $module; ?>" class="btn btn-primary btn-sm">Save</button>
-                    <?php } ?>
-                    <a href="listing_<?php echo $module; ?>.php" class="btn btn-light btn-sm">Cancel</a>
-                </div>
+    <div class="page-header page-header-light shadow">
+        <div class="page-header-content border-top py-2 px-3 d-flex flex-wrap align-items-center justify-content-between">
+            <div class="d-flex align-items-center gap-3">
+                <h5 class="mb-0"><?php echo $id > 0 ? 'Edit' : 'New'; ?> <?php echo $moduleCaption; ?></h5>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <?php if ($id > 0 ? $canEdit : $canCreate) { ?>
+                    <button type="submit" form="frm<?php echo $module; ?>" class="btn btn-primary btn-sm">Save</button>
+                <?php } ?>
+                <a href="listing_<?php echo $module; ?>.php" class="btn btn-light btn-sm">Cancel</a>
             </div>
         </div>
+    </div>
+    <div class="content-inner">
+        <div class="content">
+            <?php include 'admin_elements/breadcrumb.php'; ?>
 
-        <div class="content-inner">
-            <div class="content">
-                <?php include 'admin_elements/breadcrumb.php'; ?>
+            <form class="steps-basic clearfix" method="post" id="frm<?php echo $module; ?>" name="frm<?php echo $module; ?>" action="<?php echo $module; ?>.php" autocomplete="off">
+                <input type="hidden" name="csrf_token" value="<?php echo csrf_token(); ?>">
+                <?php if ($id > 0) { ?>
+                    <input type="hidden" name="action" value="update_<?php echo $module; ?>">
+                    <input type="hidden" name="id" value="<?php echo $id; ?>">
+                <?php } else { ?>
+                    <input type="hidden" name="action" value="add_<?php echo $module; ?>">
+                <?php } ?>
 
                 <div class="row">
                     <div class="col-lg-6">
@@ -178,9 +177,9 @@ include 'admin_elements/admin_header.php';
                     </div>
                 </div>
 
-            </div>
+            </form>
         </div>
-    </form>
-    <?php include 'admin_elements/copyright.php'; ?>
+        <?php include 'admin_elements/copyright.php'; ?>
+    </div>
 </div>
 <?php include 'admin_elements/admin_footer.php'; ?>
