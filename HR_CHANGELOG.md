@@ -7,6 +7,11 @@ and this project uses **date-based versioning** (`YYYY-MM-DD`).
 
 ---
 
+## [2026-07-28]
+
+### Fixed
+- `dashboard/admin_elements/page_header_*.php` (13 files): Fixed button layout — removed nested `.row > .row` causing button wrapping, moved Cancel button out of `#breadcrumb_elements` collapse into same flex row as action buttons, moved all buttons inside `page-header-content` for proper flex alignment
+
 ## [2026-07-06]
 
 ### Added
