@@ -185,6 +185,16 @@ and this project uses **date-based versioning** (`YYYY-MM-DD`).
 - `.vscode/settings.json`: Corrected `phpunit.args` path from `tests/phpunit.xml` to `phpunit.xml`.
 - Installed `phpunit/phpunit ^11.0` (was declared in `composer.json` but missing from lock file).
 
+## [2026-07-28]
+
+### Changed
+- `dashboard/admin_elements/sidebar.php`: Fixed Sales & Purchases submenu `pages` arrays — added missing overview/sub-pages (`customer_overview.php`, `customer_billing_addresses.php`, `customer_shipping_addresses.php`, `customer_comments.php`, `customer_transactions.php`, `customer_mails.php`, `customer_statement.php`, `customer_logs.php`, `customer_contacts.php`, `quotation_overview.php`, `sale_order_overview.php`, `invoice_overview.php`, `payment_received_overview.php`, `credit_note_overview.php`, `vendor_overview.php`, `expense_overview.php`, `purchase_order_overview.php`, `purchase_overview.php`, `payments_made_overview.php`, `debit_note_overview.php`) so sidebar menu highlights correctly when navigating to any related page. Updated parent submenu `pages` arrays to keep dropdown open.
+
+### Fixed
+- `dashboard/admin_elements/sidebar.php`: Recurring Invoices menu item — changed `href` from `listing_invoices.php?view=recurring` (non-functional) to `recurring_invoices.php`, fixed `pages` from `['listing_invoices.php', 'invoices.php']` (wrongly overlapping Invoices) to `['recurring_invoices.php', 'recurring_invoice_overview.php']`
+
+- `dashboard/listing_jobs.php`: Added row click handler via `extra_js` — clicking a job row navigates to `view_job.php?job_id=JOB_ID` (excludes action button clicks)
+
 ---
 
 *For earlier history, see `docs/archive/` and `docs/MIGRATION-AUDIT-REMAINING.md`.*

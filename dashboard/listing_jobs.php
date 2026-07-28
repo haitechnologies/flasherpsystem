@@ -67,6 +67,15 @@ $listingConfig = [
     'order' => [[0, 'desc']],
     'page_length' => 25,
     'search_placeholder' => 'Search jobs...',
+    'extra_js' => <<<'JS'
+        $(tableSelector + ' tbody').on('click', 'tr', function(e) {
+            if ($(e.target).closest('a, button, .dropdown, .dropdown-menu').length > 0) return;
+            var parts = $(this).find('td:last-child a[href*="jobs.php?"]').first().attr('href').split('id=');
+            if (parts.length > 1) {
+                window.location.href = 'view_job.php?job_id=' + parts[1];
+            }
+        });
+    JS,
 ];
 
 include('admin_elements/listing_template.php');

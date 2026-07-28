@@ -318,7 +318,7 @@ $menuConfig = [
                 'href' => '#accounting-sales-submenu',
                 'label' => 'Sales',
                 'icon' => 'ph-shopping-cart',
-                'pages' => ['listing_customers.php', 'customers.php', 'listing_quotations.php', 'quotations.php', 'listing_sale_orders.php', 'sale_orders.php', 'listing_invoices.php', 'invoices.php', 'listing_payments_received.php', 'payments_received.php', 'listing_credit_notes.php', 'credit_notes.php'],
+                'pages' => ['listing_customers.php', 'customers.php', 'customer_overview.php', 'customer_billing_addresses.php', 'customer_shipping_addresses.php', 'customer_comments.php', 'customer_transactions.php', 'customer_mails.php', 'customer_statement.php', 'customer_logs.php', 'customer_contacts.php', 'listing_quotations.php', 'quotations.php', 'quotation_overview.php', 'listing_sale_orders.php', 'sale_orders.php', 'sale_order_overview.php', 'listing_invoices.php', 'invoices.php', 'invoice_overview.php', 'listing_payments_received.php', 'payments_received.php', 'payment_received_overview.php', 'listing_credit_notes.php', 'credit_notes.php', 'credit_note_overview.php', 'recurring_invoices.php', 'recurring_invoice_overview.php'],
                 'type' => 'submenu',
                 'condition' => function() {
                     return has_full_access()
@@ -330,20 +330,20 @@ $menuConfig = [
                         || hasModuleAccess('credit_notes');
                 },
                 'children' => [
-                    ['href' => 'listing_customers.php', 'label' => 'Customers', 'pages' => ['listing_customers.php', 'customers.php'], 'condition' => function() { return has_full_access() || hasModuleAccess('customers'); }],
-                    ['href' => 'listing_quotations.php', 'label' => 'Quotes', 'pages' => ['listing_quotations.php', 'quotations.php'], 'condition' => function() { return has_full_access() || hasModuleAccess('quotations'); }],
-                    ['href' => 'listing_sale_orders.php', 'label' => 'Sale Orders', 'pages' => ['listing_sale_orders.php', 'sale_orders.php'], 'condition' => function() { return has_full_access() || hasModuleAccess('sale_orders'); }],
-                    ['href' => 'listing_invoices.php', 'label' => 'Invoices', 'pages' => ['listing_invoices.php', 'invoices.php'], 'condition' => function() { return has_full_access() || hasModuleAccess('invoices'); }],
-                    ['href' => 'listing_payments_received.php', 'label' => 'Payments Received', 'pages' => ['listing_payments_received.php', 'payments_received.php'], 'condition' => function() { return has_full_access() || hasModuleAccess('payments_received'); }],
-                    ['href' => 'listing_invoices.php?view=recurring', 'label' => 'Recurring Invoices', 'pages' => ['listing_invoices.php', 'invoices.php'], 'condition' => function() { return has_full_access() || hasModuleAccess('invoices'); }],
-                    ['href' => 'listing_credit_notes.php', 'label' => 'Credit Notes', 'pages' => ['listing_credit_notes.php', 'credit_notes.php'], 'condition' => function() { return has_full_access() || hasModuleAccess('credit_notes'); }],
+                    ['href' => 'listing_customers.php', 'label' => 'Customers', 'pages' => ['listing_customers.php', 'customers.php', 'customer_overview.php', 'customer_billing_addresses.php', 'customer_shipping_addresses.php', 'customer_comments.php', 'customer_transactions.php', 'customer_mails.php', 'customer_statement.php', 'customer_logs.php', 'customer_contacts.php'], 'condition' => function() { return has_full_access() || hasModuleAccess('customers'); }],
+                    ['href' => 'listing_quotations.php', 'label' => 'Quotes', 'pages' => ['listing_quotations.php', 'quotations.php', 'quotation_overview.php'], 'condition' => function() { return has_full_access() || hasModuleAccess('quotations'); }],
+                    ['href' => 'listing_sale_orders.php', 'label' => 'Sale Orders', 'pages' => ['listing_sale_orders.php', 'sale_orders.php', 'sale_order_overview.php'], 'condition' => function() { return has_full_access() || hasModuleAccess('sale_orders'); }],
+                    ['href' => 'listing_invoices.php', 'label' => 'Invoices', 'pages' => ['listing_invoices.php', 'invoices.php', 'invoice_overview.php'], 'condition' => function() { return has_full_access() || hasModuleAccess('invoices'); }],
+                    ['href' => 'listing_payments_received.php', 'label' => 'Payments Received', 'pages' => ['listing_payments_received.php', 'payments_received.php', 'payment_received_overview.php'], 'condition' => function() { return has_full_access() || hasModuleAccess('payments_received'); }],
+                    ['href' => 'recurring_invoices.php', 'label' => 'Recurring Invoices', 'pages' => ['recurring_invoices.php', 'recurring_invoice_overview.php'], 'condition' => function() { return has_full_access() || hasModuleAccess('invoices'); }],
+                    ['href' => 'listing_credit_notes.php', 'label' => 'Credit Notes', 'pages' => ['listing_credit_notes.php', 'credit_notes.php', 'credit_note_overview.php'], 'condition' => function() { return has_full_access() || hasModuleAccess('credit_notes'); }],
                 ]
             ],
             [
                 'href' => '#accounting-purchases-submenu',
                 'label' => 'Purchases',
                 'icon' => 'ph-package',
-                'pages' => ['listing_vendors.php', 'vendors.php', 'listing_expenses.php', 'expenses.php', 'listing_purchase_orders.php', 'purchase_orders.php', 'listing_purchases.php', 'purchases.php', 'listing_payments_made.php', 'payments_made.php', 'listing_debit_notes.php', 'debit_notes.php'],
+                'pages' => ['listing_vendors.php', 'vendors.php', 'vendor_overview.php', 'listing_expenses.php', 'expenses.php', 'expense_overview.php', 'listing_purchase_orders.php', 'purchase_orders.php', 'purchase_order_overview.php', 'listing_purchases.php', 'purchases.php', 'purchase_overview.php', 'listing_payments_made.php', 'payments_made.php', 'payments_made_overview.php', 'listing_debit_notes.php', 'debit_notes.php', 'debit_note_overview.php'],
                 'type' => 'submenu',
                 'condition' => function() {
                     return has_full_access()
@@ -355,12 +355,12 @@ $menuConfig = [
                         || hasModuleAccess('debit_notes');
                 },
                 'children' => [
-                    ['href' => 'listing_vendors.php', 'label' => 'Vendors', 'pages' => ['listing_vendors.php', 'vendors.php'], 'condition' => function() { return has_full_access() || hasModuleAccess('vendors'); }],
-                    ['href' => 'listing_expenses.php', 'label' => 'Expenses', 'pages' => ['listing_expenses.php', 'expenses.php'], 'condition' => function() { return has_full_access() || hasModuleAccess('expenses'); }],
-                    ['href' => 'listing_purchase_orders.php', 'label' => 'Purchase Orders', 'pages' => ['listing_purchase_orders.php', 'purchase_orders.php'], 'condition' => function() { return has_full_access() || hasModuleAccess('purchase_orders'); }],
-                    ['href' => 'listing_purchases.php', 'label' => 'Purchases', 'pages' => ['listing_purchases.php', 'purchases.php'], 'condition' => function() { return has_full_access() || hasModuleAccess('purchases'); }],
-                    ['href' => 'listing_payments_made.php', 'label' => 'Payments Made', 'pages' => ['listing_payments_made.php', 'payments_made.php'], 'condition' => function() { return has_full_access() || hasModuleAccess('payments_made'); }],
-                    ['href' => 'listing_debit_notes.php', 'label' => 'Debit Notes', 'pages' => ['listing_debit_notes.php', 'debit_notes.php'], 'condition' => function() { return has_full_access() || hasModuleAccess('debit_notes'); }],
+                    ['href' => 'listing_vendors.php', 'label' => 'Vendors', 'pages' => ['listing_vendors.php', 'vendors.php', 'vendor_overview.php'], 'condition' => function() { return has_full_access() || hasModuleAccess('vendors'); }],
+                    ['href' => 'listing_expenses.php', 'label' => 'Expenses', 'pages' => ['listing_expenses.php', 'expenses.php', 'expense_overview.php'], 'condition' => function() { return has_full_access() || hasModuleAccess('expenses'); }],
+                    ['href' => 'listing_purchase_orders.php', 'label' => 'Purchase Orders', 'pages' => ['listing_purchase_orders.php', 'purchase_orders.php', 'purchase_order_overview.php'], 'condition' => function() { return has_full_access() || hasModuleAccess('purchase_orders'); }],
+                    ['href' => 'listing_purchases.php', 'label' => 'Purchases', 'pages' => ['listing_purchases.php', 'purchases.php', 'purchase_overview.php'], 'condition' => function() { return has_full_access() || hasModuleAccess('purchases'); }],
+                    ['href' => 'listing_payments_made.php', 'label' => 'Payments Made', 'pages' => ['listing_payments_made.php', 'payments_made.php', 'payments_made_overview.php'], 'condition' => function() { return has_full_access() || hasModuleAccess('payments_made'); }],
+                    ['href' => 'listing_debit_notes.php', 'label' => 'Debit Notes', 'pages' => ['listing_debit_notes.php', 'debit_notes.php', 'debit_note_overview.php'], 'condition' => function() { return has_full_access() || hasModuleAccess('debit_notes'); }],
                 ]
             ],
             [
