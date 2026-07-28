@@ -4,8 +4,13 @@ declare(strict_types=1);
 
 include('admin_elements/admin_header.php');
 
-if (\App\Core\Session::roleId() === 6) {
+$roleId = \App\Core\Session::roleId();
+if ($roleId === 6) {
     header('Location: dashboard_hr.php');
+    exit;
+}
+if ($roleId === 5) {
+    header('Location: dashboard_accounting.php');
     exit;
 }
 ?>

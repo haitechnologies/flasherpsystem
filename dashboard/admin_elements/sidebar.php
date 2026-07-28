@@ -442,7 +442,7 @@ $sectionSystemMap = [
 $sectionModuleMap = [
     'shipping' => ['shipping_advices', 'shipping_invoices', 'shipping_stocks', 'shipping_customers', 'hscodes', 'ports', 'carriers', 'consignees', 'shippers'],
     'accounting' => ['items', 'banks', 'customers', 'quotations', 'sale_orders', 'invoices', 'payments_received', 'credit_notes', 'vendors', 'expenses', 'purchase_orders', 'purchases', 'payments_made', 'debit_notes', 'journals', 'accounts'],
-    'crm' => ['leads', 'lead_quotations'],
+    'crm' => ['leads', 'lead_quotations', 'projects', 'jobs', 'job_statuses'],
     'hr' => ['departments', 'designations', 'attendance', 'leave_requests', 'leave_types', 'annual_leave_entitlements', 'payroll_components', 'salary_structures', 'employee_salaries', 'payroll_runs', 'payslips', 'user_documents', 'document_categories', 'air_tickets', 'gratuity_settlements', 'report_hr'],
 ];
 

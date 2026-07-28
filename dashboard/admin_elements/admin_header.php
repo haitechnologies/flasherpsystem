@@ -524,29 +524,37 @@ $quickAccessSystemMap = [
 	'Shipping' => 'shipping',
 ];
 
-$adminHeaderQuickAccessSections = array_values(array_filter($adminHeaderQuickAccessSections, function ($section) use ($quickAccessSystemMap) {
-	$title = (string)($section['title'] ?? '');
-	$mapped = $quickAccessSystemMap[$title] ?? null;
-	if ($mapped === null) {
-		return true;
-	}
-
-	// Check subscription-level access
-	if (!dashboardHasSystemAccess($mapped)) {
-		return false;
-	}
-
-	// Check user has view permission for at least one module in this section
-	$links = $section['links'] ?? [];
-	foreach ($links as $link) {
-		$perm = $link['perm'] ?? null;
-		if ($perm && function_exists('granted_') && granted_('view', $perm)) {
+// For role_id=5 (Accounts), show only the Accounting section in mega menu
+$currentRoleId = $session_role_id;
+if ((int)$currentRoleId === 5) {
+	$adminHeaderQuickAccessSections = array_values(array_filter($adminHeaderQuickAccessSections, function ($section) {
+		return strcasecmp((string)($section['title'] ?? ''), 'Accounting') === 0;
+	}));
+} else {
+	$adminHeaderQuickAccessSections = array_values(array_filter($adminHeaderQuickAccessSections, function ($section) use ($quickAccessSystemMap) {
+		$title = (string)($section['title'] ?? '');
+		$mapped = $quickAccessSystemMap[$title] ?? null;
+		if ($mapped === null) {
 			return true;
 		}
-	}
 
-	return false;
-}));
+		// Check subscription-level access
+		if (!dashboardHasSystemAccess($mapped)) {
+			return false;
+		}
+
+		// Check user has view permission for at least one module in this section
+		$links = $section['links'] ?? [];
+		foreach ($links as $link) {
+			$perm = $link['perm'] ?? null;
+			if ($perm && function_exists('granted_') && granted_('view', $perm)) {
+				return true;
+			}
+		}
+
+		return false;
+	}));
+}
 
 $systemsMegaSections = array_values(array_filter($adminHeaderQuickAccessSections, function ($section) {
 	return strcasecmp((string)($section['title'] ?? ''), 'System') !== 0;

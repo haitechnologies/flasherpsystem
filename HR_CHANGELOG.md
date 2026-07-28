@@ -160,6 +160,15 @@ and this project uses **date-based versioning** (`YYYY-MM-DD`).
 ## [2026-07-28]
 
 ### Added
+- `database/migrations/accounts_role_migration_20260728.sql`: Revoke all non-accounting module permissions for Accounts role (id=5). Keep only accounting modules + projects/jobs/job_statuses.
+
+### Changed
+- `dashboard/index.php`: Redirect role_id=5 to `dashboard_accounting.php`.
+- `dashboard/admin_elements/sidebar.php`: Added `projects`, `jobs`, `job_statuses` to `$sectionModuleMap['crm']` for sidebar visibility.
+- `dashboard/admin_elements/admin_header.php`: Mega menu now shows only "Accounting" section for role_id=5.
+- `accounts_role_scoping_plan.md`: Plan document saved at project root.
+
+### Added
 - `.opencode/skills/create-crud/SKILL.md`: 7-step CRUD module creation skill (Model → Repository → Service → Controller → View → DataTable → Registration).
 - `.opencode/skills/migrate-repo/SKILL.md`: 8-step migration workflow for procedural-to-layered architecture conversion.
 - `.opencode/skills/fix-sql/SKILL.md`: SQL convention violation fixer (SELECT *, hard DELETE, raw mysqli, missing org_id, interpolation).
@@ -169,6 +178,8 @@ and this project uses **date-based versioning** (`YYYY-MM-DD`).
 ### Changed
 - `docs/AGENTS.md`: Removed Skills table (replaced by actual `.opencode/skills/` files — loaded on-demand via `skill` tool) and Form Partials reference table (agents can read `resources/views/` directly).
 - `opencode.json`: Lowered `compaction.tail_turns` 20→12 (triggers auto-compaction sooner), reduced `tool_output.max_lines` 200→100 and `max_bytes` 8192→4096 (less blob context), added `experimental.primary_tools` (reduced tool definition tokens).
+- `composer.lock`: Updated to include `phpunit/phpunit ^11.0` and 27 dependency packages.
+- Cleaned up stale `.md` files in `.opencode/skills/` (remnants of prior skill setup).
 
 ### Fixed
 - `.vscode/settings.json`: Corrected `phpunit.args` path from `tests/phpunit.xml` to `phpunit.xml`.
