@@ -65,10 +65,10 @@ class JobController extends BaseController
         } catch (ValidationException $e) {
             $error = current($e->getErrors());
             flash_error($error);
-            return Response::redirect("jobs.php?id=$id&action=edit_jobs");
+            return Response::redirect("jobs.php?id=$id&action=edit_jobs&error_message=" . urlencode($error));
         } catch (\Throwable $e) {
             flash_error($e->getMessage());
-            return Response::redirect("jobs.php?id=$id&action=edit_jobs");
+            return Response::redirect("jobs.php?id=$id&action=edit_jobs&error_message=" . urlencode($e->getMessage()));
         }
     }
 
@@ -84,10 +84,10 @@ class JobController extends BaseController
         } catch (ValidationException $e) {
             $error = current($e->getErrors());
             flash_error($error);
-            return Response::redirect("jobs.php");
+            return Response::redirect("jobs.php?error_message=" . urlencode($error));
         } catch (\Throwable $e) {
             flash_error($e->getMessage());
-            return Response::redirect("jobs.php");
+            return Response::redirect("jobs.php?error_message=" . urlencode($e->getMessage()));
         }
     }
 
@@ -193,11 +193,6 @@ class JobController extends BaseController
         $session_user_id = $this->userId;
         $session_role_id = $this->roleId;
         $error_message = $request->getString('error_message');
-        if (empty($error_message)) {
-            foreach (\App\Core\FlashMessage::all() as $fm) {
-                if ($fm['type'] === 'danger') { $error_message = $fm['message']; break; }
-            }
-        }
         $action = $request->getString('action');
 
         // Default values
