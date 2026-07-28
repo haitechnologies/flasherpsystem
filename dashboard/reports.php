@@ -3,8 +3,8 @@ use App\Core\DB;
 
 include('admin_elements/admin_header.php');
 
-$module = 'statistics';
-$module_caption = 'Statistics';
+$module = 'journals';
+$module_caption = 'Reports - Accounts';
 $tbl_name = $tbl_prefix . $module;
 $error_message = '';
 $success_message = '';
