@@ -106,8 +106,7 @@ tests/
 # ============================================================
 scripts/
 backups/
-migrations/
-# database/ — removed from gitignore to deploy migrations
+# database/ (replaced by migrations/ at project root)
 
 # ============================================================
 # GENERATED / TEMPORARY FILES

@@ -22,6 +22,8 @@ WHERE p.role_id = 5
     -- Accounting setup & reporting
     'journals', 'accounts', 'accounts_report_categories', 'accounts_report_subcategories',
     'tax_treatments', 'payment_terms', 'currencies', 'payment_methods', 'account_types',
+    -- General
+    'email_history',
     -- Projects/Jobs (sidebar visibility)
     'projects', 'jobs', 'job_statuses'
   );
