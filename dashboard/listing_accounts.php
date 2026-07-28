@@ -164,6 +164,7 @@ if (isset($_REQUEST['type']) && !empty($_REQUEST['type'])) {
 											// Recursive function to print accounts and their children
 											function renderAccounts($mysqli, $parentId = null, $level = 0, $type = null)
 											{
+												global $module_id;
 												// $indent = '';
 												// if ($level > 2){
 												$indent = str_repeat("&nbsp;&nbsp;&nbsp;&nbsp;", $level); // indentation for nested levels
