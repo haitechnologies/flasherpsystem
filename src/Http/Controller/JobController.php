@@ -461,7 +461,7 @@ class JobController extends BaseController
             $servicesList = [];
         }
         try {
-            $countriesList = $this->db->fetchAll("SELECT id, country FROM `" . DB::PREFIX . "geo_countries` WHERE is_active=1 ORDER BY country");
+            $countriesList = $this->db->fetchAll("SELECT id, country FROM `" . DB::GEO_COUNTRIES . "` WHERE is_active=1 ORDER BY country");
         } catch (\Throwable $e) {
             $countriesList = [];
         }
