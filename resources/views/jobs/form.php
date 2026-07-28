@@ -395,6 +395,34 @@ include 'admin_elements/admin_header.php';
                         <div class="col-lg-8">
                             <div class="card">
                                 <div class="card-header d-flex align-items-center">
+                                    <h6 class="mb-0">Notes &amp; Status</h6>
+                                </div>
+                                <div class="card-body">
+                                    <?php $field = ['name'=>'subject', 'label'=>'Subject:', 'value'=>$subject]; include 'admin_elements/form_field_text.php'; ?>
+
+                                    <?php $field = ['name'=>'terms_and_conditions', 'label'=>'Terms &amp; Conditions:', 'value'=>$terms_and_conditions]; include 'admin_elements/form_field_textarea.php'; ?>
+
+                                    <?php $field = ['name'=>'customer_notes', 'label'=>'Customer Notes:', 'value'=>$customer_notes]; include 'admin_elements/form_field_textarea.php'; ?>
+
+                                    <?php $field = ['name'=>'special_comments', 'label'=>'Special Comments:', 'value'=>$special_comments]; include 'admin_elements/form_field_textarea.php'; ?>
+
+                                    <?php $field = ['name'=>'notes', 'label'=>'Notes:', 'value'=>$notes]; include 'admin_elements/form_field_textarea.php'; ?>
+
+                                    <div class="row mb-2">
+                                        <div class="col-lg-12">
+                                            <div class="form-check form-switch mt-2">
+                                                <input type="checkbox" class="form-check-input form-check-input-success" name="publish" id="publish" <?php echo $is_active == 1 ? 'checked="checked"' : ''; ?>>
+                                                <label class="form-check-label fw-semibold" for="publish">Active</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-4">
+                            <div class="card">
+                                <div class="card-header d-flex align-items-center">
                                     <h6 class="mb-0">Totals</h6>
                                 </div>
                                 <div class="card-body">
@@ -422,34 +450,6 @@ include 'admin_elements/admin_header.php';
                                     <?php $field = ['name'=>'grand_tax', 'label'=>'Grand Tax:', 'value'=>$grand_tax, 'readonly'=>true, 'extra_class'=>'bg-light bg-opacity-75 text-end']; include 'admin_elements/form_field_text.php'; ?>
 
                                     <?php $field = ['name'=>'grand_total', 'label'=>'Grand Total:', 'value'=>$grand_total, 'readonly'=>true, 'extra_class'=>'bg-light bg-opacity-75 text-end fw-bold']; include 'admin_elements/form_field_text.php'; ?>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="col-lg-4">
-                            <div class="card">
-                                <div class="card-header d-flex align-items-center">
-                                    <h6 class="mb-0">Notes &amp; Status</h6>
-                                </div>
-                                <div class="card-body">
-                                    <?php $field = ['name'=>'subject', 'label'=>'Subject:', 'value'=>$subject]; include 'admin_elements/form_field_text.php'; ?>
-
-                                    <?php $field = ['name'=>'terms_and_conditions', 'label'=>'Terms &amp; Conditions:', 'value'=>$terms_and_conditions]; include 'admin_elements/form_field_textarea.php'; ?>
-
-                                    <?php $field = ['name'=>'customer_notes', 'label'=>'Customer Notes:', 'value'=>$customer_notes]; include 'admin_elements/form_field_textarea.php'; ?>
-
-                                    <?php $field = ['name'=>'special_comments', 'label'=>'Special Comments:', 'value'=>$special_comments]; include 'admin_elements/form_field_textarea.php'; ?>
-
-                                    <?php $field = ['name'=>'notes', 'label'=>'Notes:', 'value'=>$notes]; include 'admin_elements/form_field_textarea.php'; ?>
-
-                                    <div class="row mb-2">
-                                        <div class="col-lg-12">
-                                            <div class="form-check form-switch mt-2">
-                                                <input type="checkbox" class="form-check-input form-check-input-success" name="publish" id="publish" <?php echo $is_active == 1 ? 'checked="checked"' : ''; ?>>
-                                                <label class="form-check-label fw-semibold" for="publish">Active</label>
-                                            </div>
-                                        </div>
-                                    </div>
                                 </div>
                             </div>
                         </div>
