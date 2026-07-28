@@ -3,7 +3,7 @@
 use App\Security\Roles;
 include('admin_elements/admin_header.php');
 
-$module = 'statistics';
+$module = 'journals';
 $module_caption = 'Setup';
 $error_message = '';
 $success_message = '';
