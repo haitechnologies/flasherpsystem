@@ -171,12 +171,14 @@ $photo = getTableAttr('photo', $tbl_name, $id);
                 <h5 class="mb-0"><?php if (($action == "edit_$module" || $action == "update_$module" || $action == "change_password") && !empty($id)) { ?>Edit<?php } else { ?>New<?php } ?> <?php echo $module_caption; ?></h5>
             </div>
 
+            <?php if (function_exists('has_full_access') && has_full_access()): ?>
             <div class="my-1 d-inline-flex align-items-center me-2">
                 <div class="form-check form-check-inline form-switch mb-0">
                     <input type="checkbox" class="form-check-input form-check-input-success" name="is_active" id="is_active" <?php if ($is_active == '1') { ?>checked="checked" <?php } ?> form="frmusers">
                     <label class="form-check-label" for="is_active">Active</label>
                 </div>
             </div>
+            <?php endif; ?>
             <div class="my-1">
                 <button type="submit" form="frmusers" class="btn btn-primary btn-sm me-2">Save</button>
                 <a href="listing_<?php echo $module; ?>.php" class="btn btn-light btn-sm">Cancel</a>
