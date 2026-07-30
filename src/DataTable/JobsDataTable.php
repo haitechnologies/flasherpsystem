@@ -66,7 +66,7 @@ class JobsDataTable extends BaseDataTable
     protected function getActionButtons($id, $module)
     {
         $actions = '';
-        $actions .= '<a href="view_job.php?job_id=' . (int)$id . '" title="View PDF" class="action-btn action-view"><i class="ph-file-pdf"></i></a>';
+        $actions .= '<a href="pdf_job.php?job_id=' . (int)$id . '" title="View PDF" class="action-btn action-view" target="_blank"><i class="ph-file-pdf"></i></a>';
         if ($this->isGranted('edit', $module)) {
             $actions .= ' ' . ActionButtonHelper::editButton((int)$id, 'jobs.php', $module, 'Edit', false);
         }
