@@ -79,9 +79,11 @@ class JobController extends BaseController
         } catch (ValidationException $e) {
             $error = current($e->getErrors());
             flash_error($error);
+            $_SESSION['__jobs_old_input'] = $_POST;
             return Response::redirect("jobs.php?id=$id&action=edit_jobs&error_message=" . urlencode($error));
         } catch (\Throwable $e) {
             flash_error($e->getMessage());
+            $_SESSION['__jobs_old_input'] = $_POST;
             return Response::redirect("jobs.php?id=$id&action=edit_jobs&error_message=" . urlencode($e->getMessage()));
         }
     }
@@ -104,9 +106,11 @@ class JobController extends BaseController
         } catch (ValidationException $e) {
             $error = current($e->getErrors());
             flash_error($error);
+            $_SESSION['__jobs_old_input'] = $_POST;
             return Response::redirect("jobs.php?error_message=" . urlencode($error));
         } catch (\Throwable $e) {
             flash_error($e->getMessage());
+            $_SESSION['__jobs_old_input'] = $_POST;
             return Response::redirect("jobs.php?error_message=" . urlencode($e->getMessage()));
         }
     }
@@ -524,6 +528,69 @@ class JobController extends BaseController
                 } catch (\Throwable $e) {
                     $error_message = $e->getMessage();
                 }
+            }
+        }
+
+        // Restore old input after failed validation
+        if (session_status() === PHP_SESSION_NONE) {
+            @session_start();
+        }
+        if (isset($_SESSION['__jobs_old_input'])) {
+            $old = $_SESSION['__jobs_old_input'];
+            unset($_SESSION['__jobs_old_input']);
+
+            foreach ([
+                'warehouse_id', 'customer_id', 'quotation_id', 'job_date', 'job_status',
+                'job_seq', 'job_no', 'job_ref_no', 'sales_person', 'sales_person_from_lead',
+                'currency', 'exchange_rate', 'cs_agent', 'incoterm', 'email',
+                'supplier_rate', 'estimated_net_profit', 'estimated_invoice_amount',
+                'etd', 'eta', 'carrier', 'vessel_name', 'vessel_departure_date',
+                'flight_no', 'flight_departure_date', 'job_completion_date',
+                'payment_terms', 'hawb', 'mawb', 'estimated_cost_amount', 'declaration_no',
+                'gross_weight', 'volume_weight', 'chargeable_weight', 'no_of_pieces',
+                'commodity_type', 'no_of_containers', 'insurance_needed', 'container_type',
+                'temperature_control_required', 'container_number', 'special_comments',
+                'landing_country', 'landing_port', 'loading_place',
+                'billing_city', 'billing_state', 'billing_code', 'billing_country',
+                'destination_country', 'destination_port', 'fdp',
+                'shipping_city', 'shipping_state', 'shipping_code', 'shipping_country',
+                'subject', 'terms_and_conditions',
+                'grand_subtotal', 'grand_discount_type', 'grand_discount_type_value',
+                'grand_discount_amount', 'grand_after_discount',
+                'customer_notes', 'grand_tax', 'grand_total',
+                'happy_customer', 'unhappy_reason', 'shipment_on_time', 'referral',
+                'notes', 'quote_id', 'project_id', 'books_customer_id',
+            ] as $key) {
+                if (isset($old[$key])) {
+                    $$key = is_array($old[$key]) ? implode(', ', $old[$key]) : (string)$old[$key];
+                }
+            }
+
+            if (isset($old['tags'])) {
+                $tags = is_array($old['tags']) ? implode(', ', $old['tags']) : $old['tags'];
+                $tags_arr = is_array($old['tags']) ? $old['tags'] : explode(', ', $tags);
+            }
+            if (isset($old['services'])) {
+                $services = is_array($old['services']) ? implode(', ', $old['services']) : $old['services'];
+                $services_arr = is_array($old['services']) ? $old['services'] : explode(', ', $services);
+            }
+            if (isset($old['shipment_type'])) {
+                $shipment_type = is_array($old['shipment_type']) ? implode(', ', $old['shipment_type']) : $old['shipment_type'];
+                $shipment_type_arr = is_array($old['shipment_type']) ? $old['shipment_type'] : explode(', ', $shipment_type);
+            }
+            if (isset($old['transport_mode'])) {
+                $transport_mode = is_array($old['transport_mode']) ? implode(', ', $old['transport_mode']) : $old['transport_mode'];
+            }
+
+            if (isset($old['dim_length']) && is_array($old['dim_length'])) {
+                $dim_length_arr = $old['dim_length'];
+                $dim_width_arr = $old['dim_width'] ?? [];
+                $dim_height_arr = $old['dim_height'] ?? [];
+                $dim_pcs_arr = $old['dim_pcs'] ?? [];
+                $dim_volume_arr = $old['dim_volume'] ?? [];
+                $dim_cbm_arr = $old['dim_cbm'] ?? [];
+                $item_dim_id_arr = $old['item_dim_id'] ?? [];
+                $total_rows = count($dim_length_arr);
             }
         }
 
