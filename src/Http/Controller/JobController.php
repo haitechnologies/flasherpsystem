@@ -840,10 +840,10 @@ class JobController extends BaseController
                 return Response::json(['success' => true, 'id' => (int)$existing['id'], 'carrier_name' => $name]);
             }
 
-            $newId = $this->db->insert(DB::CARRIERS, [
-                'carrier_name' => $name,
-                'organization_id' => $this->orgId,
-            ]);
+            $newId = $this->db->insert(
+                "INSERT INTO `" . DB::CARRIERS . "` (carrier_name, organization_id) VALUES (:carrier_name, :organization_id)",
+                ['carrier_name' => $name, 'organization_id' => $this->orgId]
+            );
             return Response::json(['success' => true, 'id' => $newId, 'carrier_name' => $name]);
         } catch (\Throwable $e) {
             return Response::json(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
