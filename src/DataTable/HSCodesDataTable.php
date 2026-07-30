@@ -58,14 +58,19 @@ class HSCodesDataTable extends BaseDataTable
             return '';
         }
 
-        $this->params['search_val'] = '%' . $searchValue . '%';
-        if ($this->hasTextTable()) {
-            return "AND (h.code LIKE :search_val OR h.old_code LIKE :search_val 
-                    OR te.description LIKE :search_val
-                    OR ta.description LIKE :search_val)";
+        $fields = $this->hasTextTable()
+            ? ['h.code', 'h.old_code', 'te.description', 'ta.description']
+            : ['h.code', 'h.old_code'];
+
+        $searchVal = '%' . $searchValue . '%';
+        $conditions = [];
+        foreach ($fields as $i => $field) {
+            $key = 'search_val_' . $i;
+            $conditions[] = "{$field} LIKE :{$key}";
+            $this->params[$key] = $searchVal;
         }
 
-        return "AND (h.code LIKE :search_val OR h.old_code LIKE :search_val)";
+        return 'AND (' . implode(' OR ', $conditions) . ')';
     }
 
     protected function buildOrderClause($requestData)

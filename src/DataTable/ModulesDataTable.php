@@ -37,10 +37,15 @@ class ModulesDataTable extends BaseDataTable
             return '';
         }
 
-        $this->params['search_val'] = '%' . $searchValue . '%';
-        return "AND (module_name LIKE :search_val 
-            OR slug LIKE :search_val 
-            OR systems LIKE :search_val)";
+        $searchVal = '%' . $searchValue . '%';
+        $fields = ['module_name', 'slug', 'systems'];
+        $conditions = [];
+        foreach ($fields as $i => $field) {
+            $key = 'search_val_' . $i;
+            $conditions[] = "{$field} LIKE :{$key}";
+            $this->params[$key] = $searchVal;
+        }
+        return 'AND (' . implode(' OR ', $conditions) . ')';
     }
 
     protected function buildOrderClause($requestData)

@@ -212,11 +212,12 @@ abstract class BaseDataTable
         }
 
         $conditions = [];
-        $searchParamKey = 'search_val';
-        $this->params[$searchParamKey] = '%' . $searchValue . '%';
+        $searchValue = '%' . $searchValue . '%';
 
-        foreach ($this->searchFields as $field) {
-            $conditions[] = "{$field} LIKE :{$searchParamKey}";
+        foreach ($this->searchFields as $i => $field) {
+            $key = 'search_val_' . $i;
+            $conditions[] = "{$field} LIKE :{$key}";
+            $this->params[$key] = $searchValue;
         }
 
         return 'AND (' . implode(' OR ', $conditions) . ')';

@@ -71,11 +71,12 @@ class CustomerCommentsDataTable extends BaseDataTable
             return '';
         }
 
-        $searchKey = 'search_val';
-        $this->params[$searchKey] = '%' . $searchValue . '%';
+        $searchValue = '%' . $searchValue . '%';
         $conditions = [];
-        foreach ($this->searchFields as $field) {
-            $conditions[] = "{$field} LIKE :{$searchKey}";
+        foreach ($this->searchFields as $i => $field) {
+            $key = 'search_val_' . $i;
+            $conditions[] = "{$field} LIKE :{$key}";
+            $this->params[$key] = $searchValue;
         }
         return 'AND (' . implode(' OR ', $conditions) . ')';
     }
