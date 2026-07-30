@@ -180,6 +180,7 @@ $d_container_type   = s__($container_type_label);
 $d_container_number = s__((string)($row['container_number'] ?? ''));
 $d_gross_weight     = s__((string)($row['gross_weight'] ?? ''));
 $d_volume_weight    = s__((string)($row['volume_weight'] ?? ''));
+$d_cbm              = s__((string)($row['cbm'] ?? ''));
 $d_chargeable_weight = s__((string)($row['chargeable_weight'] ?? ''));
 $d_no_pieces        = s__((string)($row['no_of_pieces'] ?? ''));
 $d_insurance        = ((string)($row['insurance_needed'] ?? '') === '1') ? 'Yes' : 'No';
@@ -481,8 +482,12 @@ $tbl = <<<EOD
     <td style="border:1px solid #f1f1f1;"><span style="color:#555;">$d_volume_weight</span></td>
 </tr>
 <tr>
+    <td style="background-color:#e8f7f4; border:1px solid #f1f1f1;"><span style="color:#555;">CBM</span></td>
+    <td style="border:1px solid #f1f1f1;"><span style="color:#555;">$d_cbm</span></td>
     <td style="background-color:#e8f7f4; border:1px solid #f1f1f1;"><span style="color:#555;">Chargeable Weight</span></td>
     <td style="border:1px solid #f1f1f1;"><span style="color:#555;">$d_chargeable_weight</span></td>
+</tr>
+<tr>
     <td style="background-color:#e8f7f4; border:1px solid #f1f1f1;"><span style="color:#555;">No of Pieces</span></td>
     <td style="border:1px solid #f1f1f1;"><span style="color:#555;">$d_no_pieces</span></td>
 </tr>

@@ -166,6 +166,7 @@ class JobController extends BaseController
             'declaration_no' => $request->getString('declaration_no'),
             'gross_weight' => $request->getString('gross_weight'),
             'volume_weight' => $request->getString('volume_weight'),
+            'cbm' => $request->getString('cbm'),
             'chargeable_weight' => $request->getString('chargeable_weight'),
             'no_of_pieces' => $request->getString('no_of_pieces'),
             'commodity_type' => $request->getString('commodity_type'),
@@ -322,6 +323,7 @@ class JobController extends BaseController
         $declaration_no = '';
         $gross_weight = '';
         $volume_weight = '';
+        $cbm = '';
         $chargeable_weight = '';
         $no_of_pieces = '';
         $commodity_type = '0';
@@ -455,6 +457,7 @@ class JobController extends BaseController
                     $declaration_no = $job->declarationNo;
                     $gross_weight = (string)$job->grossWeight;
                     $volume_weight = (string)$job->volumeWeight;
+                    $cbm = (string)$job->cbm;
                     $chargeable_weight = (string)$job->chargeableWeight;
                     $no_of_pieces = (string)$job->noOfPieces;
                     $commodity_type = (string)$job->commodityType;
@@ -705,6 +708,7 @@ class JobController extends BaseController
             'declaration_no' => $declaration_no,
             'gross_weight' => $gross_weight,
             'volume_weight' => $volume_weight,
+            'cbm' => $cbm,
             'chargeable_weight' => $chargeable_weight,
             'no_of_pieces' => $no_of_pieces,
             'commodity_type' => $commodity_type,

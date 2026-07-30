@@ -46,6 +46,7 @@ declare(strict_types=1);
  * @var string $declaration_no
  * @var string $gross_weight
  * @var string $volume_weight
+ * @var string $cbm
  * @var string $chargeable_weight
  * @var string $no_of_pieces
  * @var string $commodity_type
@@ -549,6 +550,8 @@ include 'admin_elements/admin_header.php';
                                     <?php $field = ['name'=>'gross_weight', 'label'=>'Gross Weight:', 'value'=>$gross_weight, 'type'=>'number']; include 'admin_elements/form_field_text.php'; ?>
 
                                     <?php $field = ['name'=>'volume_weight', 'label'=>'Volume Weight:', 'value'=>$volume_weight, 'type'=>'number']; include 'admin_elements/form_field_text.php'; ?>
+
+                                    <?php $field = ['name'=>'cbm', 'label'=>'CBM:', 'value'=>$cbm, 'type'=>'number', 'step'=>'0.0001']; include 'admin_elements/form_field_text.php'; ?>
 
                                     <?php $field = ['name'=>'chargeable_weight', 'label'=>'Chargeable Weight:', 'value'=>$chargeable_weight, 'type'=>'number']; include 'admin_elements/form_field_text.php'; ?>
 

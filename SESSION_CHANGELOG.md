@@ -54,6 +54,33 @@ and this project uses **date-based versioning** (`YYYY-MM-DD`).
    UPDATE `erp_jobs` SET `job_no` = CONCAT('JB-', LPAD(id, 4, '0')) WHERE `job_no` IS NULL OR `job_no` = '';
    ```
 
+### Added
+- `resources/views/jobs/form.php`: New **CBM** decimal input field after Volume Weight in Commodity Details card.
+- `dashboard/view_job.php`: CBM field display added after Volume Weight.
+- `dashboard/pdf_job.php`: CBM field added to Commodity Details section (after Volume Weight).
+
+### Changed
+- `src/Model/Job.php`: Added `public float $cbm` property + `'cbm' => $this->cbm` in `toArray()`.
+- `src/Repository/JobRepository.php`: Added `cbm` to all 3 SELECT queries, INSERT (columns + values), UPDATE SET, and `mapRowToJob()`.
+- `src/Service/JobService.php`: Added `cbm:` to `createJob()` and `updateJob()` DTO construction.
+- `src/Http/Controller/JobController.php`: Added `'cbm'` to `buildJobData()`, defaults, fetched values, and template data.
+
+### Migrations Required on Live
+1. **cbm column** — Run on live DB:
+   ```sql
+   ALTER TABLE `erp_jobs` ADD `cbm` DECIMAL(10,4) NOT NULL DEFAULT 0.0000 AFTER `volume_weight`;
+   ```
+
+2. **commodity_type column** — Run on live DB:
+   ```sql
+   ALTER TABLE `erp_jobs` MODIFY `commodity_type` VARCHAR(255) DEFAULT NULL;
+   ```
+
+3. **Job# population** — Run on live DB (for any records created after prior migration):
+   ```sql
+   UPDATE `erp_jobs` SET `job_no` = CONCAT('JB-', LPAD(id, 4, '0')) WHERE `job_no` IS NULL OR `job_no` = '';
+   ```
+
 ### Session Maintenance Instructions
 - **Every session must append all changes to this file under the current date** (`YYYY-MM-DD`) before finishing.
 - Group entries under `### Added`, `### Changed`, `### Fixed`, `### Migration Applied`, `### Migrations Required on Live` as appropriate.

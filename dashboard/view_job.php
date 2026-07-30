@@ -170,7 +170,7 @@ $carrier = $vessel_name = $vessel_departure_date = '';
 $flight_no = $flight_departure_date = '';
 $job_completion_date = $payment_terms = $hawb = $mawb = '';
 $estimated_cost_amount = $declaration_no = '';
-$gross_weight = $volume_weight = $chargeable_weight = $no_of_pieces = '';
+$gross_weight = $volume_weight = $cbm = $chargeable_weight = $no_of_pieces = '';
 $commodity_type = '';
 $no_of_containers = $insurance_needed = $container_type = '';
 $temperature_control_required = $container_number = $special_comments = '';
@@ -285,6 +285,7 @@ if (!empty($id) && (is_SystemAdmin() || is_SuperAdmin() || is_role() == 'account
 
     $gross_weight               = s__($row['gross_weight']);
     $volume_weight              = s__($row['volume_weight']);
+    $cbm                        = s__($row['cbm'] ?? '');
     $chargeable_weight          = s__($row['chargeable_weight']);
     $no_of_pieces               = s__($row['no_of_pieces']);
     $commodity_type             = s__($row['commodity_type']);
@@ -972,6 +973,13 @@ if ($total_rows == 0) $total_rows = 1;
                                             <label class="col-lg-3 col-form-label">Volume Weight: </label>
                                             <div class="col-lg-9 mt-2">
                                                 <?php echo $volume_weight; ?>
+                                            </div>
+                                        </div>
+
+                                        <div class="row">
+                                            <label class="col-lg-3 col-form-label">CBM: </label>
+                                            <div class="col-lg-9 mt-2">
+                                                <?php echo $cbm; ?>
                                             </div>
                                         </div>
 
