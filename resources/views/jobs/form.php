@@ -488,6 +488,19 @@ include 'admin_elements/admin_header.php';
                             <div>
                                 <span id="span_add_item_row"><a href="#" onclick="add_item_row(); return false;"><span class="badge bg-primary">Add New Row</span></a></span>
                             </div>
+
+                            <div class="mt-3">
+                                <div class="alert alert-info bg-info bg-opacity-10 border-info border-opacity-25 mb-0 py-2 px-3">
+                                    <div class="d-flex align-items-start">
+                                        <div class="me-2 mt-1"><i class="ph-info ph-lg text-info"></i></div>
+                                        <div class="small lh-lg">
+                                            <span class="fw-semibold">Volume Weight</span> = L &times; W &times; H (cm&sup3;)<br>
+                                            <span class="fw-semibold">CBM</span> = (L &times; W &times; H &times; Pcs) &divide; 1,000,000<br>
+                                            <span class="fw-semibold">Total CBM</span> = Sum of all row CBMs
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
