@@ -1518,10 +1518,11 @@ function convert_number_to_words($num)
     */
     function getUsernameByID($id){
 
+      if (empty($id)) return '';
       $mysqli = $GLOBALS['DB']['MSQLI'];
       $result = $mysqli->query("SELECT email FROM `".$GLOBALS['TBL']['PREFIX']. "users` WHERE id='".$id."'");
       $row = $result->fetch_array();
-          return $row[0];
+      return ($row !== null) ? $row[0] : '';
 
     }
  
