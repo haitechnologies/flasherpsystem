@@ -1,6 +1,7 @@
 <?php
 
 use App\Core\DB;
+use App\Core\Session;
 use App\Service\JournalService;
 include('admin_elements/admin_header.php');
 

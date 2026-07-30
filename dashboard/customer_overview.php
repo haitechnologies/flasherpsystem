@@ -5,6 +5,7 @@ declare(strict_types=1);
 include('admin_elements/admin_header.php');
 
 use App\Core\Container;
+use App\Core\Session;
 use App\Service\CustomerService;
 use App\Exception\NotFoundException;
 use App\Security\InputValidator;
