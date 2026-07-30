@@ -54,6 +54,12 @@ class JobController extends BaseController
             $action === 'ajax_ports' => $this->handleAjaxPorts($request),
             $request->isPost() && $action === 'ajax_add_carrier' => $this->handleAddCarrier($request),
 
+            $request->isPost() && $action === 'send_for_approval' && $id > 0
+                => $this->handleSendForApproval($request, $id),
+            $request->isPost() && $action === 'approve_job' && $id > 0
+                => $this->handleApproveJob($request, $id),
+            $request->isPost() && $action === 'reject_job' && $id > 0
+                => $this->handleRejectJob($request, $id),
             $request->isPost() && $action === 'update_jobs' && $id > 0 && $this->canEdit()
                 => $this->handleUpdate($request, $id),
             $request->isPost() && $action === 'add_jobs' && $this->canCreate()
@@ -64,6 +70,20 @@ class JobController extends BaseController
 
     private function handleUpdate(Request $request, int $id): Response
     {
+        try {
+            $jobStatusRaw = $this->db->fetchOne(
+                "SELECT job_status FROM `" . DB::JOBS . "` WHERE id = :id AND organization_id = :org_id",
+                ['id' => $id, 'org_id' => $this->orgId]
+            );
+            $currentJobStatus = $jobStatusRaw ? (int)$jobStatusRaw['job_status'] : 0;
+
+            if ($this->jobService->isPendingApproval($currentJobStatus) && Roles::isOperations($this->roleId)) {
+                flash_error('This job is under review and cannot be edited.');
+                return Response::redirect("view_job.php?id=$id");
+            }
+        } catch (\Throwable $e) {
+        }
+
         $jobData = $this->buildJobData($request);
 
         try {
@@ -261,13 +281,80 @@ class JobController extends BaseController
 
         try {
             $rows = $this->db->fetchAll(
-                "SELECT id, port_name FROM `" . DB::PORTS . "` WHERE country_id = :country_id AND is_active = 1 ORDER BY port_name",
+                "SELECT id, port_name, port_code FROM `" . DB::PORTS . "` WHERE country_id = :country_id AND is_active = 1 ORDER BY port_name",
                 ['country_id' => $countryId]
             );
-            $result = array_map(fn($r) => ['id' => $r['id'], 'port' => $r['port_name']], $rows);
+            $result = array_map(fn($r) => ['id' => $r['id'], 'port' => ($r['port_code'] ?? '') . ' - ' . $r['port_name']], $rows);
             return Response::json($result);
         } catch (\Throwable $e) {
             return Response::json([]);
+        }
+    }
+
+    private function handleSendForApproval(Request $request, int $id): Response
+    {
+        try {
+            $job = $this->jobService->getJob($id, $this->orgId);
+
+            if ($this->jobService->isPendingApproval((int)$job->jobStatus)) {
+                flash_error('This job is already pending approval.');
+                return Response::redirect("view_job.php?id=$id");
+            }
+
+            $this->jobService->sendForApproval($id, $this->orgId);
+            flash_success('Job has been sent for approval. Accounts department will review it.');
+            return Response::redirect("view_job.php?id=$id");
+        } catch (\Throwable $e) {
+            flash_error($e->getMessage());
+            return Response::redirect("view_job.php?id=$id");
+        }
+    }
+
+    private function handleApproveJob(Request $request, int $id): Response
+    {
+        if (!Roles::isAccounts($this->roleId) && !Roles::hasFullAccess($this->roleId)) {
+            flash_error('Only Accounts department can approve jobs.');
+            return Response::redirect("view_job.php?id=$id");
+        }
+
+        try {
+            $job = $this->jobService->getJob($id, $this->orgId);
+
+            if (!$this->jobService->isPendingApproval((int)$job->jobStatus)) {
+                flash_error('This job is not pending approval.');
+                return Response::redirect("view_job.php?id=$id");
+            }
+
+            $this->jobService->approveJob($id, $this->orgId);
+            flash_success('Job has been approved successfully.');
+            return Response::redirect("view_job.php?id=$id");
+        } catch (\Throwable $e) {
+            flash_error($e->getMessage());
+            return Response::redirect("view_job.php?id=$id");
+        }
+    }
+
+    private function handleRejectJob(Request $request, int $id): Response
+    {
+        if (!Roles::isAccounts($this->roleId) && !Roles::hasFullAccess($this->roleId)) {
+            flash_error('Only Accounts department can reject jobs.');
+            return Response::redirect("view_job.php?id=$id");
+        }
+
+        try {
+            $job = $this->jobService->getJob($id, $this->orgId);
+
+            if (!$this->jobService->isPendingApproval((int)$job->jobStatus)) {
+                flash_error('This job is not pending approval.');
+                return Response::redirect("view_job.php?id=$id");
+            }
+
+            $this->jobService->rejectJob($id, $this->orgId);
+            flash_success('Job has been sent back to draft. Operations can now make changes.');
+            return Response::redirect("view_job.php?id=$id");
+        } catch (\Throwable $e) {
+            flash_error($e->getMessage());
+            return Response::redirect("view_job.php?id=$id");
         }
     }
 
@@ -393,6 +480,21 @@ class JobController extends BaseController
             $canEdit = Roles::hasFullAccess($session_role_id) || $session_user_id === $created_by;
 
             if ($canEdit) {
+                try {
+                    $jobStatusRaw = $this->db->fetchOne(
+                        "SELECT job_status FROM `" . DB::JOBS . "` WHERE id = :id AND organization_id = :org_id",
+                        ['id' => $id, 'org_id' => $this->orgId]
+                    );
+                    $currentJobStatus = $jobStatusRaw ? (int)$jobStatusRaw['job_status'] : 0;
+
+                    if ($this->jobService->isPendingApproval($currentJobStatus) && Roles::isOperations($session_role_id)) {
+                        flash_error('This job is under review and cannot be edited.');
+                        header('Location: view_job.php?id=' . $id);
+                        exit;
+                    }
+                } catch (\Throwable $e) {
+                }
+
                 try {
                     $job = $this->jobService->getJob($id, $this->orgId);
 
@@ -545,12 +647,12 @@ class JobController extends BaseController
             foreach ([
                 'warehouse_id', 'customer_id', 'quotation_id', 'job_date', 'job_status',
                 'job_seq', 'job_no', 'job_ref_no', 'sales_person', 'sales_person_from_lead',
-                'currency', 'exchange_rate', 'cs_agent', 'incoterm', 'email',
+                'currency', 'exchange_rate', 'job_owner', 'cs_agent', 'incoterm', 'email',
                 'supplier_rate', 'estimated_net_profit', 'estimated_invoice_amount',
                 'etd', 'eta', 'carrier', 'vessel_name', 'vessel_departure_date',
                 'flight_no', 'flight_departure_date', 'job_completion_date',
                 'payment_terms', 'hawb', 'mawb', 'estimated_cost_amount', 'declaration_no',
-                'gross_weight', 'volume_weight', 'chargeable_weight', 'no_of_pieces',
+                'gross_weight', 'volume_weight', 'cbm', 'chargeable_weight', 'no_of_pieces',
                 'commodity_type', 'no_of_containers', 'insurance_needed', 'container_type',
                 'temperature_control_required', 'container_number', 'special_comments',
                 'landing_country', 'landing_port', 'loading_place',
@@ -563,6 +665,7 @@ class JobController extends BaseController
                 'customer_notes', 'grand_tax', 'grand_total',
                 'happy_customer', 'unhappy_reason', 'shipment_on_time', 'referral',
                 'notes', 'quote_id', 'project_id', 'books_customer_id',
+                'approved_time', 'approved_time_resubmission',
             ] as $key) {
                 if (isset($old[$key])) {
                     $$key = is_array($old[$key]) ? implode(', ', $old[$key]) : (string)$old[$key];
@@ -779,6 +882,8 @@ class JobController extends BaseController
             'quotesList' => $quotesList,
             'canCreate' => $this->canCreate(),
             'canEdit' => $this->canEdit(),
+            'draftStatusId' => $this->jobService->getDraftStatusId(),
+            'pendingApprovalStatusId' => $this->jobService->getPendingApprovalStatusId(),
         ]));
     }
 

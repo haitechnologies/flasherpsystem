@@ -69,6 +69,13 @@ phpunit.xml
 opencode.json
 
 # ============================================================
+# SCRATCH / TEMP FILES (delete from repo)
+# ============================================================
+src/main.py
+_tmp_check_modules.php
+__tmp_port.php
+
+# ============================================================
 # DOCUMENTATION & PLANNING (not for production)
 # ============================================================
 docs/
@@ -79,6 +86,7 @@ docs/
 CHANGELOG.md
 !HR_CHANGELOG.md
 !ACCOUNTING_CHANGELOG.md
+!OPERATIONS_CHANGELOG.md
 CHANGE_SUMMARY_EMAIL.md
 CONTRIBUTING.md
 ZKTeco-attendance-integration-plan.md

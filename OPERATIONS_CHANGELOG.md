@@ -1,4 +1,4 @@
-# Session Changelog
+# Operations Changelog
 
 All notable changes from the current session are recorded here.
 
@@ -10,6 +10,13 @@ and this project uses **date-based versioning** (`YYYY-MM-DD`).
 ## [2026-07-30]
 
 ### Added
+- `.opencodeignore`: Excludes assets, vendor, tcpdf, logs, backups from AI context scanning to minimize token costs
+- `docs/archive/job-approval-workflow-plan.md`: Plan document for job approval workflow
+
+### Changed
+- `resources/views/jobs/form.php`: Tag field changed from multi-select (`tags[]`, `multiple=>true`) to single dropdown (`name'=>'tags'`) — matches DB schema (single string) and simplifies UX
+- `.vscode/settings.json`: Filled `php.validate.executablePath` with actual XAMPP PHP path (`G:\xampp\php\php.exe`)
+- `src/Service/JobService.php`: Added `use App\Core\DB;` import (required for `DB::JOB_STATUSES`, `DB::JOBS` constants in new approval methods)
 - `resources/views/jobs/form.php`: Full form layout restructure to match source (flashlogisticsserver). Added dimension items L×W×H table with CBM auto-calculation, total CBM/volume/pieces summary, After Service card (happy_customer, unhappy_reason, shipment_on_time, referral), System Fields card (created_by, modified_by, customer_type, quote_id, books_customer_id, approved_time, project_id), Sales Person from Lead field, Job Seq field, port AJAX population on landing/destination country change
 - `src/Http/Controller/JobController.php`: Added `JobItemService` dependency (`buildJobItemsData()`, dimension items processing in `handleCreate`/`handleUpdate`), `handleAjaxPorts()` endpoint for port population by country, added `item_dim_*_arr`/`total_rows`/`created_by`/`modified_by`/`books_customer_id`/`approved_time`/`approved_time_resubmission` to template data
 - `dashboard/bootstrap.php`: Injected `JobItemService` into `JobController` constructor
@@ -84,14 +91,37 @@ and this project uses **date-based versioning** (`YYYY-MM-DD`).
    UPDATE `erp_jobs` SET `job_no` = CONCAT('JB-', LPAD(id, 4, '0')) WHERE `job_no` IS NULL OR `job_no` = '';
    ```
 
-### Session Maintenance Instructions
+### Fixed
+- `resources/views/jobs/form.php`: Port of Loading (POL) and Port of Destination (POD) PHP pre-population — replaced broken `\App\Core\DB::pdo()->prepare()` → `->fetchAll()`. `Database` wrapper has no `prepare()` method; calls silently failed in `catch (\Throwable $e) {}` block, causing ports to never pre-populate on page load for existing jobs. Both landing_port (line ~604) and destination_port (line ~643) fixed.
+- `.gitignore`: Added `src/main.py`, `_tmp_check_modules.php`, `__tmp_port.php` to scratch/temp section.
+- Git: `git rm --cached src/main.py _tmp_check_modules.php` — scratch files untracked from repo.
+- `src/Http/Controller/JobController.php`: Old-input restoration loop (line ~545) was missing `job_owner`, `cbm`, `approved_time`, `approved_time_resubmission`. After a validation redirect, these fields reverted to defaults — `job_owner` to `'0'`, causing the "Please select Job Owner" error on resubmission. Added all 4 fields to the restored-fields array.
+
+### Added
+- **Job Approval Workflow**: Operations team can now send Draft jobs for Accounts department review via a "Send for Approval" button. While under review, jobs are locked from editing by Operations. Accounts can Approve or Reject the job. See full plan at `docs/archive/job-approval-workflow-plan.md`.
+
+#### Files changed (approval workflow):
+- `src/Service/JobService.php`: Added `sendForApproval()`, `approveJob()`, `rejectJob()`, `isPendingApproval()`, `getDraftStatusId()`, `getApprovedStatusId()`, `getPendingApprovalStatusId()`, `getStatusId()` methods
+- `src/Http/Controller/JobController.php`: Added `handleSendForApproval()`, `handleApproveJob()`, `handleRejectJob()` endpoints; added `pending_approval` gate in `showForm()` and `handleUpdate()` blocking Operations from editing under-review jobs; dispatch updated with 3 new actions
+- `resources/views/jobs/form.php`: Added "Send for Approval" button to Job Status Details card, visible only when job is saved and status is Draft
+- `dashboard/view_job.php`: Added Approve/Reject buttons for Accounts users when status is pending_approval; "Under Review" badge for non-Accounts users; pending_approval status ID lookup
+- `docs/archive/job-approval-workflow-plan.md`: Full implementation plan document
+
+### Migrations Required on Live
+```sql
+INSERT INTO erp_job_statuses (job_status, is_active) VALUES ('pending_approval', 1);
+```
+- `docs/`: Archived 22 stale/irrelevant files into `docs/archive/` (18 stale plans, 2 JSON backups, 1 stale session changelog, 2 already-applied SQL migrations). Removed empty `docs/migrations/` directory. Only 6 active reference files remain: `AGENTS.md`, `ARCHITECTURE.md`, `DATABASE.md`, `MANPOWER_FLOW.md`, `MIGRATION-AUDIT-REMAINING.md`, `llm-readability-optimization-plan.md`.
+- `docs/AGENTS.md`: Added **Document Reading Policy** section at top instructing AI agents to read only the 6 active files and use `@reference` shortcuts, never recursively read `docs/`.
+
+### Maintenance Instructions
 - **Every session must append all changes to this file under the current date** (`YYYY-MM-DD`) before finishing.
 - Group entries under `### Added`, `### Changed`, `### Fixed`, `### Migration Applied`, `### Migrations Required on Live` as appropriate.
 - List **all** files modified, with a concise description of what changed and why.
 - Collect all `ALTER TABLE` / `UPDATE` / `INSERT` SQL statements under "Migrations Required on Live" so the user can deploy them to production.
 - After updating this file, commit and push to `live/main`:
   ```bash
-  git add SESSION_CHANGELOG.md
-  git commit -m "docs: update SESSION_CHANGELOG.md"
+  git add OPERATIONS_CHANGELOG.md
+  git commit -m "docs: update OPERATIONS_CHANGELOG.md"
   git push live main
   ```

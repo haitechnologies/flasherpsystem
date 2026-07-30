@@ -7,6 +7,7 @@ namespace App\Service;
 use App\Model\Job;
 use App\Repository\JobRepository;
 use App\Repository\CustomerRepository;
+use App\Core\DB;
 use App\Core\Database;
 use App\Exception\NotFoundException;
 use App\Exception\ValidationException;
@@ -349,6 +350,99 @@ class JobService
     public function updateStatus(int $id, string $status, int $orgId): bool
     {
         return $this->jobRepo->updateStatus($id, $status, $orgId);
+    }
+
+    /**
+     * Send job for approval (Operations -> Accounts review)
+     */
+    public function sendForApproval(int $id, int $orgId): void
+    {
+        $statusId = $this->getStatusId('pending_approval');
+        if ($statusId === null) {
+            throw new \RuntimeException("'pending_approval' status not found. Run migration first.");
+        }
+
+        $this->db->execute(
+            "UPDATE `" . DB::JOBS . "` SET job_status = :status, approved_time_resubmission = NOW(), updated_at = NOW() WHERE id = :id AND organization_id = :org_id",
+            ['status' => (string)$statusId, 'id' => $id, 'org_id' => $orgId]
+        );
+    }
+
+    /**
+     * Approve a job (Accounts)
+     */
+    public function approveJob(int $id, int $orgId): void
+    {
+        $statusId = $this->getStatusId('approved');
+        if ($statusId === null) {
+            throw new \RuntimeException("'approved' status not found.");
+        }
+
+        $this->db->execute(
+            "UPDATE `" . DB::JOBS . "` SET job_status = :status, approved_time = NOW(), updated_at = NOW() WHERE id = :id AND organization_id = :org_id",
+            ['status' => (string)$statusId, 'id' => $id, 'org_id' => $orgId]
+        );
+    }
+
+    /**
+     * Reject a job back to draft (Accounts)
+     */
+    public function rejectJob(int $id, int $orgId): void
+    {
+        $statusId = $this->getStatusId('draft');
+        if ($statusId === null) {
+            throw new \RuntimeException("'draft' status not found.");
+        }
+
+        $this->db->execute(
+            "UPDATE `" . DB::JOBS . "` SET job_status = :status, updated_at = NOW() WHERE id = :id AND organization_id = :org_id",
+            ['status' => (string)$statusId, 'id' => $id, 'org_id' => $orgId]
+        );
+    }
+
+    /**
+     * Check if a job is in pending_approval status
+     */
+    public function isPendingApproval(int $jobStatusValue): bool
+    {
+        $pendingId = $this->getStatusId('pending_approval');
+        return $pendingId !== null && $jobStatusValue === $pendingId;
+    }
+
+    /**
+     * Get status ID by name from erp_job_statuses
+     */
+    private function getStatusId(string $statusName): ?int
+    {
+        $row = $this->db->fetchOne(
+            "SELECT id FROM `" . DB::JOB_STATUSES . "` WHERE LOWER(job_status) = LOWER(:status) AND is_active = 1 LIMIT 1",
+            ['status' => $statusName]
+        );
+        return $row ? (int)$row['id'] : null;
+    }
+
+    /**
+     * Get draft status ID
+     */
+    public function getDraftStatusId(): ?int
+    {
+        return $this->getStatusId('draft');
+    }
+
+    /**
+     * Get approved status ID
+     */
+    public function getApprovedStatusId(): ?int
+    {
+        return $this->getStatusId('approved');
+    }
+
+    /**
+     * Get pending_approval status ID
+     */
+    public function getPendingApprovalStatusId(): ?int
+    {
+        return $this->getStatusId('pending_approval');
     }
 
     /**

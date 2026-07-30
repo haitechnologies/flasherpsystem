@@ -192,7 +192,7 @@ foreach ($transport_modeOptions as $val => $lbl) {
 
 $tags_options_html = '';
 foreach ($tagsList as $row) {
-    $sel = (in_array($row['id'], $tags_arr) || in_array((string)$row['id'], $tags_arr)) ? 'selected' : '';
+    $sel = ((string)$row['id'] === $tags) ? 'selected' : '';
     $tags_options_html .= '<option value="' . $row['id'] . '" ' . $sel . '>' . htmlspecialchars($row['value']) . '</option>';
 }
 
@@ -281,7 +281,7 @@ include 'admin_elements/admin_header.php';
 
                                     <?php $field = ['name'=>'job_owner', 'label'=>'Job Owner:', 'required'=>true, 'options'=>$users_options, 'selected'=>$job_owner]; include 'admin_elements/form_field_select.php'; ?>
 
-                                    <?php $field = ['name'=>'tags[]', 'label'=>'Tag:', 'options_html'=>$tags_options_html, 'extra_class'=>'form-control select', 'extra_attr'=>'data-tags="true"', 'multiple'=>true, 'empty_option'=>false]; include 'admin_elements/form_field_select.php'; ?>
+                                    <?php $field = ['name'=>'tags', 'label'=>'Tag:', 'options_html'=>$tags_options_html, 'extra_class'=>'form-control select', 'empty_option'=>'Please select']; include 'admin_elements/form_field_select.php'; ?>
                                 </div>
                             </div>
                         </div>
@@ -302,6 +302,13 @@ include 'admin_elements/admin_header.php';
                                         <?php echo $job_status_options_html; ?>
                                     </select>
                                 </div>
+                                <?php if ($id > 0 && !empty($draftStatusId) && $job_status == $draftStatusId): ?>
+                                <div class="col-lg-4">
+                                    <button type="button" class="btn btn-warning btn-sm" onclick="if(confirm('Are you sure you want to send this job for approval? Accounts department will review it and the job will be locked for editing.')){ document.getElementById('action').value='send_for_approval'; document.getElementById('frmjobs').submit(); }">
+                                        <i class="ph-paper-plane-tilt me-1"></i> Send for Approval
+                                    </button>
+                                </div>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>
@@ -601,9 +608,8 @@ include 'admin_elements/admin_header.php';
                                                 <?php
                                                 if (!empty($landing_country) && $landing_country !== '0') {
                                                     try {
-                                                        $ports = \App\Core\DB::pdo()->prepare("SELECT id, port_name FROM `" . \App\Core\DB::PORTS . "` WHERE country_id = ? AND is_active = 1 ORDER BY port_name");
-                                                        $ports->execute([$landing_country]);
-                                                        while ($p = $ports->fetch(\PDO::FETCH_ASSOC)) {
+                                                        $ports = \App\Core\DB::pdo()->fetchAll("SELECT id, port_name FROM `" . \App\Core\DB::PORTS . "` WHERE country_id = ? AND is_active = 1 ORDER BY port_name", [$landing_country]);
+                                                        foreach ($ports as $p) {
                                                             $sel = ((string)$p['id'] === $landing_port) ? 'selected' : '';
                                                             echo '<option value="' . $p['id'] . '" ' . $sel . '>' . htmlspecialchars($p['port_name']) . '</option>';
                                                         }
@@ -640,9 +646,8 @@ include 'admin_elements/admin_header.php';
                                                 <?php
                                                 if (!empty($destination_country) && $destination_country !== '0') {
                                                     try {
-                                                        $ports = \App\Core\DB::pdo()->prepare("SELECT id, port_name FROM `" . \App\Core\DB::PORTS . "` WHERE country_id = ? AND is_active = 1 ORDER BY port_name");
-                                                        $ports->execute([$destination_country]);
-                                                        while ($p = $ports->fetch(\PDO::FETCH_ASSOC)) {
+                                                        $ports = \App\Core\DB::pdo()->fetchAll("SELECT id, port_name FROM `" . \App\Core\DB::PORTS . "` WHERE country_id = ? AND is_active = 1 ORDER BY port_name", [$destination_country]);
+                                                        foreach ($ports as $p) {
                                                             $sel = ((string)$p['id'] === $destination_port) ? 'selected' : '';
                                                             echo '<option value="' . $p['id'] . '" ' . $sel . '>' . htmlspecialchars($p['port_name']) . '</option>';
                                                         }

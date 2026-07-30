@@ -1,0 +1,24 @@
+# Static assets (minimizes token costs)
+assets/
+uploads/
+pdfs_invoices/
+
+# Dependencies (never need context loading)
+vendor/
+dashboard/vendor/
+tcpdf/
+
+# Node (no JS toolchain in this project)
+node_modules/
+
+# Backups & logs
+backups/
+logs/
+
+# Large generated files
+*.min.css
+*.min.js
+*.lock
+
+# Database export (use @database reference instead)
+database_export.sql

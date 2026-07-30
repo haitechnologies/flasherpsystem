@@ -410,12 +410,27 @@ if ($total_rows == 0) $total_rows = 1;
 
                         $approved_row = $db->fetchOne("SELECT id FROM `" . DB::JOB_STATUSES . "` WHERE LOWER(job_status) = 'approved' LIMIT 1");
                         $approved_job_status_id = $approved_row ? (int)$approved_row['id'] : 0;
+
+                        $pending_approval_row = $db->fetchOne("SELECT id FROM `" . DB::JOB_STATUSES . "` WHERE LOWER(job_status) = 'pending_approval' LIMIT 1");
+                        $pending_approval_status_id = $pending_approval_row ? (int)$pending_approval_row['id'] : 0;
+
+                        $current_role_id = \App\Core\Session::roleId();
+                        $is_accounts = ($current_role_id === \App\Security\Roles::ACCOUNTS) || \App\Security\Roles::hasFullAccess($current_role_id);
                         ?>
 
                         <?php if ($project_created == 0) { ?>
 
                             <?php if ($job_status == $draft_job_status_id) { ?>
                                 <button type="button" onclick="window.location.href='<?php echo $module; ?>.php?action=edit_<?php echo $module; ?>&id=<?php echo $id; ?>'; " class="btn btn-primary btn-sm me-2">Edit</button>
+                            <?php } ?>
+
+                            <?php if ($job_status == $pending_approval_status_id) { ?>
+                                <?php if ($is_accounts) { ?>
+                                    <button type="button" onclick="if(confirm('Approve this job?')){ document.getElementById('frmjobs').action='jobs.php?action=approve_job&id=<?php echo $id; ?>'; document.getElementById('frmjobs').submit(); }" class="btn btn-success btn-sm me-2"><i class="ph-check-circle me-1"></i> Approve</button>
+                                    <button type="button" onclick="if(confirm('Send back to draft? Operations will be able to edit again.')){ document.getElementById('frmjobs').action='jobs.php?action=reject_job&id=<?php echo $id; ?>'; document.getElementById('frmjobs').submit(); }" class="btn btn-danger btn-sm me-2"><i class="ph-x-circle me-1"></i> Reject</button>
+                                <?php } else { ?>
+                                    <span class="badge bg-warning bg-opacity-10 text-warning px-3 py-2"><i class="ph-clock-countdown me-1"></i> Under Review — Awaiting Accounts Approval</span>
+                                <?php } ?>
                             <?php } ?>
 
                             <?php if ($job_status == $approved_job_status_id) { ?>
