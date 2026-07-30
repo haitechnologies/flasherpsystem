@@ -256,7 +256,7 @@ include 'admin_elements/admin_header.php';
                                 <div class="card-body">
                                     <?php $field = ['name'=>'warehouse_id', 'label'=>'Warehouse:', 'required'=>true, 'options'=>$warehouse_options, 'selected'=>$warehouse_id, 'empty_option'=>false]; include 'admin_elements/form_field_select.php'; ?>
 
-                                    <?php $field = ['name'=>'customer_id', 'label'=>'Customer Name:', 'required'=>true, 'options_html'=>$customer_options_html, 'selected'=>$customer_id, 'empty_option'=>'&nbsp;', 'extra_class'=>'form-control select select2-enable']; include 'admin_elements/form_field_select.php'; ?>
+                                    <?php $field = ['name'=>'customer_id', 'label'=>'Customer Name:', 'required'=>true, 'options_html'=>$customer_options_html, 'selected'=>$customer_id, 'empty_option'=>'Please select', 'extra_class'=>'form-control select select2-enable']; include 'admin_elements/form_field_select.php'; ?>
 
                                     <?php $field = ['name'=>'sales_person_from_lead', 'label'=>'Sales Person from Lead:', 'value'=>$sales_person_from_lead]; include 'admin_elements/form_field_text.php'; ?>
 
