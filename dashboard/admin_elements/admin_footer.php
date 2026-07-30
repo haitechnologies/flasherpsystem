@@ -696,8 +696,6 @@ foreach ($footerSystemCandidates as $systemKey => $systemMeta) {
 <script>
 $(function() {
     $('select[data-tags="true"], select.select2-enable').select2({
-        placeholder: 'Select options...',
-        closeOnSelect: false,
         width: '100%'
     });
 });
