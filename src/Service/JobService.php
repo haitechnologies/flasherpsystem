@@ -465,6 +465,8 @@ class JobService
         return null;
     }
 
+    private const VALID_SHIPMENT_TYPES = ['export', 'import', 'transit', 'local_jobs', 'import_export'];
+
     private function processShipmentType(mixed $shipmentType): ?string
     {
         if ($shipmentType === null) {
@@ -472,11 +474,12 @@ class JobService
         }
         if (is_array($shipmentType)) {
             $trimmed = array_map('trim', $shipmentType);
-            $filtered = array_filter($trimmed, fn($v) => $v !== '');
+            $filtered = array_filter($trimmed, fn($v) => $v !== '' && in_array($v, self::VALID_SHIPMENT_TYPES, true));
             return !empty($filtered) ? implode(', ', $filtered) : null;
         }
         if (is_string($shipmentType) && $shipmentType !== '') {
-            return trim($shipmentType);
+            $v = trim($shipmentType);
+            return in_array($v, self::VALID_SHIPMENT_TYPES, true) ? $v : null;
         }
         return null;
     }
