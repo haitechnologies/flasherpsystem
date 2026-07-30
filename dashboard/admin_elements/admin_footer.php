@@ -633,6 +633,65 @@ foreach ($footerSystemCandidates as $systemKey => $systemMeta) {
 </main>
 <!-- /main content -->
 
+<style>
+.select2-container--default .select2-selection--single {
+    height: auto;
+    min-height: 38px;
+}
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+    line-height: 38px;
+    font-family: 'Noto Sans', 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+    font-size: 0.8125rem;
+}
+.select2-container--default .select2-selection--multiple {
+    border-color: #ddd;
+    min-height: 38px;
+}
+.select2-container--default .select2-selection--multiple .select2-selection__choice {
+    background-color: #E5E7EB;
+    border-color: #E5E7EB;
+    color: #1F2937;
+    border-radius: 3px;
+    padding: 2px 8px;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+}
+.select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+    color: #9CA3AF;
+    margin-right: 4px;
+    border: none;
+}
+.select2-container--default .select2-selection--multiple .select2-selection__choice:hover {
+    background-color: #0c83ff;
+    border-color: #0c83ff;
+    color: #fff;
+}
+.select2-container--default .select2-selection--multiple .select2-selection__choice:hover .select2-selection__choice__remove {
+    color: #fff;
+}
+.select2-container--default .select2-selection--multiple .select2-selection__rendered {
+    padding: 2px 6px;
+}
+.select2-container--default .select2-search--inline .select2-search__field {
+    font-family: inherit;
+    font-size: 0.8125rem;
+    margin-top: 0;
+}
+.select2-container--default .select2-results__option--highlighted[aria-selected] {
+    background-color: #E5E7EB;
+    color: #1F2937;
+}
+</style>
+<script>
+$(function() {
+    $('select[data-tags="true"], select.select2-enable').select2({
+        placeholder: 'Select options...',
+        closeOnSelect: false,
+        width: '100%'
+    });
+});
+</script>
+
 </body>
 
 </html>

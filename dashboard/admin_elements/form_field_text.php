@@ -33,7 +33,7 @@ if (!isset($field) || !is_array($field)) {
 $_ffName        = $field['name'] ?? '';
 $_ffLabel       = $field['label'] ?? '';
 $_ffValue       = $field['value'] ?? '';
-$_ffPlaceholder = $field['placeholder'] ?? $_ffLabel;
+$_ffPlaceholder = $field['placeholder'] ?? '';
 $_ffRequired    = $field['required'] ?? false;
 $_ffColLabel    = $field['col_label'] ?? 3;
 $_ffColInput    = $field['col_input'] ?? 9;
@@ -48,7 +48,7 @@ $_ffHelpText    = $field['help_text'] ?? '';
 
 <div class="row mb-2">
     <label class="col-lg-<?php echo $_ffColLabel; ?> col-form-label" for="<?php echo htmlspecialchars($_ffName); ?>">
-        <?php if ($_ffRequired): ?><span class="text-danger"><?php echo htmlspecialchars($_ffLabel); ?>:</span><?php else: ?><?php echo htmlspecialchars($_ffLabel); ?><?php endif; ?>
+        <?php if ($_ffRequired): ?><span class="text-danger"><?php echo htmlspecialchars($_ffLabel); ?></span><?php else: ?><?php echo htmlspecialchars($_ffLabel); ?><?php endif; ?>
     </label>
     <div class="col-lg-<?php echo $_ffColInput; ?>">
         <?php if (!empty($_ffPrefix) || !empty($_ffSuffix)): ?>

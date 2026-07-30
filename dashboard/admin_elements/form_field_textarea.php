@@ -30,7 +30,7 @@ if (!isset($field) || !is_array($field)) {
 $_ftName        = $field['name'] ?? '';
 $_ftLabel       = $field['label'] ?? '';
 $_ftValue       = $field['value'] ?? '';
-$_ftPlaceholder = $field['placeholder'] ?? $_ftLabel;
+$_ftPlaceholder = $field['placeholder'] ?? '';
 $_ftRequired    = $field['required'] ?? false;
 $_ftColLabel    = $field['col_label'] ?? 3;
 $_ftColInput    = $field['col_input'] ?? 9;
@@ -42,7 +42,7 @@ $_ftExtraAttr   = $field['extra_attr'] ?? '';
 
 <div class="row mb-2">
     <label class="col-lg-<?php echo $_ftColLabel; ?> col-form-label" for="<?php echo htmlspecialchars($_ftName); ?>">
-        <?php if ($_ftRequired): ?><span class="text-danger"><?php echo htmlspecialchars($_ftLabel); ?>:</span><?php else: ?><?php echo htmlspecialchars($_ftLabel); ?><?php endif; ?>
+        <?php if ($_ftRequired): ?><span class="text-danger"><?php echo htmlspecialchars($_ftLabel); ?></span><?php else: ?><?php echo htmlspecialchars($_ftLabel); ?><?php endif; ?>
     </label>
     <div class="col-lg-<?php echo $_ftColInput; ?>">
         <textarea

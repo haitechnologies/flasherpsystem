@@ -5,7 +5,6 @@ All notable changes to this project are recorded here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project uses **date-based versioning** (`YYYY-MM-DD`).
 
----
 
 ## [2026-07-28]
 

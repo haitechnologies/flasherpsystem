@@ -22,6 +22,7 @@ declare(strict_types=1);
  *   'state_save'     => bool   (default: false)
  *   'extra_js'       => string (additional JS code to append)
  *   'hide_add_button'=> bool   (default: false)
+ *   'button_text'    => string (default: 'New')
  *   'extra_header'   => string (HTML to add after the page header)
  *   'before_table'   => string (HTML to add before the table)
  *   'table_classes'  => string (additional table classes)
@@ -42,6 +43,7 @@ $_ltSearching  = $listingConfig['searching'] ?? true;
 $_ltStateSave  = $listingConfig['state_save'] ?? false;
 $_ltExtraJs    = $listingConfig['extra_js'] ?? '';
 $_ltHideAdd    = $listingConfig['hide_add_button'] ?? false;
+$_ltBtnText    = $listingConfig['button_text'] ?? 'New';
 $_ltExtraHdr   = $listingConfig['extra_header'] ?? '';
 $_ltBeforeTbl  = $listingConfig['before_table'] ?? '';
 $_ltAfterCard  = $listingConfig['after_card'] ?? '';
@@ -68,7 +70,7 @@ $_ltGridId     = 'grid-' . $_ltModule;
             <div class="my-1">
                 <?php if (!$_ltHideAdd && isset($module_id) && isset($_ltModule) && granted('create', $module_id)): ?>
                     <a href="<?php echo htmlspecialchars($_ltModule); ?>.php" class="btn btn-primary btn-sm d-inline-flex align-items-center">
-                        <i class="ph-plus ph-sm me-2 opacity-75"></i>New
+                        <i class="ph-plus ph-sm me-2 opacity-75"></i><?php echo htmlspecialchars($_ltBtnText); ?>
                     </a>
                 <?php endif; ?>
             </div>

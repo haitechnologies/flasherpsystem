@@ -54,15 +54,18 @@ class JobService
 
         $this->db->beginTransaction();
         try {
-            $prefix = 'FL-JB' . date('ym');
-            $lastJobNo = $this->jobRepo->getLastJobNoForMonth($prefix, $orgId);
-            if ($lastJobNo !== null) {
-                $lastSerial = (int) substr($lastJobNo, -4);
-                $newSerial = $lastSerial + 1;
-            } else {
-                $newSerial = 1;
+            $jobNo = !empty($data['job_no']) ? trim((string)$data['job_no']) : null;
+            if ($jobNo === null) {
+                $prefix = 'FL-JB' . date('ym');
+                $lastJobNo = $this->jobRepo->getLastJobNoForMonth($prefix, $orgId);
+                if ($lastJobNo !== null) {
+                    $lastSerial = (int) substr($lastJobNo, -4);
+                    $newSerial = $lastSerial + 1;
+                } else {
+                    $newSerial = 1;
+                }
+                $jobNo = $prefix . '-' . str_pad((string)$newSerial, 4, '0', STR_PAD_LEFT);
             }
-            $jobNo = $prefix . '-' . str_pad((string)$newSerial, 4, '0', STR_PAD_LEFT);
 
             $jobDate = $this->parseDate($data['job_date'] ?? date('Y-m-d'));
             $etd = $this->parseOptionalDate($data['etd'] ?? '');
@@ -73,6 +76,7 @@ class JobService
 
             $tags = $this->processTags($data['tags'] ?? null);
             $services = $this->processServices($data['services'] ?? null);
+            $shipmentType = $this->processShipmentType($data['shipment_type'] ?? null);
 
             $job = new Job(
                 id: null,
@@ -86,10 +90,11 @@ class JobService
                 jobNo: $jobNo,
                 jobSeq: !empty($data['job_seq']) ? (int)$data['job_seq'] : 0,
                 salesPerson: !empty($data['sales_person']) ? (int)$data['sales_person'] : 0,
+                salesPersonFromLead: !empty($data['sales_person_from_lead']) ? (int)$data['sales_person_from_lead'] : 0,
                 currency: !empty($data['currency']) ? trim((string)$data['currency']) : '0',
                 exchangeRate: !empty($data['exchange_rate']) ? (float)$data['exchange_rate'] : 0.0,
                 transportMode: !empty($data['transport_mode']) ? trim((string)$data['transport_mode']) : '0',
-                shipmentType: !empty($data['shipment_type']) ? trim((string)$data['shipment_type']) : '',
+                shipmentType: $shipmentType,
                 jobOwner: !empty($data['job_owner']) ? (int)$data['job_owner'] : 0,
                 tags: $tags,
                 services: $services,
@@ -116,7 +121,7 @@ class JobService
                 volumeWeight: !empty($data['volume_weight']) ? (float)$data['volume_weight'] : 0.0,
                 chargeableWeight: !empty($data['chargeable_weight']) ? (float)$data['chargeable_weight'] : 0.0,
                 noOfPieces: !empty($data['no_of_pieces']) ? (int)$data['no_of_pieces'] : 0,
-                commodityType: !empty($data['commodity_type']) ? (int)$data['commodity_type'] : 0,
+                commodityType: !empty($data['commodity_type']) ? trim((string)$data['commodity_type']) : null,
                 noOfContainers: !empty($data['no_of_containers']) ? (int)$data['no_of_containers'] : 0,
                 insuranceNeeded: !empty($data['insurance_needed']) ? trim((string)$data['insurance_needed']) : '0',
                 containerType: !empty($data['container_type']) ? (int)$data['container_type'] : 0,
@@ -125,7 +130,7 @@ class JobService
                 specialComments: !empty($data['special_comments']) ? trim((string)$data['special_comments']) : null,
                 landingCountry: !empty($data['landing_country']) ? (int)$data['landing_country'] : 0,
                 landingPort: !empty($data['landing_port']) ? (int)$data['landing_port'] : 0,
-                loadingPlace: !empty($data['loading_place']) ? (int)$data['loading_place'] : 0,
+                loadingPlace: !empty($data['loading_place']) ? trim((string)$data['loading_place']) : null,
                 billingCity: !empty($data['billing_city']) ? trim((string)$data['billing_city']) : null,
                 billingState: !empty($data['billing_state']) ? trim((string)$data['billing_state']) : null,
                 billingCode: !empty($data['billing_code']) ? trim((string)$data['billing_code']) : null,
@@ -155,12 +160,14 @@ class JobService
                 booksCustomerId: !empty($data['customer_id']) ? (int)$data['customer_id'] : 0,
                 quoteId: !empty($data['quote_id']) ? (int)$data['quote_id'] : 0,
                 projectId: !empty($data['project_id']) ? (int)$data['project_id'] : 0,
+                projectCreated: !empty($data['project_created']) ? trim((string)$data['project_created']) : '0',
+                qrcode: !empty($data['qrcode']) ? trim((string)$data['qrcode']) : null,
                 modifiedBy: null,
                 customerType: null,
                 approvedTime: null,
                 approvedTimeResubmission: null,
-                publish: isset($data['publish']) ? (bool)$data['publish'] : true,
-                isActive: isset($data['is_active']) ? (bool)$data['is_active'] : true,
+                publish: true,
+                isActive: true,
                 createdBy: $userId,
                 pdf: null
             );
@@ -198,6 +205,7 @@ class JobService
 
             $tags = isset($data['tags']) ? $this->processTags($data['tags']) : $job->tags;
             $services = isset($data['services']) ? $this->processServices($data['services']) : $job->services;
+            $shipmentType = isset($data['shipment_type']) ? $this->processShipmentType($data['shipment_type']) : $job->shipmentType;
 
             $updatedJob = new Job(
                 id: $job->id,
@@ -211,10 +219,11 @@ class JobService
                 jobNo: isset($data['job_no']) ? trim((string)$data['job_no']) : $job->jobNo,
                 jobSeq: isset($data['job_seq']) ? (int)$data['job_seq'] : $job->jobSeq,
                 salesPerson: isset($data['sales_person']) ? (int)$data['sales_person'] : $job->salesPerson,
+                salesPersonFromLead: isset($data['sales_person_from_lead']) ? (int)$data['sales_person_from_lead'] : $job->salesPersonFromLead,
                 currency: isset($data['currency']) ? trim((string)$data['currency']) : $job->currency,
                 exchangeRate: isset($data['exchange_rate']) ? (float)$data['exchange_rate'] : $job->exchangeRate,
                 transportMode: isset($data['transport_mode']) ? trim((string)$data['transport_mode']) : $job->transportMode,
-                shipmentType: isset($data['shipment_type']) ? trim((string)$data['shipment_type']) : $job->shipmentType,
+                shipmentType: $shipmentType,
                 jobOwner: isset($data['job_owner']) ? (int)$data['job_owner'] : $job->jobOwner,
                 tags: $tags,
                 services: $services,
@@ -241,7 +250,7 @@ class JobService
                 volumeWeight: isset($data['volume_weight']) ? (float)$data['volume_weight'] : $job->volumeWeight,
                 chargeableWeight: isset($data['chargeable_weight']) ? (float)$data['chargeable_weight'] : $job->chargeableWeight,
                 noOfPieces: isset($data['no_of_pieces']) ? (int)$data['no_of_pieces'] : $job->noOfPieces,
-                commodityType: isset($data['commodity_type']) ? (int)$data['commodity_type'] : $job->commodityType,
+                commodityType: isset($data['commodity_type']) ? trim((string)$data['commodity_type']) : $job->commodityType,
                 noOfContainers: isset($data['no_of_containers']) ? (int)$data['no_of_containers'] : $job->noOfContainers,
                 insuranceNeeded: isset($data['insurance_needed']) ? trim((string)$data['insurance_needed']) : $job->insuranceNeeded,
                 containerType: isset($data['container_type']) ? (int)$data['container_type'] : $job->containerType,
@@ -250,7 +259,7 @@ class JobService
                 specialComments: isset($data['special_comments']) ? (empty($data['special_comments']) ? null : trim((string)$data['special_comments'])) : $job->specialComments,
                 landingCountry: isset($data['landing_country']) ? (int)$data['landing_country'] : $job->landingCountry,
                 landingPort: isset($data['landing_port']) ? (int)$data['landing_port'] : $job->landingPort,
-                loadingPlace: isset($data['loading_place']) ? (int)$data['loading_place'] : $job->loadingPlace,
+                loadingPlace: isset($data['loading_place']) ? (empty($data['loading_place']) ? null : trim((string)$data['loading_place'])) : $job->loadingPlace,
                 billingCity: isset($data['billing_city']) ? (empty($data['billing_city']) ? null : trim((string)$data['billing_city'])) : $job->billingCity,
                 billingState: isset($data['billing_state']) ? (empty($data['billing_state']) ? null : trim((string)$data['billing_state'])) : $job->billingState,
                 billingCode: isset($data['billing_code']) ? (empty($data['billing_code']) ? null : trim((string)$data['billing_code'])) : $job->billingCode,
@@ -280,12 +289,14 @@ class JobService
                 booksCustomerId: isset($data['customer_id']) ? (int)$data['customer_id'] : $job->booksCustomerId,
                 quoteId: isset($data['quote_id']) ? (int)$data['quote_id'] : $job->quoteId,
                 projectId: isset($data['project_id']) ? (int)$data['project_id'] : $job->projectId,
+                projectCreated: isset($data['project_created']) ? trim((string)$data['project_created']) : $job->projectCreated,
+                qrcode: isset($data['qrcode']) ? (empty($data['qrcode']) ? null : trim((string)$data['qrcode'])) : $job->qrcode,
                 modifiedBy: $job->modifiedBy,
                 customerType: $job->customerType,
                 approvedTime: $job->approvedTime,
                 approvedTimeResubmission: $job->approvedTimeResubmission,
-                publish: isset($data['publish']) ? (bool)$data['publish'] : $job->publish,
-                isActive: isset($data['is_active']) ? (bool)$data['is_active'] : $job->isActive,
+                publish: $job->publish,
+                isActive: $job->isActive,
                 createdAt: $job->createdAt,
                 updatedAt: $job->updatedAt,
                 updatedBy: $userId,
@@ -354,8 +365,30 @@ class JobService
         if (empty($data['job_owner']) || $data['job_owner'] === 'Please select' || $data['job_owner'] === '0') {
             throw new ValidationException(['job_owner' => 'Please select Job Owner.']);
         }
+        if (empty($data['job_ref_no'])) {
+            throw new ValidationException(['job_ref_no' => 'Job Ref No is mandatory.']);
+        }
+        if (empty($data['job_no'])) {
+            throw new ValidationException(['job_no' => 'Job No is mandatory.']);
+        }
         if (empty($data['declaration_no'])) {
             throw new ValidationException(['declaration_no' => 'Customs Declaration No is mandatory.']);
+        }
+
+        // Check duplicate job_ref_no
+        if (!empty($data['job_ref_no'])) {
+            $existing = $this->jobRepo->findByField('job_ref_no', trim((string)$data['job_ref_no']), $orgId, (int)($data['id'] ?? 0));
+            if ($existing !== null) {
+                throw new ValidationException(['job_ref_no' => 'Job Ref No already exists.']);
+            }
+        }
+
+        // Check duplicate job_no
+        if (!empty($data['job_no'])) {
+            $existing = $this->jobRepo->findByField('job_no', trim((string)$data['job_no']), $orgId, (int)($data['id'] ?? 0));
+            if ($existing !== null) {
+                throw new ValidationException(['job_no' => 'Job No already exists.']);
+            }
         }
 
         // Verify customer exists if provided
@@ -426,6 +459,22 @@ class JobService
         }
         if (is_string($services) && $services !== '') {
             return trim($services);
+        }
+        return null;
+    }
+
+    private function processShipmentType(mixed $shipmentType): ?string
+    {
+        if ($shipmentType === null) {
+            return null;
+        }
+        if (is_array($shipmentType)) {
+            $trimmed = array_map('trim', $shipmentType);
+            $filtered = array_filter($trimmed, fn($v) => $v !== '');
+            return !empty($filtered) ? implode(', ', $filtered) : null;
+        }
+        if (is_string($shipmentType) && $shipmentType !== '') {
+            return trim($shipmentType);
         }
         return null;
     }

@@ -40,7 +40,7 @@ $_fdExtraAttr   = $field['extra_attr'] ?? '';
 
 <div class="row mb-2">
     <label class="col-lg-<?php echo $_fdColLabel; ?> col-form-label" for="<?php echo htmlspecialchars($_fdName); ?>">
-        <?php if ($_fdRequired): ?><span class="text-danger"><?php echo htmlspecialchars($_fdLabel); ?>:</span><?php else: ?><?php echo htmlspecialchars($_fdLabel); ?><?php endif; ?>
+        <?php if ($_fdRequired): ?><span class="text-danger"><?php echo htmlspecialchars($_fdLabel); ?></span><?php else: ?><?php echo htmlspecialchars($_fdLabel); ?><?php endif; ?>
     </label>
     <div class="col-lg-<?php echo $_fdColInput; ?>">
         <div class="form-control-feedback form-control-feedback-start">

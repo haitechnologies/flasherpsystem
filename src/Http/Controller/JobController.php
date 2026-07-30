@@ -10,6 +10,7 @@ use App\Core\Database;
 use App\Http\Request;
 use App\Http\Response;
 use App\Service\JobService;
+use App\Service\JobItemService;
 use App\Security\Roles;
 use App\Exception\ValidationException;
 use App\Exception\NotFoundException;
@@ -18,6 +19,7 @@ use App\Helper\DateHelper;
 class JobController extends BaseController
 {
     private JobService $jobService;
+    private JobItemService $jobItemService;
 
     public function __construct(
         Database $db,
@@ -25,9 +27,11 @@ class JobController extends BaseController
         int $roleId,
         int $orgId,
         JobService $jobService,
+        JobItemService $jobItemService,
     ) {
         parent::__construct($db, $userId, $roleId, $orgId);
         $this->jobService = $jobService;
+        $this->jobItemService = $jobItemService;
     }
 
     public function __invoke(Request $request): Response
@@ -46,6 +50,10 @@ class JobController extends BaseController
         $action = $request->getString('action');
 
         return match (true) {
+            $action === 'check_duplicate' => $this->handleCheckDuplicate($request),
+            $action === 'ajax_ports' => $this->handleAjaxPorts($request),
+            $request->isPost() && $action === 'ajax_add_carrier' => $this->handleAddCarrier($request),
+            $request->isPost() && $action === 'ajax_add_service' => $this->handleAddService($request),
             $request->isPost() && $action === 'update_jobs' && $id > 0 && $this->canEdit()
                 => $this->handleUpdate($request, $id),
             $request->isPost() && $action === 'add_jobs' && $this->canCreate()
@@ -60,6 +68,12 @@ class JobController extends BaseController
 
         try {
             $this->jobService->updateJob($id, $jobData, $this->orgId, $this->userId);
+
+            $jobItems = $this->buildJobItemsData($request);
+            if (!empty($jobItems)) {
+                $this->jobItemService->replaceForJob($id, $jobItems, $this->orgId);
+            }
+
             flash_success('The Job has been updated successfully.');
             return Response::redirect('listing_jobs.php');
         } catch (ValidationException $e) {
@@ -79,6 +93,12 @@ class JobController extends BaseController
         try {
             $newJob = $this->jobService->createJob($jobData, $this->orgId, $this->userId);
             $id = $newJob->id;
+
+            $jobItems = $this->buildJobItemsData($request);
+            if (!empty($jobItems)) {
+                $this->jobItemService->replaceForJob($id, $jobItems, $this->orgId);
+            }
+
             flash_success('The Job has been saved successfully.');
             return Response::redirect('listing_jobs.php');
         } catch (ValidationException $e) {
@@ -113,10 +133,11 @@ class JobController extends BaseController
             'job_no' => $request->getString('job_no'),
             'job_ref_no' => $request->getString('job_ref_no'),
             'sales_person' => $request->getString('sales_person'),
+            'sales_person_from_lead' => $request->getString('sales_person_from_lead'),
             'currency' => $request->getString('currency'),
             'exchange_rate' => $request->getString('exchange_rate'),
-            'transport_mode' => $request->getString('transport_mode'),
-            'shipment_type' => $request->getString('shipment_type'),
+            'transport_mode' => $this->processArrayField($request->post('transport_mode', [])),
+            'shipment_type' => $this->processArrayField($request->post('shipment_type', [])),
             'job_owner' => $request->getString('job_owner'),
             'tags' => $tags,
             'services' => $services,
@@ -179,10 +200,70 @@ class JobController extends BaseController
             'shipment_on_time' => $request->getString('shipment_on_time'),
             'referral' => $request->getString('referral'),
             'notes' => $request->getString('notes'),
+            'books_customer_id' => $request->getString('books_customer_id'),
             'quote_id' => $request->getString('quote_id'),
             'project_id' => $request->getString('project_id'),
-            'publish' => $request->get('publish') ? true : false,
+            'project_created' => $request->getString('project_created'),
+            'qrcode' => $request->getString('qrcode'),
         ];
+    }
+
+    private function buildJobItemsData(Request $request): array
+    {
+        $items = [];
+        $dimLengths = $request->post('dim_length', []);
+        if (!is_array($dimLengths) || empty($dimLengths)) {
+            return $items;
+        }
+
+        $dimWidths = $request->post('dim_width', []);
+        $dimHeights = $request->post('dim_height', []);
+        $dimPcs = $request->post('dim_pcs', []);
+        $dimVolumes = $request->post('dim_volume', []);
+        $dimCbms = $request->post('dim_cbm', []);
+
+        foreach ($dimLengths as $idx => $length) {
+            $length = trim((string)$length);
+            $width = trim((string)($dimWidths[$idx] ?? ''));
+            $height = trim((string)($dimHeights[$idx] ?? ''));
+            $pcs = trim((string)($dimPcs[$idx] ?? '1'));
+            $volume = trim((string)($dimVolumes[$idx] ?? ''));
+            $cbm = trim((string)($dimCbms[$idx] ?? ''));
+
+            if ($length === '' && $width === '' && $height === '') {
+                continue;
+            }
+
+            $items[] = [
+                'dim_length' => $length,
+                'dim_width' => $width,
+                'dim_height' => $height,
+                'dim_pcs' => $pcs !== '' ? $pcs : '1',
+                'dim_volume' => $volume !== '' ? $volume : '0',
+                'dim_cbm' => $cbm !== '' ? $cbm : '0',
+            ];
+        }
+
+        return $items;
+    }
+
+    private function handleAjaxPorts(Request $request): Response
+    {
+        $countryId = $request->getInt('country_id');
+        if ($countryId <= 0) {
+            return Response::json([]);
+        }
+
+        try {
+            $rows = $this->db->fetchAll(
+                "SELECT id, port_name FROM `" . DB::PORTS . "` WHERE country_id = :country_id AND is_active = 1 ORDER BY port_name",
+                ['country_id' => $countryId]
+            );
+            $result = array_map(fn($r) => ['id' => $r['id'], 'port' => $r['port_name']], $rows);
+            return Response::json($result);
+        } catch (\Throwable $e) {
+            return Response::json([]);
+        }
     }
 
     private function showForm(Request $request, int $id): Response
@@ -205,10 +286,12 @@ class JobController extends BaseController
         $job_no = '';
         $job_ref_no = '';
         $sales_person = '0';
+        $sales_person_from_lead = '0';
         $currency = '';
         $exchange_rate = '';
         $transport_mode = '';
         $shipment_type = '';
+        $shipment_type_arr = [];
         $job_owner = '0';
         $tags = '';
         $tags_arr = [];
@@ -245,14 +328,14 @@ class JobController extends BaseController
         $container_number = '';
         $special_comments = '';
         $landing_country = '0';
-        $landing_port = '0';
-        $loading_place = '0';
+        $landing_port = '';
+        $loading_place = '';
         $billing_city = '';
         $billing_state = '';
         $billing_code = '';
         $billing_country = '0';
         $destination_country = '0';
-        $destination_port = '0';
+        $destination_port = '';
         $fdp = '';
         $shipping_city = '';
         $shipping_state = '';
@@ -275,9 +358,22 @@ class JobController extends BaseController
         $notes = '';
         $quote_id = '';
         $project_id = '';
-        $is_active = 1;
+        $project_created = '0';
+        $qrcode = '';
         $customer_type = '';
-        $created_by = 0;
+        $created_by = '';
+        $modified_by = '';
+        $books_customer_id = '';
+        $approved_time = '';
+        $approved_time_resubmission = '';
+        $item_dim_id_arr = [];
+        $dim_length_arr = [];
+        $dim_width_arr = [];
+        $dim_height_arr = [];
+        $dim_pcs_arr = [];
+        $dim_volume_arr = [];
+        $dim_cbm_arr = [];
+        $total_rows = 1;
 
         if ($id > 0) {
             try {
@@ -304,10 +400,14 @@ class JobController extends BaseController
                     $job_no = $job->jobNo;
                     $job_ref_no = $job->jobReferenceNo;
                     $sales_person = (string)$job->salesPerson;
+                    $sales_person_from_lead = (string)$job->salesPersonFromLead;
                     $currency = (string)$job->currency;
                     $exchange_rate = (string)$job->exchangeRate;
                     $transport_mode = $job->transportMode;
-                    $shipment_type = $job->shipmentType;
+                    $shipment_type = (string)$job->shipmentType;
+                    if (!empty($shipment_type)) {
+                        $shipment_type_arr = explode(', ', $shipment_type);
+                    }
                     $job_owner = (string)$job->jobOwner;
                     $tags = (string)$job->tags;
                     if (!empty($tags)) {
@@ -391,8 +491,36 @@ class JobController extends BaseController
                     $notes = (string)$job->notes;
                     $quote_id = (string)$job->quoteId;
                     $project_id = (string)$job->projectId;
-                    $is_active = $job->isActive ? 1 : 0;
+                    $project_created = $job->projectCreated;
+                    $qrcode = (string)$job->qrcode;
                     $customer_type = (string)$job->customerType;
+
+                    $created_by = (string)$job->createdBy;
+                    $modified_by = (string)$job->modifiedBy;
+                    $created_by = $this->resolveUserName((int)$job->createdBy);
+                    $modified_by = $this->resolveUserName((int)$job->modifiedBy);
+                    $books_customer_id = (string)$job->booksCustomerId;
+                    $approved_time = (string)$job->approvedTime;
+                    $approved_time_resubmission = (string)$job->approvedTimeResubmission;
+
+                    $dimItems = $this->jobItemService->getByJobId($id, $this->orgId);
+                    $item_dim_id_arr = [];
+                    $dim_length_arr = [];
+                    $dim_width_arr = [];
+                    $dim_height_arr = [];
+                    $dim_pcs_arr = [];
+                    $dim_volume_arr = [];
+                    $dim_cbm_arr = [];
+                    foreach ($dimItems as $item) {
+                        $item_dim_id_arr[] = (string)$item->id;
+                        $dim_length_arr[] = $item->dimLength;
+                        $dim_width_arr[] = $item->dimWidth;
+                        $dim_height_arr[] = $item->dimHeight;
+                        $dim_pcs_arr[] = $item->dimPcs;
+                        $dim_volume_arr[] = $item->dimVolume;
+                        $dim_cbm_arr[] = $item->dimCbm;
+                    }
+                    $total_rows = count($dimItems);
                 } catch (\Throwable $e) {
                     $error_message = $e->getMessage();
                 }
@@ -434,11 +562,6 @@ class JobController extends BaseController
             $carriersList = $this->db->fetchAll("SELECT id, carrier_name FROM `" . DB::CARRIERS . "` ORDER BY carrier_name ASC");
         } catch (\Throwable $e) {
             $carriersList = [];
-        }
-        try {
-            $commodityTypesList = $this->db->fetchAll("SELECT id, commodity_type FROM `" . DB::COMMODITY_TYPES . "` WHERE is_active=1 ORDER BY commodity_type");
-        } catch (\Throwable $e) {
-            $commodityTypesList = [];
         }
         try {
             $containerTypesList = $this->db->fetchAll("SELECT id, container_type FROM `" . DB::CONTAINER_TYPES . "` WHERE is_active=1 ORDER BY container_type");
@@ -483,10 +606,12 @@ class JobController extends BaseController
             'job_no' => $job_no,
             'job_ref_no' => $job_ref_no,
             'sales_person' => $sales_person,
+            'sales_person_from_lead' => $sales_person_from_lead,
             'currency' => $currency,
             'exchange_rate' => $exchange_rate,
             'transport_mode' => $transport_mode,
             'shipment_type' => $shipment_type,
+            'shipment_type_arr' => $shipment_type_arr,
             'job_owner' => $job_owner,
             'tags' => $tags,
             'tags_arr' => $tags_arr,
@@ -553,8 +678,22 @@ class JobController extends BaseController
             'notes' => $notes,
             'quote_id' => $quote_id,
             'project_id' => $project_id,
-            'is_active' => $is_active,
+            'project_created' => $project_created,
+            'qrcode' => $qrcode,
             'customer_type' => $customer_type,
+            'created_by' => $created_by,
+            'modified_by' => $modified_by,
+            'books_customer_id' => $books_customer_id,
+            'approved_time' => $approved_time,
+            'approved_time_resubmission' => $approved_time_resubmission,
+            'item_dim_id_arr' => $item_dim_id_arr,
+            'dim_length_arr' => $dim_length_arr,
+            'dim_width_arr' => $dim_width_arr,
+            'dim_height_arr' => $dim_height_arr,
+            'dim_pcs_arr' => $dim_pcs_arr,
+            'dim_volume_arr' => $dim_volume_arr,
+            'dim_cbm_arr' => $dim_cbm_arr,
+            'total_rows' => $total_rows,
             'warehousesList' => $warehousesList,
             'customersList' => $customersList,
             'usersList' => $usersList,
@@ -562,7 +701,6 @@ class JobController extends BaseController
             'jobStatusesList' => $jobStatusesList,
             'incotermsList' => $incotermsList,
             'carriersList' => $carriersList,
-            'commodityTypesList' => $commodityTypesList,
             'containerTypesList' => $containerTypesList,
             'tagsList' => $tagsList,
             'servicesList' => $servicesList,
@@ -571,5 +709,118 @@ class JobController extends BaseController
             'canCreate' => $this->canCreate(),
             'canEdit' => $this->canEdit(),
         ]));
+    }
+
+    private function handleCheckDuplicate(Request $request): Response
+    {
+        $field = $request->getString('field');
+        $value = $request->getString('value');
+        $excludeId = $request->getInt('id');
+
+        if (empty($field) || empty($value)) {
+            return Response::json(['duplicate' => false]);
+        }
+
+        $allowedFields = ['job_no', 'job_ref_no'];
+        if (!in_array($field, $allowedFields, true)) {
+            return Response::json(['duplicate' => false]);
+        }
+
+        $sql = "SELECT COUNT(*) as cnt FROM `" . DB::JOBS . "`
+                WHERE $field = :value AND organization_id = :org_id";
+        $params = ['value' => $value, 'org_id' => $this->orgId];
+
+        if ($excludeId > 0) {
+            $sql .= " AND id != :exclude_id";
+            $params['exclude_id'] = $excludeId;
+        }
+
+        $row = $this->db->fetchOne($sql, $params);
+        $isDuplicate = ($row && (int)$row['cnt'] > 0);
+
+        return Response::json(['duplicate' => $isDuplicate]);
+    }
+
+    private function resolveUserName(int $userId): string
+    {
+        if ($userId <= 0) {
+            return '';
+        }
+        try {
+            $row = $this->db->fetchOne(
+                "SELECT full_name FROM `" . DB::USERS . "` WHERE id = :id",
+                ['id' => $userId]
+            );
+            return $row ? ($row['full_name'] ?? (string)$userId) : (string)$userId;
+        } catch (\Throwable $e) {
+            return (string)$userId;
+        }
+    }
+
+    private function handleAddService(Request $request): Response
+    {
+        $name = trim($request->getString('service_name'));
+        if (empty($name)) {
+            return Response::json(['success' => false, 'message' => 'Service name is required.']);
+        }
+
+        try {
+            $existing = $this->db->fetchOne(
+                "SELECT id FROM `" . DB::ITEMS . "` WHERE item_name = :name AND item_type = 'services'",
+                ['name' => $name]
+            );
+            if ($existing) {
+                return Response::json(['success' => true, 'id' => (int)$existing['id'], 'service_name' => $name]);
+            }
+
+            $newId = $this->db->insert(DB::ITEMS, [
+                'item_name' => $name,
+                'item_type' => 'services',
+                'organization_id' => $this->orgId,
+            ]);
+            return Response::json(['success' => true, 'id' => $newId, 'service_name' => $name]);
+        } catch (\Throwable $e) {
+            return Response::json(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
+        }
+    }
+
+    private function handleAddCarrier(Request $request): Response
+    {
+        $name = trim($request->getString('carrier_name'));
+        if (empty($name)) {
+            return Response::json(['success' => false, 'message' => 'Carrier name is required.']);
+        }
+
+        try {
+            $existing = $this->db->fetchOne(
+                "SELECT id FROM `" . DB::CARRIERS . "` WHERE carrier_name = :name",
+                ['name' => $name]
+            );
+            if ($existing) {
+                return Response::json(['success' => true, 'id' => (int)$existing['id'], 'carrier_name' => $name]);
+            }
+
+            $newId = $this->db->insert(DB::CARRIERS, [
+                'carrier_name' => $name,
+                'organization_id' => $this->orgId,
+            ]);
+            return Response::json(['success' => true, 'id' => $newId, 'carrier_name' => $name]);
+        } catch (\Throwable $e) {
+            return Response::json(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
+        }
+    }
+
+    private function processArrayField(mixed $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+        if (is_array($value)) {
+            $trimmed = array_map('trim', $value);
+            $filtered = array_filter($trimmed, fn($v) => $v !== '');
+            return !empty($filtered) ? implode(', ', $filtered) : null;
+        }
+        $v = trim((string)$value);
+        return $v !== '' ? $v : null;
     }
 }

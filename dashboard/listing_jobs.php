@@ -60,6 +60,7 @@ $listingConfig = [
     ],
     'order' => [[0, 'desc']],
     'page_length' => 25,
+    'button_text' => 'Create New Job',
     'search_placeholder' => 'Search jobs...',
     'extra_js' => <<<'JS'
         $(tableSelector + ' tbody').on('click', 'tr', function(e) {

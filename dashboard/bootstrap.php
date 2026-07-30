@@ -188,6 +188,7 @@ $container->autowire(\App\Repository\SaleOrderRepository::class);
 $container->autowire(\App\Repository\QuotationRepository::class);
 $container->autowire(\App\Repository\LeadQuotationRepository::class);
 $container->autowire(\App\Repository\JobRepository::class);
+$container->autowire(\App\Repository\JobItemRepository::class);
 $container->autowire(\App\Repository\ShippingAdviceRepository::class);
 $container->autowire(\App\Repository\ShippingInvoiceRepository::class);
 $container->autowire(\App\Repository\JournalRepository::class);
@@ -252,6 +253,7 @@ $container->autowire(\App\Service\SaleOrderService::class);
 $container->autowire(\App\Service\QuotationService::class);
 $container->autowire(\App\Service\LeadQuotationService::class);
 $container->autowire(\App\Service\JobService::class);
+$container->autowire(\App\Service\JobItemService::class);
 $container->autowire(\App\Service\ShippingAdviceService::class);
 $container->autowire(\App\Service\ShippingInvoiceService::class);
 $container->autowire(\App\Service\SetupGroupService::class);
@@ -864,7 +866,8 @@ $container->register(\App\Http\Controller\JobController::class, function (\App\C
         \App\Core\Session::userId(),
         \App\Core\Session::roleId(),
         \App\Core\Session::orgId(),
-        $c->get(\App\Service\JobService::class)
+        $c->get(\App\Service\JobService::class),
+        $c->get(\App\Service\JobItemService::class)
     );
 });
 # --- Shipping modules ---

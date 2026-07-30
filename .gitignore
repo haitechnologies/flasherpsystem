@@ -72,6 +72,10 @@ opencode.json
 # DOCUMENTATION & PLANNING (not for production)
 # ============================================================
 docs/
+/SENSITIVE_DATA_CLEANUP_PLAN.md
+/accounts_role_scoping_plan.md
+/CLIENT_MIGRATION_EMAIL.md
+/CRM-FLOW-QUESTIONS.md
 CHANGELOG.md
 !HR_CHANGELOG.md
 !ACCOUNTING_CHANGELOG.md

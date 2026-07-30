@@ -638,6 +638,7 @@ if (!function_exists('renderEmailQuickbar')) {
 	<link href="<?php echo $admin_base_url; ?>/assets/fonts/inter/inter.css" rel="stylesheet" type="text/css">
 	<link href="<?php echo $admin_base_url; ?>/assets/icons/phosphor/styles.min.css" rel="stylesheet" type="text/css">
 	<link href="<?php echo $admin_base_url; ?>/assets/assets_custom/css/all.min.css" id="stylesheet" rel="stylesheet" type="text/css">
+<link href="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/css/select2.min.css" rel="stylesheet" />
 	<link href="<?php echo $admin_base_url; ?>/assets/assets_custom/css/haipulse-dashboard-compat.css?v=<?php echo @filemtime(__DIR__ . '/../assets/assets_custom/css/haipulse-dashboard-compat.css'); ?>" rel="stylesheet" type="text/css">
 	<!-- /global stylesheets -->
 

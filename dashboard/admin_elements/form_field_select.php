@@ -46,7 +46,7 @@ $_fsEmptyOption  = $field['empty_option'] ?? null;
 
 <div class="row mb-2">
     <label class="col-lg-<?php echo $_fsColLabel; ?> col-form-label" for="<?php echo htmlspecialchars($_fsName); ?>">
-        <?php if ($_fsRequired): ?><span class="text-danger"><?php echo htmlspecialchars($_fsLabel); ?>:</span><?php else: ?><?php echo htmlspecialchars($_fsLabel); ?><?php endif; ?>
+        <?php if ($_fsRequired): ?><span class="text-danger"><?php echo htmlspecialchars($_fsLabel); ?></span><?php else: ?><?php echo htmlspecialchars($_fsLabel); ?><?php endif; ?>
     </label>
     <div class="col-lg-<?php echo $_fsColInput; ?>">
         <select

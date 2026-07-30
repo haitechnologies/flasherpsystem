@@ -2,7 +2,11 @@
 
 
 use App\Core\DB;
+use App\Core\Database;
 include('admin_elements/admin_header.php');
+
+/** @var \App\Core\Database $db */
+$db = \App\Core\Container::getInstance()->get(\App\Core\Database::class);
 
 $module             = 'jobs';
 $module_caption     = 'Job';
@@ -21,18 +25,18 @@ include('admin_elements/permissions.php');
 
 $activeOrganizationId = dashboardRequireActiveOrganization();
 
-if (empty($id) && isset($_REQUEST['job_id'])) $id = e_s__($_REQUEST['job_id']);
+if (empty($id) && isset($_REQUEST['job_id'])) {
+    $id = (int)$_REQUEST['job_id'];
+}
 
 if (!empty($id)) {
-    $rs_valid = $mysqli->query("SELECT id FROM `" . $tbl_name . "` WHERE id='" . $id . "'");
-    if ($rs_valid->num_rows == 0) {
+    $rs_valid = $db->fetchOne("SELECT id FROM `" . $tbl_name . "` WHERE id = :id", ['id' => $id]);
+    if (!$rs_valid) {
         flash_error('Invalid Record in the database.');
         header("Location:listing_jobs.php");
         exit;
     }
 }
-
-// print_r($_REQUEST);
 
 /*
 |--------------------------------------------------------------------------
@@ -41,17 +45,12 @@ if (!empty($id)) {
 */
 
 
-
 if (isset($_REQUEST['customer_id']) && !empty($_REQUEST['customer_id'])) {
-    $customer_id     = e_s__($_REQUEST['customer_id']);
+    $customer_id     = (int)$_REQUEST['customer_id'];
 } else {
     $customer_id = 0;
 }
 
-
-
-if (isset($_POST['publish']))                                 $publish     = 1;
-else $publish = 0;
 
 
 /*
@@ -74,23 +73,40 @@ else $publish = 0;
 */
 if ($action == "create_project" && !empty($id)) {
 
+    // CSRF check
+    if (!isset($_POST['csrf_token']) || !\App\Core\Session::csrf_validate($_POST['csrf_token'])) {
+        $error_message = 'Invalid security token.';
+    }
+
+    $job = $db->fetchOne("SELECT project_created, customer_id, organization_id FROM `" . DB::JOBS . "` WHERE id = :id", ['id' => $id]);
+    if (!$job) {
+        $error_message = 'Job not found.';
+    }
+
     // IF ALREADY CREATED PROJECT - EXIT
-    $rs = $mysqli->query("SELECT * FROM `" . DB::JOBS . "` WHERE id=$id AND project_created=1");
+    $jobProjectCreated = $job ? (int)$job['project_created'] : 0;
+    $jobOrganizationId = $job ? (int)$job['organization_id'] : 0;
 
-    if ($rs->num_rows > 0) {
+    if ($jobProjectCreated === 1) {
         $error_message = 'The Project is already Created for this Job.';
-
-        // IF NOT CONVERTED - Then Continue
+    } elseif ($jobOrganizationId !== $activeOrganizationId) {
+        $error_message = 'You do not have permission to create a project for this job.';
     } else {
-        $customer_id = getTableAttrV('customer_id', DB::JOBS, "id=$id");
-        $mysqli->query("INSERT INTO `" . DB::PROJECTS . "`(job_id, customer_id) VALUES ('" . $id . "',  '" . $customer_id . "'); ");
-        $project_id = $mysqli->insert_id;
+        $projectCustomerId = (int)$job['customer_id'];
 
-        // SET PROJECT CREATED = 1
-        $mysqli->query("UPDATE `" . DB::JOBS . "` SET project_created=1, project_id = '" . $project_id . "' WHERE id=$id");
+        $newProjectId = $db->insert("INSERT INTO `" . DB::PROJECTS . "` (job_id, customer_id) VALUES (:job_id, :customer_id)", [
+            'job_id' => $id,
+            'customer_id' => $projectCustomerId,
+        ]);
 
-        // REDIRECT
+        $db->execute("UPDATE `" . DB::JOBS . "` SET project_created = 1, project_id = :project_id WHERE id = :id", [
+            'project_id' => $newProjectId,
+            'id' => $id,
+        ]);
+
+        flash_success('Project created successfully.');
         header("Location:view_job.php?id=$id");
+        exit;
     }
 }
 
@@ -212,7 +228,7 @@ if (!empty($id) && (is_SystemAdmin() || is_SuperAdmin() || is_role() == 'account
     if ($tags != NULL) {
         $tags_arr               = explode(',', $tags);
         foreach ($tags_arr as $tag_id) {
-            $tags_captions .= '<span class="badge bg-light text-dark">' . getTableAttr('value', DB::TAXONOMIES, $tag_id) . '</span> &nbsp;';
+            $tags_captions .= '<span class="badge bg-light text-dark">' . htmlspecialchars(getTableAttr('value', DB::TAXONOMIES, $tag_id)) . '</span> &nbsp;';
         }
     }
 
@@ -228,7 +244,7 @@ if (!empty($id) && (is_SystemAdmin() || is_SuperAdmin() || is_role() == 'account
         // $services_captions = '';
 
         foreach ($services_arr as $service_id) {
-            $services_captions .= '<span class="badge bg-light text-dark">' . getTableAttr('item_name', DB::ITEMS, $service_id) . '</span> &nbsp;';
+            $services_captions .= '<span class="badge bg-light text-dark">' . htmlspecialchars(getTableAttr('item_name', DB::ITEMS, $service_id)) . '</span> &nbsp;';
         }
     }
 
@@ -303,6 +319,7 @@ if (!empty($id) && (is_SystemAdmin() || is_SuperAdmin() || is_role() == 'account
     $notes                      = s__($row['notes']);
 
     $modified_by                = s__($row['modified_by']);
+    $modified_by_name           = getTableAttr('full_name', DB::USERS, $modified_by);
     $customer_type              = getTableAttr('customer_type', DB::CUSTOMERS, $customer_id);
     $quote_id                   = s__($row['quote_id']);
     $books_customer_id          = s__($row['books_customer_id']);
@@ -317,7 +334,7 @@ if (!empty($id) && (is_SystemAdmin() || is_SuperAdmin() || is_role() == 'account
 
     // ------------------ TOTAL ITEMS ------------------
     // ------------------ TOTAL ITEMS ------------------
-    $result_job_items = $mysqli->query("SELECT * FROM `" . tbl_job_items . "` WHERE job_id=$id");
+    $result_job_items = $db->fetchAll("SELECT job_id, dim_length, dim_width, dim_height, dim_pcs, dim_volume, dim_cbm FROM `" . tbl_job_items . "` WHERE job_id = :job_id AND organization_id = :org_id", ['job_id' => $id, 'org_id' => $activeOrganizationId]);
 
     // **CRITICAL FIX: INITIALIZE ARRAYS HERE**
     $item_dim_id_arr = [];
@@ -329,29 +346,17 @@ if (!empty($id) && (is_SystemAdmin() || is_SuperAdmin() || is_role() == 'account
     $dim_cbm_arr     = [];
     // --------------------------------------------------
 
-    // Removed the 'echo' before assignment to prevent accidental output
-    $total_rows = $result_job_items->num_rows;
+    $total_rows = count($result_job_items);
 
     if ($total_rows > 0) {
-        while ($row_job_items = $result_job_items->fetch_array()) {
-
-            // Note: You can also use the shorthand [] syntax instead of array_push()
-            // It is generally cleaner and slightly faster.
-
-            // Array Push Method (as you used):
-            array_push($item_dim_id_arr, $row_job_items['job_id']);
-            array_push($dim_length_arr,  $row_job_items['dim_length']);
-            array_push($dim_width_arr,   $row_job_items['dim_width']);
-            array_push($dim_height_arr,  $row_job_items['dim_height']);
-            array_push($dim_pcs_arr,     $row_job_items['dim_pcs']);
-            array_push($dim_volume_arr,  $row_job_items['dim_volume']);
-            array_push($dim_cbm_arr,     $row_job_items['dim_cbm']);
-
-            /* // OR the preferred shorthand method:
-        $item_dim_id_arr[] = $row_job_items['job_id'];
-        $dim_length_arr[]  = $row_job_items['dim_length'];
-        // ... and so on for the rest of the variables
-        */
+        foreach ($result_job_items as $row_job_items) {
+            $item_dim_id_arr[] = $row_job_items['job_id'];
+            $dim_length_arr[]  = $row_job_items['dim_length'];
+            $dim_width_arr[]   = $row_job_items['dim_width'];
+            $dim_height_arr[]  = $row_job_items['dim_height'];
+            $dim_pcs_arr[]     = $row_job_items['dim_pcs'];
+            $dim_volume_arr[]  = $row_job_items['dim_volume'];
+            $dim_cbm_arr[]     = $row_job_items['dim_cbm'];
         }
     }
 }
@@ -371,22 +376,61 @@ if ($total_rows == 0) $total_rows = 1;
 <div class="content-wrapper">
 
     <!-- Page header -->
-    <div class="page-header page-header-light shadow carriers-page-header">
-        <div class="page-header-content border-top py-2 px-3 carriers-page-header-content">
-            <div class="my-1">
-                <h5 class="mb-0"><?php if (($action == "edit_$module" || $action == "update_$module" || $action == "change_password") && !empty($id)) { ?>Edit<?php } else { ?>New<?php } ?> <?php echo $module_caption; ?></h5>
+    <div class="page-header page-header-light shadow">
+        <div class="page-header-content d-lg-flex border-top">
+            <div class="row mt-2">
+
+                <a href="#breadcrumb_elements" class="btn btn-light align-self-center collapsed d-lg-none border-transparent rounded-pill p-0 ms-auto" data-bs-toggle="collapse">
+                    <i class="ph-caret-down collapsible-indicator ph-sm m-1"></i>
+                </a>
             </div>
 
-            <div class="my-1 d-inline-flex align-items-center me-2">
-                <div class="form-check form-check-inline form-switch mb-0">
-                    <input type="checkbox" class="form-check-input form-check-input-success" name="publish" id="publish" <?php if ($publish == '1') { ?>checked="checked" <?php } ?> form="frmjobs">
-                    <label class="form-check-label" for="publish">Publish</label>
+            <?php if (($action == "edit_$module" || $action == "update_$module") && !empty($id)) { ?>
+                <div class="mt-3">
+                    <div class="form-check form-check-inline form-switch">
+                        <label class="form-check-label fw-semibold" for="sc_r_success">Job #: <?php echo $id; ?></label>
+                    </div>
+                </div>
+            <?php } ?>
+
+            <div class="mt-3">
+                <div class="form-check form-check-inline form-switch">
+                    <label class="form-check-label" for="sc_r_success"> <strong><?php if (!empty($job_status)) echo getTableAttr("job_status", DB::JOB_STATUSES, $job_status); ?></strong></label>
                 </div>
             </div>
-            <div class="my-1">
-                
-                <a href="listing_<?php echo $module; ?>.php" class="btn btn-light btn-sm">Cancel</a>
+
+            <div class="collapse d-lg-block ms-lg-auto" id="breadcrumb_elements">
+                <div class="d-lg-flex mb-2 mb-lg-0">
+                    <div class="mt-2 mb-2">
+
+                        <?php
+                        $draft_row = $db->fetchOne("SELECT id FROM `" . DB::JOB_STATUSES . "` WHERE LOWER(job_status) = 'draft' LIMIT 1");
+                        $draft_job_status_id = $draft_row ? (int)$draft_row['id'] : 0;
+
+                        $approved_row = $db->fetchOne("SELECT id FROM `" . DB::JOB_STATUSES . "` WHERE LOWER(job_status) = 'approved' LIMIT 1");
+                        $approved_job_status_id = $approved_row ? (int)$approved_row['id'] : 0;
+                        ?>
+
+                        <?php if ($project_created == 0) { ?>
+
+                            <?php if ($job_status == $draft_job_status_id) { ?>
+                                <button type="button" onclick="window.location.href='<?php echo $module; ?>.php?action=edit_<?php echo $module; ?>&id=<?php echo $id; ?>'; " class="btn btn-primary btn-sm me-2">Edit</button>
+                            <?php } ?>
+
+                            <?php if ($job_status == $approved_job_status_id) { ?>
+                                <button type="button" onclick="window.location.href='view_job.php?action=create_project&id=<?php echo $id; ?>';" class="btn btn-primary btn-sm me-2">Create Project</button>
+                            <?php } ?>
+
+                        <?php } else { ?>
+                            <button type="button" class=" btn btn-light my-1 me-2" disabled>Project Created</button>
+                        <?php } ?>
+
+
+                        <a href="listing_<?php echo $module; ?>.php" class="btn btn-light btn-sm">Cancel</a>
+                    </div>
+                </div>
             </div>
+
         </div>
     </div>
     <!-- /page header -->
@@ -496,7 +540,11 @@ if ($total_rows == 0) $total_rows = 1;
                                     <div class="row">
                                         <label class="col-lg-3 col-form-label">Type of Shipment:</label>
                                         <div class="col-lg-9 mt-2">
-                                            <?php echo $shipment_type; ?>
+                                            <?php
+                                            $types = !empty($shipment_type) ? explode(', ', $shipment_type) : [];
+                                            foreach ($types as $t): ?>
+                                                <span class="badge bg-secondary me-1"><?php echo htmlspecialchars(trim($t)); ?></span>
+                                            <?php endforeach; ?>
                                         </div>
                                     </div>
 
@@ -510,7 +558,7 @@ if ($total_rows == 0) $total_rows = 1;
                                     <div class="row">
                                         <label class="col-lg-3 col-form-label">Tag:</label>
                                         <div class="col-lg-9 mt-2">
-                                            <?php print_r($tags_captions); ?>
+                                            <?php echo $tags_captions; ?>
                                         </div>
                                     </div>
 
@@ -735,7 +783,7 @@ if ($total_rows == 0) $total_rows = 1;
                                     </div>
 
                                     <div class="row">
-                                        <label class="col-lg-3 col-form-label"><span class="text-danger">Custom Declaration No:*</span></label>
+                                        <label class="col-lg-3 col-form-label"><span class="text-danger">Customs Declaration No:*</span></label>
                                         <div class="col-lg-9 mt-2">
                                             <?php echo $declaration_no; ?>
                                         </div>
@@ -934,6 +982,7 @@ if ($total_rows == 0) $total_rows = 1;
                                             </div>
                                         </div>
 
+
                                         <div class="row">
                                             <label class="col-lg-3 col-form-label">No. of Pieces: </label>
                                             <div class="col-lg-9 mt-2">
@@ -944,7 +993,7 @@ if ($total_rows == 0) $total_rows = 1;
                                         <div class="row">
                                             <label class="col-lg-3 col-form-label">Commodity Type: </label>
                                             <div class="col-lg-9 mt-2">
-                                                <?php echo getTableAttr('commodity_type', DB::COMMODITY_TYPES, $commodity_type); ?>
+                                                <?php echo htmlspecialchars($commodity_type); ?>
                                             </div>
                                         </div>
 
@@ -1029,14 +1078,14 @@ if ($total_rows == 0) $total_rows = 1;
                                     <div class="card-body">
 
                                         <div class="row">
-                                            <label class="col-lg-3 col-form-label">Landing Country: </label>
+                                            <label class="col-lg-3 col-form-label">Loading Country: </label>
                                             <div class="col-lg-9 mt-2">
                                                 <?php echo getTableAttr('country', DB::GEO_COUNTRIES, $landing_country); ?>
                                             </div>
                                         </div>
 
                                         <div class="row">
-                                            <label class="col-lg-3 col-form-label">Port of Landing (POL): </label>
+                                            <label class="col-lg-3 col-form-label">Port of Loading (POL): </label>
                                             <div class="col-lg-9 mt-2">
                                                 <?php echo getTableAttr('port_name', DB::PORTS, $landing_port); ?>
                                             </div>
@@ -1242,7 +1291,7 @@ if ($total_rows == 0) $total_rows = 1;
                                         <div class="row">
                                             <label class="col-lg-3 col-form-label">Modified By: </label>
                                             <div class="col-lg-9 mt-1">
-                                                <input type="text" class="form-control" value="<?php echo $modified_by; ?>" disabled>
+                                                <input type="text" class="form-control" value="<?php echo $modified_by_name ?? $modified_by; ?>" disabled>
                                             </div>
                                         </div>
 
@@ -1321,7 +1370,7 @@ if ($total_rows == 0) $total_rows = 1;
                                 <div class="col-lg-12 mt-2">
                                     <div class="ms-sm-3 mb-3 mb-sm-0">
                                         <label class="col-lg-6 col-form-label">Notes:</label>
-                                        <textarea class="form-control" name="notes" id="notes" style="field-sizing: content;" placeholder=""><?php echo $notes; ?></textarea>
+                                        <textarea class="form-control" name="notes" id="notes" style="field-sizing: content;" placeholder="" disabled><?php echo $notes; ?></textarea>
                                         <!-- Looking forward for your business -->
                                     </div>
                                 </div>
