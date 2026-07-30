@@ -53,7 +53,7 @@ class JobController extends BaseController
             $action === 'check_duplicate' => $this->handleCheckDuplicate($request),
             $action === 'ajax_ports' => $this->handleAjaxPorts($request),
             $request->isPost() && $action === 'ajax_add_carrier' => $this->handleAddCarrier($request),
-            $request->isPost() && $action === 'ajax_add_service' => $this->handleAddService($request),
+
             $request->isPost() && $action === 'update_jobs' && $id > 0 && $this->canEdit()
                 => $this->handleUpdate($request, $id),
             $request->isPost() && $action === 'add_jobs' && $this->canCreate()
@@ -286,7 +286,7 @@ class JobController extends BaseController
         $job_no = '';
         $job_ref_no = '';
         $sales_person = '0';
-        $sales_person_from_lead = '0';
+        $sales_person_from_lead = '';
         $currency = '';
         $exchange_rate = '';
         $transport_mode = '';
@@ -748,39 +748,12 @@ class JobController extends BaseController
         }
         try {
             $row = $this->db->fetchOne(
-                "SELECT full_name FROM `" . DB::USERS . "` WHERE id = :id",
+                "SELECT email FROM `" . DB::USERS . "` WHERE id = :id",
                 ['id' => $userId]
             );
-            return $row ? ($row['full_name'] ?? (string)$userId) : (string)$userId;
+            return $row ? ($row['email'] ?? (string)$userId) : (string)$userId;
         } catch (\Throwable $e) {
             return (string)$userId;
-        }
-    }
-
-    private function handleAddService(Request $request): Response
-    {
-        $name = trim($request->getString('service_name'));
-        if (empty($name)) {
-            return Response::json(['success' => false, 'message' => 'Service name is required.']);
-        }
-
-        try {
-            $existing = $this->db->fetchOne(
-                "SELECT id FROM `" . DB::ITEMS . "` WHERE item_name = :name AND item_type = 'services'",
-                ['name' => $name]
-            );
-            if ($existing) {
-                return Response::json(['success' => true, 'id' => (int)$existing['id'], 'service_name' => $name]);
-            }
-
-            $newId = $this->db->insert(DB::ITEMS, [
-                'item_name' => $name,
-                'item_type' => 'services',
-                'organization_id' => $this->orgId,
-            ]);
-            return Response::json(['success' => true, 'id' => $newId, 'service_name' => $name]);
-        } catch (\Throwable $e) {
-            return Response::json(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
         }
     }
 

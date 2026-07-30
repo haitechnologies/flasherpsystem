@@ -321,19 +321,7 @@ include 'admin_elements/admin_header.php';
 
                                     <?php $field = ['name'=>'cs_agent', 'label'=>'CS Agent:', 'options'=>$users_options, 'selected'=>$cs_agent]; include 'admin_elements/form_field_select.php'; ?>
 
-                                    <div class="row mb-2">
-                                        <label class="col-lg-3 col-form-label" for="services">Type of Services:</label>
-                                        <div class="col-lg-9">
-                                            <div class="input-group">
-                                                <select class="form-control select select2-enable" name="services[]" id="services" multiple>
-                                                    <?php echo $services_options_html; ?>
-                                                </select>
-                                                <button type="button" class="btn btn-outline-primary" onclick="showAddServiceModal();" title="Add New Service">
-                                                    <i class="ph-plus"></i>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
+                                    <?php $field = ['name'=>'services[]', 'label'=>'Type of Services:', 'options_html'=>$services_options_html, 'extra_class'=>'form-control select select2-enable', 'multiple'=>true, 'empty_option'=>false]; include 'admin_elements/form_field_select.php'; ?>
 
                                     <?php $field = ['name'=>'incoterm', 'label'=>'Incoterms:', 'options_html'=>$incoterm_options_html, 'selected'=>$incoterm, 'extra_class'=>'form-control']; include 'admin_elements/form_field_select.php'; ?>
 
@@ -829,29 +817,6 @@ include 'admin_elements/admin_header.php';
                     </div>
                 </div>
             </div>
-
-            <!-- Add Service Modal -->
-            <div class="modal fade" id="addServiceModal" tabindex="-1">
-                <div class="modal-dialog">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title">Add New Service</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                        </div>
-                        <div class="modal-body">
-                            <div class="mb-3">
-                                <label for="new_service_name" class="form-label">Service Name <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="new_service_name" placeholder="Enter service name">
-                                <div class="invalid-feedback" id="service_name_error"></div>
-                            </div>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
-                            <button type="button" class="btn btn-primary" id="saveServiceBtn" onclick="saveNewService();">Save Service</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
         </div>
         <?php include 'admin_elements/copyright.php'; ?>
     </div>
@@ -892,43 +857,6 @@ function saveNewCarrier() {
         }
     }, 'json').always(function() {
         $('#saveCarrierBtn').prop('disabled', false).text('Save Carrier');
-    });
-}
-
-function showAddServiceModal() {
-    $('#new_service_name').val('').removeClass('is-invalid');
-    $('#service_name_error').text('');
-    $('#addServiceModal').modal('show');
-}
-
-function saveNewService() {
-    var name = $('#new_service_name').val().trim();
-    if (!name) {
-        $('#new_service_name').addClass('is-invalid');
-        $('#service_name_error').text('Please enter a service name.');
-        return;
-    }
-    $('#saveServiceBtn').prop('disabled', true).text('Saving...');
-    $.post('<?php echo $module; ?>.php', {
-        action: 'ajax_add_service',
-        service_name: name,
-        csrf_token: '<?php echo csrf_token(); ?>'
-    }, function(res) {
-        if (res.success) {
-            var $servicesSelect = $('#services');
-            if ($servicesSelect.hasClass('select2-hidden-accessible')) {
-                var newOption = new Option(res.service_name, res.id, true, true);
-                $servicesSelect.append(newOption).trigger('change');
-            } else {
-                $servicesSelect.append('<option value="' + res.id + '" selected>' + res.service_name + '</option>');
-            }
-            $('#addServiceModal').modal('hide');
-        } else {
-            $('#new_service_name').addClass('is-invalid');
-            $('#service_name_error').text(res.message || 'Failed to save service.');
-        }
-    }, 'json').always(function() {
-        $('#saveServiceBtn').prop('disabled', false).text('Save Service');
     });
 }
 
