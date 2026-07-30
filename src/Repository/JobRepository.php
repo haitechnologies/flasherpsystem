@@ -27,7 +27,7 @@ class JobRepository
      */
     public function find(int $id, int $orgId): ?Job
     {
-        $sql = "SELECT id, organization_id, job_date, job_status, warehouse_id, customer_id, quotation_id, job_ref_no, job_no, job_seq, sales_person, sales_person_from_lead, project_created, qrcode, currency, exchange_rate, transport_mode, shipment_type, job_owner, tags, services, cs_agent, incoterm, email, supplier_rate, estimated_net_profit, estimated_invoice_amount, etd, eta, carrier, vessel_name, vessel_departure_date, flight_no, flight_departure_date, job_completion_date, payment_terms, hawb, mawb, estimated_cost_amount, declaration_no, gross_weight, volume_weight, cbm, chargeable_weight, no_of_pieces, commodity_type, no_of_containers, insurance_needed, container_type, temperature_control_required, container_number, special_comments, landing_country, landing_port, loading_place, billing_city, billing_state, billing_code, billing_country, destination_country, destination_port, fdp, shipping_city, shipping_state, shipping_code, shipping_country, subject, terms_and_conditions, grand_subtotal, grand_discount_type, grand_discount_type_value, grand_discount_amount, grand_after_discount, customer_notes, grand_tax, grand_total, happy_customer, unhappy_reason, shipment_on_time, referral, notes, books_customer_id, quote_id, project_id, modified_by, customer_type, approved_time, approved_time_resubmission, publish, is_active, created_at, updated_at, updated_by, created_by, pdf FROM `{DB::JOBS}` WHERE id = :id AND organization_id = :org_id";
+        $sql = "SELECT id, organization_id, job_date, job_status, warehouse_id, customer_id, job_ref_no, job_no, job_seq, sales_person, sales_person_from_lead, project_created, qrcode, currency, exchange_rate, transport_mode, shipment_type, job_owner, tags, services, cs_agent, incoterm, email, supplier_rate, estimated_net_profit, estimated_invoice_amount, etd, eta, carrier, vessel_name, vessel_departure_date, flight_no, flight_departure_date, job_completion_date, payment_terms, hawb, mawb, estimated_cost_amount, declaration_no, gross_weight, volume_weight, cbm, chargeable_weight, no_of_pieces, commodity_type, no_of_containers, insurance_needed, container_type, temperature_control_required, container_number, special_comments, landing_country, landing_port, loading_place, billing_city, billing_state, billing_code, billing_country, destination_country, destination_port, fdp, shipping_city, shipping_state, shipping_code, shipping_country, subject, terms_and_conditions, grand_subtotal, grand_discount_type, grand_discount_type_value, grand_discount_amount, grand_after_discount, customer_notes, grand_tax, grand_total, happy_customer, unhappy_reason, shipment_on_time, referral, notes, books_customer_id, quote_id, project_id, modified_by, customer_type, approved_time, approved_time_resubmission, publish, is_active, created_at, updated_at, updated_by, created_by, pdf FROM `{DB::JOBS}` WHERE id = :id AND organization_id = :org_id";
         $row = $this->db->fetchOne($sql, ['id' => $id, 'org_id' => $orgId]);
         if ($row === null) {
             return null;
@@ -52,7 +52,7 @@ class JobRepository
      */
     public function findAll(int $orgId): array
     {
-        $sql = "SELECT id, organization_id, job_date, job_status, warehouse_id, customer_id, quotation_id, job_ref_no, job_no, job_seq, sales_person, sales_person_from_lead, project_created, qrcode, currency, exchange_rate, transport_mode, shipment_type, job_owner, tags, services, cs_agent, incoterm, email, supplier_rate, estimated_net_profit, estimated_invoice_amount, etd, eta, carrier, vessel_name, vessel_departure_date, flight_no, flight_departure_date, job_completion_date, payment_terms, hawb, mawb, estimated_cost_amount, declaration_no, gross_weight, volume_weight, cbm, chargeable_weight, no_of_pieces, commodity_type, no_of_containers, insurance_needed, container_type, temperature_control_required, container_number, special_comments, landing_country, landing_port, loading_place, billing_city, billing_state, billing_code, billing_country, destination_country, destination_port, fdp, shipping_city, shipping_state, shipping_code, shipping_country, subject, terms_and_conditions, grand_subtotal, grand_discount_type, grand_discount_type_value, grand_discount_amount, grand_after_discount, customer_notes, grand_tax, grand_total, happy_customer, unhappy_reason, shipment_on_time, referral, notes, books_customer_id, quote_id, project_id, modified_by, customer_type, approved_time, approved_time_resubmission, publish, is_active, created_at, updated_at, updated_by, created_by, pdf FROM `{DB::JOBS}` WHERE organization_id = :org_id ORDER BY id DESC";
+        $sql = "SELECT id, organization_id, job_date, job_status, warehouse_id, customer_id, job_ref_no, job_no, job_seq, sales_person, sales_person_from_lead, project_created, qrcode, currency, exchange_rate, transport_mode, shipment_type, job_owner, tags, services, cs_agent, incoterm, email, supplier_rate, estimated_net_profit, estimated_invoice_amount, etd, eta, carrier, vessel_name, vessel_departure_date, flight_no, flight_departure_date, job_completion_date, payment_terms, hawb, mawb, estimated_cost_amount, declaration_no, gross_weight, volume_weight, cbm, chargeable_weight, no_of_pieces, commodity_type, no_of_containers, insurance_needed, container_type, temperature_control_required, container_number, special_comments, landing_country, landing_port, loading_place, billing_city, billing_state, billing_code, billing_country, destination_country, destination_port, fdp, shipping_city, shipping_state, shipping_code, shipping_country, subject, terms_and_conditions, grand_subtotal, grand_discount_type, grand_discount_type_value, grand_discount_amount, grand_after_discount, customer_notes, grand_tax, grand_total, happy_customer, unhappy_reason, shipment_on_time, referral, notes, books_customer_id, quote_id, project_id, modified_by, customer_type, approved_time, approved_time_resubmission, publish, is_active, created_at, updated_at, updated_by, created_by, pdf FROM `{DB::JOBS}` WHERE organization_id = :org_id ORDER BY id DESC";
         $rows = $this->db->fetchAll($sql, ['org_id' => $orgId]);
         $jobs = [];
         foreach ($rows as $row) {
@@ -66,7 +66,7 @@ class JobRepository
      */
     public function findByField(string $field, string $value, int $orgId, int $excludeId = 0): ?Job
     {
-        $sql = "SELECT id, organization_id, job_date, job_status, warehouse_id, customer_id, quotation_id, job_ref_no, job_no, job_seq, sales_person, sales_person_from_lead, project_created, qrcode, currency, exchange_rate, transport_mode, shipment_type, job_owner, tags, services, cs_agent, incoterm, email, supplier_rate, estimated_net_profit, estimated_invoice_amount, etd, eta, carrier, vessel_name, vessel_departure_date, flight_no, flight_departure_date, job_completion_date, payment_terms, hawb, mawb, estimated_cost_amount, declaration_no, gross_weight, volume_weight, cbm, chargeable_weight, no_of_pieces, commodity_type, no_of_containers, insurance_needed, container_type, temperature_control_required, container_number, special_comments, landing_country, landing_port, loading_place, billing_city, billing_state, billing_code, billing_country, destination_country, destination_port, fdp, shipping_city, shipping_state, shipping_code, shipping_country, subject, terms_and_conditions, grand_subtotal, grand_discount_type, grand_discount_type_value, grand_discount_amount, grand_after_discount, customer_notes, grand_tax, grand_total, happy_customer, unhappy_reason, shipment_on_time, referral, notes, books_customer_id, quote_id, project_id, modified_by, customer_type, approved_time, approved_time_resubmission, publish, is_active, created_at, updated_at, updated_by, created_by, pdf FROM `{DB::JOBS}` WHERE $field = :value AND organization_id = :org_id";
+        $sql = "SELECT id, organization_id, job_date, job_status, warehouse_id, customer_id, job_ref_no, job_no, job_seq, sales_person, sales_person_from_lead, project_created, qrcode, currency, exchange_rate, transport_mode, shipment_type, job_owner, tags, services, cs_agent, incoterm, email, supplier_rate, estimated_net_profit, estimated_invoice_amount, etd, eta, carrier, vessel_name, vessel_departure_date, flight_no, flight_departure_date, job_completion_date, payment_terms, hawb, mawb, estimated_cost_amount, declaration_no, gross_weight, volume_weight, cbm, chargeable_weight, no_of_pieces, commodity_type, no_of_containers, insurance_needed, container_type, temperature_control_required, container_number, special_comments, landing_country, landing_port, loading_place, billing_city, billing_state, billing_code, billing_country, destination_country, destination_port, fdp, shipping_city, shipping_state, shipping_code, shipping_country, subject, terms_and_conditions, grand_subtotal, grand_discount_type, grand_discount_type_value, grand_discount_amount, grand_after_discount, customer_notes, grand_tax, grand_total, happy_customer, unhappy_reason, shipment_on_time, referral, notes, books_customer_id, quote_id, project_id, modified_by, customer_type, approved_time, approved_time_resubmission, publish, is_active, created_at, updated_at, updated_by, created_by, pdf FROM `{DB::JOBS}` WHERE $field = :value AND organization_id = :org_id";
         $params = ['value' => $value, 'org_id' => $orgId];
         if ($excludeId > 0) {
             $sql .= " AND id != :exclude_id";
@@ -94,7 +94,7 @@ class JobRepository
     {
         $sql = "INSERT INTO `{DB::JOBS}` (
                     organization_id, job_date, job_status, warehouse_id, customer_id,
-                    quotation_id, job_ref_no, job_no, job_seq, sales_person,
+                    job_ref_no, job_no, job_seq, sales_person,
                     sales_person_from_lead, project_created, qrcode,
                     currency, exchange_rate, transport_mode, shipment_type, job_owner, tags,
                     services, cs_agent, incoterm, email, supplier_rate, estimated_net_profit,
@@ -115,7 +115,7 @@ class JobRepository
                     created_at, updated_at, updated_by, created_by, pdf
                 ) VALUES (
                     :organization_id, :job_date, :job_status, :warehouse_id, :customer_id,
-                    :quotation_id, :job_ref_no, :job_no, :job_seq, :sales_person,
+                    :job_ref_no, :job_no, :job_seq, :sales_person,
                     :sales_person_from_lead, :project_created, :qrcode,
                     :currency, :exchange_rate, :transport_mode, :shipment_type, :job_owner, :tags,
                     :services, :cs_agent, :incoterm, :email, :supplier_rate, :estimated_net_profit,
@@ -171,7 +171,6 @@ class JobRepository
                     job_status = :job_status,
                     warehouse_id = :warehouse_id,
                     customer_id = :customer_id,
-                    quotation_id = :quotation_id,
                     job_ref_no = :job_ref_no,
                     job_no = :job_no,
                     job_seq = :job_seq,
@@ -321,7 +320,6 @@ class JobRepository
             jobStatus: (string)($row['job_status'] ?? ''),
             warehouseId: (int)($row['warehouse_id'] ?? 0),
             customerId: (int)($row['customer_id'] ?? 0),
-            quotationId: isset($row['quotation_id']) ? (int)$row['quotation_id'] : null,
             jobReferenceNo: (string)($row['job_ref_no'] ?? ''),
             jobNo: (string)($row['job_no'] ?? ''),
             jobSeq: (int)($row['job_seq'] ?? 0),
