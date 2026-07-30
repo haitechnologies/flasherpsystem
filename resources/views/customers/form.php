@@ -58,7 +58,7 @@ include 'admin_elements/admin_header.php';
                 <h5 class="mb-0"><?php echo ($id > 0) ? 'Edit' : 'New'; ?> <?php echo $moduleCaption; ?></h5>
                 <?php if ($id > 0) { ?>
                     <div class="form-check form-switch ms-3 mb-0">
-                        <input type="checkbox" class="form-check-input form-check-input-success" name="publish" id="publish" <?php echo $is_active == 1 ? 'checked="checked"' : ''; ?>>
+                        <input type="checkbox" class="form-check-input form-check-input-success" name="publish" id="publish" form="frm<?php echo $module; ?>" <?php echo $is_active == 1 ? 'checked="checked"' : ''; ?>>
                         <label class="form-check-label fw-semibold" for="publish">Active Status</label>
                     </div>
                 <?php } ?>

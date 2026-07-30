@@ -143,7 +143,7 @@ class CustomerController extends BaseController
             'subscription_expires_at' => $request->getString('subscription_expires_at'),
             'is_active' => $request->get('publish') ? true : false,
             'approved' => $request->get('approved') ? true : false,
-            'publish' => $request->get('publish') ? true : true,
+            'publish' => $request->get('publish') ? true : false,
         ];
     }
 
