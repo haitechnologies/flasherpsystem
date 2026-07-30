@@ -54,6 +54,9 @@ and this project uses **date-based versioning** (`YYYY-MM-DD`).
    UPDATE `erp_jobs` SET `job_no` = CONCAT('JB-', LPAD(id, 4, '0')) WHERE `job_no` IS NULL OR `job_no` = '';
    ```
 
+### Fixed
+- `src/Repository/JobRepository.php`: Removed `quotation_id` from all SQL queries — column does not exist in `erp_jobs` table (only `quote_id` exists). Affected 3 SELECT queries, INSERT columns, INSERT VALUES, UPDATE SET, and `mapRowToJob()`. Caused `SQLSTATE[42S22]: Column not found` on any job query.
+
 ### Added
 - `resources/views/jobs/form.php`: New **CBM** decimal input field after Volume Weight in Commodity Details card.
 - `dashboard/view_job.php`: CBM field display added after Volume Weight.
