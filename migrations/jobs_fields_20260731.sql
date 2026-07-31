@@ -28,3 +28,6 @@ ALTER TABLE `erp_jobs` ADD COLUMN `customer_type` VARCHAR(100) DEFAULT NULL AFTE
 ALTER TABLE `erp_jobs` MODIFY COLUMN `unhappy_reason` TEXT DEFAULT NULL;
 ALTER TABLE `erp_jobs` MODIFY COLUMN `referral` VARCHAR(300) DEFAULT NULL;
 ALTER TABLE `erp_jobs` MODIFY COLUMN `notes` TEXT DEFAULT NULL;
+
+-- 5. Fix job status: rename 'pending' to 'pending_approval' for workflow
+UPDATE `erp_job_statuses` SET job_status = 'pending_approval' WHERE job_status = 'pending';

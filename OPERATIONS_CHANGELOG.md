@@ -54,3 +54,9 @@ ALTER TABLE `erp_jobs` ADD COLUMN `grand_tax` DECIMAL(10,2) DEFAULT 0.00 AFTER `
 ALTER TABLE `erp_jobs` ADD COLUMN `grand_total` DECIMAL(10,2) DEFAULT 0.00 AFTER `grand_tax`;
 ALTER TABLE `erp_jobs` ADD COLUMN `customer_type` VARCHAR(100) DEFAULT NULL AFTER `approved_time_resubmission`;
 ```
+
+mysql -u u904789561_haizon -p u904789561_haizon < migrations/jobs_fields_20260731.sql
+
+rn|M|9D@Y2c
+
+mysql -u u904789561_haizon -p u904789561_haizon < migrations/geo_data_import_20260731.sql

@@ -401,7 +401,7 @@ if ($total_rows == 0) $total_rows = 1;
             </div>
 
             <div class="collapse d-lg-block ms-lg-auto" id="breadcrumb_elements">
-                <div class="d-lg-flex mb-2 mb-lg-0">
+                <div class="d-lg-flex mb-2 mb-lg-0 ms-auto">
                     <div class="mt-2 mb-2">
 
                         <?php
