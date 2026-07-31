@@ -23,3 +23,8 @@ ALTER TABLE `erp_jobs` ADD COLUMN `customer_notes` TEXT DEFAULT NULL AFTER `gran
 ALTER TABLE `erp_jobs` ADD COLUMN `grand_tax` DECIMAL(10,2) DEFAULT 0.00 AFTER `customer_notes`;
 ALTER TABLE `erp_jobs` ADD COLUMN `grand_total` DECIMAL(10,2) DEFAULT 0.00 AFTER `grand_tax`;
 ALTER TABLE `erp_jobs` ADD COLUMN `customer_type` VARCHAR(100) DEFAULT NULL AFTER `approved_time_resubmission`;
+
+-- 4. Fix NOT NULL constraints mismatched with Model ?string types
+ALTER TABLE `erp_jobs` MODIFY COLUMN `unhappy_reason` TEXT DEFAULT NULL;
+ALTER TABLE `erp_jobs` MODIFY COLUMN `referral` VARCHAR(300) DEFAULT NULL;
+ALTER TABLE `erp_jobs` MODIFY COLUMN `notes` TEXT DEFAULT NULL;
