@@ -76,13 +76,4 @@ class JobsDataTable extends BaseDataTable
         return trim($actions);
     }
 
-    private function formatDate(string $dateStr): string
-    {
-        if (empty($dateStr) || $dateStr === '1970-01-01') {
-            return '';
-        }
-        $ts = strtotime($dateStr);
-        return $ts ? htmlspecialchars(date('d M Y', $ts)) : htmlspecialchars($dateStr);
-    }
-
 }
