@@ -618,7 +618,7 @@ include 'admin_elements/admin_header.php';
                                                 }
                                                 ?>
                                             </select>
-                                            <button type="button" class="btn btn-outline-primary" onclick="showAddPortModal();" title="Add New Port"><i class="ph-plus"></i></button>
+                                            <button type="button" class="btn btn-outline-primary" onclick="showAddPortModal('landing_port');" title="Add New Port"><i class="ph-plus"></i></button>
                                             </div>
                                         </div>
                                     </div>
@@ -659,7 +659,7 @@ include 'admin_elements/admin_header.php';
                                                 }
                                                 ?>
                                             </select>
-                                            <button type="button" class="btn btn-outline-primary" onclick="showAddPortModal();" title="Add New Port"><i class="ph-plus"></i></button>
+                                            <button type="button" class="btn btn-outline-primary" onclick="showAddPortModal('destination_port');" title="Add New Port"><i class="ph-plus"></i></button>
                                             </div>
                                         </div>
                                     </div>
@@ -924,10 +924,19 @@ function saveNewCarrier() {
     });
 }
 
-function showAddPortModal() {
+var portModalTarget = null;
+
+function showAddPortModal(targetSelect) {
+    portModalTarget = targetSelect;
     $('#new_port_name').val('').removeClass('is-invalid');
     $('#new_port_code').val('');
-    $('#new_port_country').val('0').removeClass('is-invalid');
+    var countryId = '0';
+    if (targetSelect === 'landing_port') {
+        countryId = $('select[name="landing_country"]').val() || '0';
+    } else if (targetSelect === 'destination_port') {
+        countryId = $('select[name="destination_country"]').val() || '0';
+    }
+    $('#new_port_country').val(countryId).removeClass('is-invalid');
     $('#port_name_error').text('');
     $('#port_country_error').text('');
     $('#addPortModal').modal('show');
@@ -960,10 +969,9 @@ function saveNewPort() {
     }, function(res) {
         if (res.success) {
             var label = res.port_code ? res.port_code + ' - ' + res.port_name : res.port_name;
-            var $allPortSelects = $('select[name="landing_port"], select[name="destination_port"]');
-            $allPortSelects.each(function() {
-                $(this).append('<option value="' + res.id + '" selected>' + label + '</option>');
-            });
+            if (portModalTarget) {
+                $('#' + portModalTarget).append('<option value="' + res.id + '" selected>' + label + '</option>');
+            }
             $('#addPortModal').modal('hide');
         } else {
             $('#new_port_name').addClass('is-invalid');
