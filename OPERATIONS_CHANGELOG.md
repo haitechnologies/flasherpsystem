@@ -1,7 +1,7 @@
 ## 2026-07-31
 
 ### Fixed — Jobs Module
-- **Missing column**: `erp_jobs.cbm` added (`varchar(255) DEFAULT NULL`) — migration from 2026-07-29 was never applied, causing SQL error on job save.
+- **Missing columns**: `erp_jobs.cbm` added (`varchar(255)`) — migration from 2026-07-29 was never applied. Also added 12 missing columns (`quotation_id`, `subject`, `terms_and_conditions`, `grand_subtotal`, `grand_discount_type`, `grand_discount_type_value`, `grand_discount_amount`, `grand_after_discount`, `customer_notes`, `grand_tax`, `grand_total`, `customer_type`) — all referenced in `JobRepository` queries but absent from production schema, causing SQLSTATE[42S22] on every save.
 - **Date picker**: Calendar icon now clickable to open datepicker across all date fields (`form_field_date.php`). Added `z-index: 10000 !important` to prevent icons/buttons from overlapping the popup (`haipulse-dashboard-compat.css`).
 - **Dimension totals**: `calculateGrand()` now called after row removal (`clear_row`) and always after `calculateItemCBM` — fixes totals not updating on row delete or pcs=0.
 
@@ -16,7 +16,7 @@
 - **Shipping > Settings**: Added "Countries" link above Ports pointing to `listing_geo_countries.php`. Operations role (4) already has permissions for `geo_countries` (module 133).
 
 ### Added — Migration
-- `migrations/jobs_fields_20260731.sql`: Consolidated DB changes for today (cbm column + hawb/mawb TEXT).
+- `migrations/jobs_fields_20260731.sql`: Consolidated DB changes — cbm + 12 missing columns + hawb/mawb TEXT (15 ALTERs total).
 
 ### Changed — Agent Context (token optimization)
 - **docs/AGENTS.md**: 146→111 lines (-24%). Added `AGENTS_QUICKREF.md` to active refs.
@@ -28,10 +28,23 @@
 - `docs/AGENTS_QUICKREF.md`: 52-line cheat sheet.
 - `.opencode/skills/SKILL_COMMON.md`: Shared stack patterns.
 
-### Live Deployment — SQL to run
+### Live Deployment — Run on production database
+
 ```sql
--- File: migrations/jobs_fields_20260731.sql
+-- File: migrations/jobs_fields_20260731.sql (15 statements)
 ALTER TABLE `erp_jobs` ADD COLUMN `cbm` VARCHAR(255) DEFAULT NULL AFTER `chargeable_weight`;
 ALTER TABLE `erp_jobs` MODIFY COLUMN `hawb` TEXT DEFAULT NULL;
 ALTER TABLE `erp_jobs` MODIFY COLUMN `mawb` TEXT DEFAULT NULL;
+ALTER TABLE `erp_jobs` ADD COLUMN `quotation_id` INT UNSIGNED DEFAULT NULL AFTER `customer_id`;
+ALTER TABLE `erp_jobs` ADD COLUMN `subject` TEXT DEFAULT NULL AFTER `shipping_country`;
+ALTER TABLE `erp_jobs` ADD COLUMN `terms_and_conditions` TEXT DEFAULT NULL AFTER `subject`;
+ALTER TABLE `erp_jobs` ADD COLUMN `grand_subtotal` DECIMAL(10,2) DEFAULT 0.00 AFTER `terms_and_conditions`;
+ALTER TABLE `erp_jobs` ADD COLUMN `grand_discount_type` VARCHAR(20) DEFAULT '0.00' AFTER `grand_subtotal`;
+ALTER TABLE `erp_jobs` ADD COLUMN `grand_discount_type_value` DECIMAL(10,2) DEFAULT 0.00 AFTER `grand_discount_type`;
+ALTER TABLE `erp_jobs` ADD COLUMN `grand_discount_amount` DECIMAL(10,2) DEFAULT 0.00 AFTER `grand_discount_type_value`;
+ALTER TABLE `erp_jobs` ADD COLUMN `grand_after_discount` DECIMAL(10,2) DEFAULT 0.00 AFTER `grand_discount_amount`;
+ALTER TABLE `erp_jobs` ADD COLUMN `customer_notes` TEXT DEFAULT NULL AFTER `grand_after_discount`;
+ALTER TABLE `erp_jobs` ADD COLUMN `grand_tax` DECIMAL(10,2) DEFAULT 0.00 AFTER `customer_notes`;
+ALTER TABLE `erp_jobs` ADD COLUMN `grand_total` DECIMAL(10,2) DEFAULT 0.00 AFTER `grand_tax`;
+ALTER TABLE `erp_jobs` ADD COLUMN `customer_type` VARCHAR(100) DEFAULT NULL AFTER `approved_time_resubmission`;
 ```
