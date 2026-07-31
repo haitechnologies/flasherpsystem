@@ -85,6 +85,7 @@ class JobController extends BaseController
         }
 
         $jobData = $this->buildJobData($request);
+        $jobData['id'] = $id;
 
         try {
             $this->jobService->updateJob($id, $jobData, $this->orgId, $this->userId);
