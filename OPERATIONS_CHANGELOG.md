@@ -1,5 +1,8 @@
 ## 2026-07-31
 
+### Migration — Live Server
+- **`migrations/jobs_fix_live_20260731.sql`**: Idempotent MODIFY-only migration — fixes `unhappy_reason`/`referral`/`notes` NOT NULL constraints, `hawb`/`mawb` → TEXT, `pending_approval` status rename. Safe to re-run.
+
 ### Fixed — Port Popup
 - **New port only appends to clicked dropdown** (no longer duplicates to both POL/POD). Uses `portModalTarget` variable to track which select opened the modal.
 - **Country pre-selected in port popup** — reads currently selected country from parent dropdown.
@@ -77,3 +80,10 @@ ALTER TABLE `erp_jobs` ADD COLUMN `customer_type` VARCHAR(100) DEFAULT NULL AFTE
 
 mysql -u USER -p DATABASE < migrations/jobs_fields_20260731.sql
 mysql -u USER -p DATABASE < migrations/geo_data_import_20260731.sql
+
+mysql -u u904789561_haizon -p u904789561_haizon < migrations/jobs_fields_20260731.sql
+
+
+mysql -u u904789561_haizon -p u904789561_haizon < migrations/jobs_fix_live_20260731.sql
+
+rn|M|9D@Y2c
