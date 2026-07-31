@@ -142,9 +142,21 @@
                                         </div>
 
                                         <div class="ps-3 pe-3 pb-3">
-                                            <a href="#" data-bs-toggle="modal" data-bs-target="#modal_opening_balance" class="text-primary">
-                                                Enter Opening Balance
-                                            </a>
+                                            <?php $ob = $customerObj->openingBalance; ?>
+                                            <?php if ($ob != 0): ?>
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <span class="fw-semibold small">
+                                                        Opening Balance: <?php echo BASE_CURRENCY['code']; ?> <?php echo number_format((float)$ob, 2); ?>
+                                                    </span>
+                                                    <a href="#" data-bs-toggle="modal" data-bs-target="#modal_opening_balance" class="text-muted small text-decoration-none">
+                                                        <i class="ph-pencil me-1"></i> Edit
+                                                    </a>
+                                                </div>
+                                            <?php else: ?>
+                                                <a href="#" data-bs-toggle="modal" data-bs-target="#modal_opening_balance" class="text-primary">
+                                                    Enter Opening Balance
+                                                </a>
+                                            <?php endif; ?>
                                         </div>
                                     </div>
 
@@ -498,7 +510,7 @@
                             <label class="form-label fw-semibold">Opening Balance <span class="text-danger">*</span></label>
                             <div class="input-group">
                                 <span class="input-group-text"><?php echo BASE_CURRENCY['code']; ?></span>
-                                <input type="number" step="0.01" class="form-control" name="opening_balance" placeholder="0.00" required>
+                                <input type="number" step="0.01" class="form-control" name="opening_balance" value="<?php echo $customerObj->openingBalance != 0 ? number_format((float)$customerObj->openingBalance, 2, '.', '') : ''; ?>" placeholder="0.00" required>
                             </div>
                         </div>
 
