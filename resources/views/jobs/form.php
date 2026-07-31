@@ -598,7 +598,20 @@ include 'admin_elements/admin_header.php';
                                     <h6 class="mb-0">Port Details</h6>
                                 </div>
                                 <div class="card-body">
-                                    <?php $field = ['name'=>'landing_country', 'label'=>'Loading Country:', 'options'=>$countries_options, 'selected'=>$landing_country, 'extra_class'=>'form-select select2-enable', 'extra_attr'=>'onchange="ajax_populate_landing_ports(this.value);"']; include 'admin_elements/form_field_select.php'; ?>
+                                    <div class="row mb-2">
+                                        <label class="col-lg-3 col-form-label" for="landing_country">Loading Country:</label>
+                                        <div class="col-lg-9">
+                                            <div class="input-group">
+                                                <select class="form-select select2-enable" name="landing_country" id="landing_country" onchange="ajax_populate_landing_ports(this.value);">
+                                                    <option value="">Please select</option>
+                                                    <?php foreach ($countries_options as $cid => $cname): ?>
+                                                        <option value="<?php echo $cid; ?>" <?php echo ((string)$cid === (string)$landing_country) ? 'selected' : ''; ?>><?php echo htmlspecialchars($cname); ?></option>
+                                                    <?php endforeach; ?>
+                                                </select>
+                                                <button type="button" class="btn btn-outline-primary" onclick="showAddCountryModal();" title="Add New Country"><i class="ph-plus"></i></button>
+                                            </div>
+                                        </div>
+                                    </div>
 
                                     <div class="row mb-2">
                                         <label class="col-lg-3 col-form-label" for="landing_port">Port of Loading (POL):</label>
@@ -628,7 +641,20 @@ include 'admin_elements/admin_header.php';
 
                                     <?php $field = ['name'=>'billing_code', 'label'=>'Billing Code:', 'value'=>$billing_code]; include 'admin_elements/form_field_text.php'; ?>
 
-                                    <?php $field = ['name'=>'billing_country', 'label'=>'Billing Country:', 'options'=>$countries_options, 'selected'=>$billing_country, 'extra_class'=>'form-select select2-enable']; include 'admin_elements/form_field_select.php'; ?>
+                                    <div class="row mb-2">
+                                        <label class="col-lg-3 col-form-label" for="billing_country">Billing Country:</label>
+                                        <div class="col-lg-9">
+                                            <div class="input-group">
+                                                <select class="form-select select2-enable" name="billing_country" id="billing_country">
+                                                    <option value="">Please select</option>
+                                                    <?php foreach ($countries_options as $cid => $cname): ?>
+                                                        <option value="<?php echo $cid; ?>" <?php echo ((string)$cid === (string)$billing_country) ? 'selected' : ''; ?>><?php echo htmlspecialchars($cname); ?></option>
+                                                    <?php endforeach; ?>
+                                                </select>
+                                                <button type="button" class="btn btn-outline-primary" onclick="showAddCountryModal();" title="Add New Country"><i class="ph-plus"></i></button>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -636,7 +662,20 @@ include 'admin_elements/admin_header.php';
                         <div class="col-lg-6">
                             <div class="card">
                                 <div class="card-body">
-                                    <?php $field = ['name'=>'destination_country', 'label'=>'Destination Country:', 'options'=>$countries_options, 'selected'=>$destination_country, 'extra_class'=>'form-select select2-enable', 'extra_attr'=>'onchange="ajax_populate_destination_ports(this.value);"']; include 'admin_elements/form_field_select.php'; ?>
+                                    <div class="row mb-2">
+                                        <label class="col-lg-3 col-form-label" for="destination_country">Destination Country:</label>
+                                        <div class="col-lg-9">
+                                            <div class="input-group">
+                                                <select class="form-select select2-enable" name="destination_country" id="destination_country" onchange="ajax_populate_destination_ports(this.value);">
+                                                    <option value="">Please select</option>
+                                                    <?php foreach ($countries_options as $cid => $cname): ?>
+                                                        <option value="<?php echo $cid; ?>" <?php echo ((string)$cid === (string)$destination_country) ? 'selected' : ''; ?>><?php echo htmlspecialchars($cname); ?></option>
+                                                    <?php endforeach; ?>
+                                                </select>
+                                                <button type="button" class="btn btn-outline-primary" onclick="showAddCountryModal();" title="Add New Country"><i class="ph-plus"></i></button>
+                                            </div>
+                                        </div>
+                                    </div>
 
                                     <div class="row mb-2">
                                         <label class="col-lg-3 col-form-label" for="destination_port">Port of Destination (POD):</label>
@@ -666,7 +705,20 @@ include 'admin_elements/admin_header.php';
 
                                     <?php $field = ['name'=>'shipping_code', 'label'=>'Shipping Code:', 'value'=>$shipping_code]; include 'admin_elements/form_field_text.php'; ?>
 
-                                    <?php $field = ['name'=>'shipping_country', 'label'=>'Shipping Country:', 'options'=>$countries_options, 'selected'=>$shipping_country, 'extra_class'=>'form-select select2-enable']; include 'admin_elements/form_field_select.php'; ?>
+                                    <div class="row mb-2">
+                                        <label class="col-lg-3 col-form-label" for="shipping_country">Shipping Country:</label>
+                                        <div class="col-lg-9">
+                                            <div class="input-group">
+                                                <select class="form-select select2-enable" name="shipping_country" id="shipping_country">
+                                                    <option value="">Please select</option>
+                                                    <?php foreach ($countries_options as $cid => $cname): ?>
+                                                        <option value="<?php echo $cid; ?>" <?php echo ((string)$cid === (string)$shipping_country) ? 'selected' : ''; ?>><?php echo htmlspecialchars($cname); ?></option>
+                                                    <?php endforeach; ?>
+                                                </select>
+                                                <button type="button" class="btn btn-outline-primary" onclick="showAddCountryModal();" title="Add New Country"><i class="ph-plus"></i></button>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -838,6 +890,29 @@ include 'admin_elements/admin_header.php';
                     </div>
                 </div>
             </div>
+
+            <!-- Add Country Modal -->
+            <div class="modal fade" id="addCountryModal" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Add New Country</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label for="new_country_name" class="form-label">Country Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="new_country_name" placeholder="Enter country name">
+                                <div class="invalid-feedback" id="country_name_error"></div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-primary" id="saveCountryBtn" onclick="saveNewCountry();">Save Country</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
         <?php include 'admin_elements/copyright.php'; ?>
     </div>
@@ -878,6 +953,45 @@ function saveNewCarrier() {
         }
     }, 'json').always(function() {
         $('#saveCarrierBtn').prop('disabled', false).text('Save Carrier');
+    });
+}
+
+function showAddCountryModal() {
+    $('#new_country_name').val('').removeClass('is-invalid');
+    $('#country_name_error').text('');
+    $('#addCountryModal').modal('show');
+}
+
+function saveNewCountry() {
+    var name = $('#new_country_name').val().trim();
+    if (!name) {
+        $('#new_country_name').addClass('is-invalid');
+        $('#country_name_error').text('Please enter a country name.');
+        return;
+    }
+    $('#saveCountryBtn').prop('disabled', true).text('Saving...');
+    $.post('<?php echo $module; ?>.php', {
+        action: 'ajax_add_country',
+        country_name: name,
+        csrf_token: '<?php echo csrf_token(); ?>'
+    }, function(res) {
+        if (res.success) {
+            var $allCountrySelects = $('select[name="landing_country"], select[name="billing_country"], select[name="destination_country"], select[name="shipping_country"]');
+            $allCountrySelects.each(function() {
+                if ($(this).hasClass('select2-hidden-accessible')) {
+                    var newOption = new Option(res.country_name, res.id, true, true);
+                    $(this).append(newOption);
+                } else {
+                    $(this).append('<option value="' + res.id + '">' + res.country_name + '</option>');
+                }
+            });
+            $('#addCountryModal').modal('hide');
+        } else {
+            $('#new_country_name').addClass('is-invalid');
+            $('#country_name_error').text(res.message || 'Failed to save country.');
+        }
+    }, 'json').always(function() {
+        $('#saveCountryBtn').prop('disabled', false).text('Save Country');
     });
 }
 

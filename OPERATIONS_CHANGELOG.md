@@ -34,6 +34,15 @@
 - `docs/AGENTS_QUICKREF.md`: 52-line cheat sheet.
 - `.opencode/skills/SKILL_COMMON.md`: Shared stack patterns.
 
+### Fixed — View Job
+- **CSRF token**: `view_job.php` form missing `csrf_token` hidden field — approve/reject buttons returned "Invalid security token."
+- **Button alignment**: Edit/Approve/Reject/Cancel buttons now right-aligned via `ms-auto` on the container div.
+- **Job status**: Renamed 'pending' → 'pending_approval' in `erp_job_statuses` (workflow expects 'pending_approval').
+
+### Added — Country Quick-Add
+- **Form UX**: All 4 country dropdowns (Loading, Billing, Destination, Shipping) now have a `+` button inline — opens modal to add a new country, inserts into `erp_geo_countries`, and refreshes all country selects via Select2/AJAX.
+- **Controller**: `JobController::handleAddCountry()` — AJAX POST handler.
+
 ### Live Deployment — Run on production database
 
 ```sql
@@ -55,8 +64,5 @@ ALTER TABLE `erp_jobs` ADD COLUMN `grand_total` DECIMAL(10,2) DEFAULT 0.00 AFTER
 ALTER TABLE `erp_jobs` ADD COLUMN `customer_type` VARCHAR(100) DEFAULT NULL AFTER `approved_time_resubmission`;
 ```
 
-mysql -u u904789561_haizon -p u904789561_haizon < migrations/jobs_fields_20260731.sql
-
-rn|M|9D@Y2c
-
-mysql -u u904789561_haizon -p u904789561_haizon < migrations/geo_data_import_20260731.sql
+mysql -u USER -p DATABASE < migrations/jobs_fields_20260731.sql
+mysql -u USER -p DATABASE < migrations/geo_data_import_20260731.sql

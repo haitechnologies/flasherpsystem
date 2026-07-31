@@ -53,6 +53,7 @@ class JobController extends BaseController
             $action === 'check_duplicate' => $this->handleCheckDuplicate($request),
             $action === 'ajax_ports' => $this->handleAjaxPorts($request),
             $request->isPost() && $action === 'ajax_add_carrier' => $this->handleAddCarrier($request),
+            $request->isPost() && $action === 'ajax_add_country' => $this->handleAddCountry($request),
 
             $request->isPost() && $action === 'send_for_approval' && $id > 0
                 => $this->handleSendForApproval($request, $id),
@@ -955,6 +956,32 @@ class JobController extends BaseController
                 ['carrier_name' => $name, 'organization_id' => $this->orgId]
             );
             return Response::json(['success' => true, 'id' => $newId, 'carrier_name' => $name]);
+        } catch (\Throwable $e) {
+            return Response::json(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
+        }
+    }
+
+    private function handleAddCountry(Request $request): Response
+    {
+        $name = trim($request->getString('country_name'));
+        if (empty($name)) {
+            return Response::json(['success' => false, 'message' => 'Country name is required.']);
+        }
+
+        try {
+            $existing = $this->db->fetchOne(
+                "SELECT id FROM `" . DB::GEO_COUNTRIES . "` WHERE country = :name",
+                ['name' => $name]
+            );
+            if ($existing) {
+                return Response::json(['success' => true, 'id' => (int)$existing['id'], 'country_name' => $name]);
+            }
+
+            $newId = $this->db->insert(
+                "INSERT INTO `" . DB::GEO_COUNTRIES . "` (country, publish, is_active, created_at, updated_at) VALUES (:country_name, 1, 1, NOW(), NOW())",
+                ['country_name' => $name]
+            );
+            return Response::json(['success' => true, 'id' => $newId, 'country_name' => $name]);
         } catch (\Throwable $e) {
             return Response::json(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
         }
