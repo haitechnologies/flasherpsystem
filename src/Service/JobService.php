@@ -170,6 +170,9 @@ class JobService
                 approvedTimeResubmission: null,
                 publish: true,
                 isActive: true,
+                createdAt: null,
+                updatedAt: null,
+                updatedBy: null,
                 createdBy: $userId,
                 pdf: null
             );
