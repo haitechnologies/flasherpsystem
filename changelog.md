@@ -10,5 +10,8 @@
 - **`accounts_role_address_perms_20260731.sql`**: Grants Accounts role (id=5) view/create/edit/delete permissions for `customer_billing_addresses` and `customer_shipping_addresses` modules. Also ensures the modules exist in `erp_modules`, their permission types in `erp_module_permissions`, and role-permission mappings in `erp_permissions` for roles 1, 2, and 5.
 
 ### Changed
-- `src/Http/Controller/CustomerController.php`: Added `$opening_balance` to defaults, DB load on edit, and `render()` data array.
-- `resources/views/customers/form.php`: Added `@var string $opening_balance` docblock + opening balance input row above Tax field.
+- `src/Http/Controller/CustomerController.php`: Added `$opening_balance` to defaults (`0.00`), DB load on edit with `number_format()` for proper decimal display, and `render()` data array.
+- `resources/views/customers/form.php`: Added `@var string $opening_balance` docblock + opening balance input row above Tax field. Uses `type="number" step="0.01"` with AED input-group prefix.
+
+### Fixed
+- **Opening Balance on customer edit form**: Value now displays with 2 decimal places (`number_format()`). Input uses `type="number" step="0.01"` with AED currency prefix.

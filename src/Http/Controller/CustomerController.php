@@ -208,7 +208,7 @@ class CustomerController extends BaseController
         $x = '';
         $facebook = '';
         $instagram = '';
-        $opening_balance = '0';
+        $opening_balance = '0.00';
         $is_active = 1;
 
         if ($id > 0) {
@@ -253,7 +253,7 @@ class CustomerController extends BaseController
                 $x = (string)$customer->x;
                 $facebook = (string)$customer->facebook;
                 $instagram = (string)$customer->instagram;
-                $opening_balance = (string)($customer->openingBalance ?? '0');
+                $opening_balance = number_format((float)($customer->openingBalance ?? 0), 2, '.', '');
                 $is_active = $customer->isActive ? 1 : 0;
             } catch (NotFoundException $e) {
                 $error_message = $e->getMessage();

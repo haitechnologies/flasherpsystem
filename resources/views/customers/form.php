@@ -261,7 +261,10 @@ include 'admin_elements/admin_header.php';
                                 <div class="row mb-2">
                                     <label class="col-lg-4 col-form-label">Opening Balance:</label>
                                     <div class="col-lg-8">
-                                        <input type="text" name="opening_balance" id="opening_balance" value="<?php echo $opening_balance; ?>" class="form-control" placeholder="0.00">
+                                        <div class="input-group">
+                                            <span class="input-group-text">AED</span>
+                                            <input type="number" step="0.01" name="opening_balance" id="opening_balance" value="<?php echo $opening_balance; ?>" class="form-control" placeholder="0.00">
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="row mb-2">
