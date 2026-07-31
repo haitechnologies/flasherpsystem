@@ -996,6 +996,12 @@ $(document).ready(function() {
     // Auto-grow textareas
     $('textarea.auto-grow').each(function() {
         var $this = $(this);
+        // Guard: ensure Enter inserts a newline, never hijacked by global handlers (Select2/Inputmask/theme)
+        $this.on('keydown', function(e) {
+            if (e.key === 'Enter' || e.keyCode === 13) {
+                e.stopPropagation();
+            }
+        });
         $this.on('input', function() {
             $this.css('height', 'auto').css('height', this.scrollHeight + 2 + 'px');
         });
