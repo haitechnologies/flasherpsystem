@@ -38,21 +38,24 @@ $created_by     = getTableAttr('created_by', DB::CUSTOMERS, $customer_id);
             <h1 class="ms-2"> <a href="customer_overview.php?customer_id=<?php echo $customer_id;?>" class="text-dark"><?php echo $display_name; ?></a></h1>
             <div class="ms-2">
                 <span class="text-muted small"><?php if ($publish == '1') { ?>Active <?php } else { ?> InActive <?php } ?></span>
-                <?php if ($approved != 1) { ?>
-                    <span class="badge bg-warning small text-white fw-normal ms-1">Request Approval</span>
+                <?php if ($approved == 1) { ?>
+                    <span class="badge bg-success bg-opacity-10 text-success small fw-normal ms-1"><i class="ph-check-circle me-1"></i> Approved</span>
+                <?php } elseif ($approved == 0) { ?>
+                    <span class="badge bg-warning bg-opacity-10 text-warning small fw-normal ms-1"><i class="ph-clock-countdown me-1"></i> Awaiting Approval</span>
                 <?php } ?>
             </div>
         </div>
         <div class="my-1 ms-auto d-flex align-items-center gap-2 flex-wrap">
             <a href="listing_<?php echo $module; ?>.php" class="btn btn-light btn-sm">Cancel</a>
-            <?php if (granted_('edit', 'customers')) { ?>
-                <?php if (Roles::hasFullAccess($session_role_id)) { ?>
-                    <?php if ($approved == 0) { ?>
-                        <a href="customer_overview.php?action=approved&customer_id=<?php echo $customer_id; ?>&approve=1" class="btn btn-light btn-sm">Approve</a>
-                    <?php } else { ?>
-                        <a href="customer_overview.php?action=disapproved&customer_id=<?php echo $customer_id; ?>&approve=0" class="btn btn-light btn-sm">Dis-Approve</a>
-                    <?php } ?>
+            <?php $can_approve = Roles::hasFullAccess($session_role_id) || Roles::isAccounts($session_role_id); ?>
+            <?php if (granted_('edit', 'customers') && $can_approve) { ?>
+                <?php if ($approved == 0) { ?>
+                    <a href="customer_overview.php?action=approved&customer_id=<?php echo $customer_id; ?>&approve=1" class="btn btn-success btn-sm"><i class="ph-check-circle me-1"></i> Approve</a>
+                <?php } elseif ($approved == 1) { ?>
+                    <a href="customer_overview.php?action=disapproved&customer_id=<?php echo $customer_id; ?>&approve=0" class="btn btn-outline-danger btn-sm"><i class="ph-x-circle me-1"></i> Dis-Approve</a>
                 <?php } ?>
+            <?php } else { ?>
+                <?php // Edit permission without approval right — only show notice ?>
             <?php } ?>
             <?php if (isset($module_id) && granted('edit', $module_id)) { ?>
                 <button type="button" onclick="window.location.href='<?php echo $module; ?>.php?action=edit_customers&id=<?php echo $customer_id; ?>';" class="btn btn-light btn-sm">Edit</button>

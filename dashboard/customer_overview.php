@@ -81,24 +81,32 @@ if (!empty($contact_id)) {
 |--------------------------------------------------------------------------
 */
 if ($action == "approved" && !empty($customer_id)) {
-    try {
-        $customerService->approveCustomer((int)$customer_id, $activeOrganizationId, Session::userId());
-        $success_message = 'This Customer is Approved.';
-        flash_success($success_message);
-        header("Location:customer_overview.php?customer_id=$customer_id");
-        exit;
-    } catch (\Throwable $e) {
-        $error_message = $e->getMessage();
+    if (!Roles::hasFullAccess(Session::roleId()) && !Roles::isAccounts(Session::roleId())) {
+        $error_message = 'Only Accounts or Admin can approve customers.';
+    } else {
+        try {
+            $customerService->approveCustomer((int)$customer_id, $activeOrganizationId, Session::userId());
+            $success_message = 'This Customer is Approved.';
+            flash_success($success_message);
+            header("Location:customer_overview.php?customer_id=$customer_id");
+            exit;
+        } catch (\Throwable $e) {
+            $error_message = $e->getMessage();
+        }
     }
 } else if ($action == "disapproved" && !empty($customer_id)) {
-    try {
-        $customerService->disapproveCustomer((int)$customer_id, $activeOrganizationId, Session::userId());
-        $success_message = 'This Customer is Dis-Approved.';
-        flash_success($success_message);
-        header("Location:customer_overview.php?customer_id=$customer_id");
-        exit;
-    } catch (\Throwable $e) {
-        $error_message = $e->getMessage();
+    if (!Roles::hasFullAccess(Session::roleId()) && !Roles::isAccounts(Session::roleId())) {
+        $error_message = 'Only Accounts or Admin can disapprove customers.';
+    } else {
+        try {
+            $customerService->disapproveCustomer((int)$customer_id, $activeOrganizationId, Session::userId());
+            $success_message = 'This Customer is Dis-Approved.';
+            flash_success($success_message);
+            header("Location:customer_overview.php?customer_id=$customer_id");
+            exit;
+        } catch (\Throwable $e) {
+            $error_message = $e->getMessage();
+        }
     }
 } else if ($action == "update_opening_balance" && !empty($customer_id) && $_SERVER['REQUEST_METHOD'] == 'POST') {
     // INPUT VALIDATION: Validate opening_balance
