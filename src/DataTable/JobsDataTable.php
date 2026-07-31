@@ -52,7 +52,7 @@ class JobsDataTable extends BaseDataTable
         $statusLabel = (string)($this->relatedDataCache['statuses'][$statusId] ?? '');
 
         return [
-            htmlspecialchars((string)($row['job_date'] ?? '')),
+            $this->formatDate($row['job_date'] ?? ''),
             htmlspecialchars((string)($row['job_no'] ?? '')),
             htmlspecialchars((string)($row['job_ref_no'] ?? '')),
             htmlspecialchars((string)($this->relatedDataCache['customers'][$customerId] ?? '')),
@@ -74,6 +74,15 @@ class JobsDataTable extends BaseDataTable
             $actions .= ' ' . ActionButtonHelper::deleteButton((int)$id, $module);
         }
         return trim($actions);
+    }
+
+    private function formatDate(string $dateStr): string
+    {
+        if (empty($dateStr)) {
+            return '';
+        }
+        $dt = \DateTime::createFromFormat('Y-m-d', $dateStr);
+        return $dt ? htmlspecialchars($dt->format('d M Y')) : htmlspecialchars($dateStr);
     }
 
 }
