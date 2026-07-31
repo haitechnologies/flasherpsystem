@@ -433,9 +433,9 @@ $tbl = <<<EOD
 </tr>
 <tr>
     <td style="background-color:#e8f7f4; border:1px solid #f1f1f1;"><span style="color:#555;">MBL No</span></td>
-    <td style="border:1px solid #f1f1f1;"><span style="color:#555;">$d_mbl</span></td>
+    <td style="border:1px solid #f1f1f1;"><span style="color:#555;"><?php echo nl2br(htmlspecialchars($d_mbl)); ?></span></td>
     <td style="background-color:#e8f7f4; border:1px solid #f1f1f1;"><span style="color:#555;">HBL No</span></td>
-    <td style="border:1px solid #f1f1f1;"><span style="color:#555;">$d_hbl</span></td>
+    <td style="border:1px solid #f1f1f1;"><span style="color:#555;"><?php echo nl2br(htmlspecialchars($d_hbl)); ?></span></td>
 </tr>
 <tr>
     <td style="background-color:#e8f7f4; border:1px solid #f1f1f1;"><span style="color:#555;">Customs Declaration No</span></td>

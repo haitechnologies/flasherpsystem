@@ -168,3 +168,9 @@ textarea:focus {
 .carriers-page-header-content a.text-dark {
     text-decoration: none !important;
 }
+
+/* Ensure datepicker always appears above form icons and input-group buttons */
+#ui-datepicker-div,
+.ui-datepicker {
+    z-index: 10000 !important;
+}

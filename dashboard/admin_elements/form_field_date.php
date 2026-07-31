@@ -53,7 +53,7 @@ $_fdExtraAttr   = $field['extra_attr'] ?? '';
                 placeholder="<?php echo htmlspecialchars($_fdPlaceholder); ?>"
                 <?php if ($_fdReadonly): ?>readonly<?php endif; ?>
                 <?php echo $_fdExtraAttr; ?>>
-            <div class="form-control-feedback-icon">
+            <div class="form-control-feedback-icon" onclick="this.previousElementSibling.focus();">
                 <i class="ph-calendar"></i>
             </div>
         </div>

@@ -185,12 +185,13 @@ $menuConfig = [
                 'href' => '#shipping-settings-submenu',
                 'label' => 'Settings',
                 'icon' => 'ph-database',
-                'pages' => ['listing_ports.php', 'ports.php', 'listing_carriers.php', 'carriers.php', 'listing_consignees.php', 'consignees.php', 'listing_shippers.php', 'shippers.php'],
+                'pages' => ['listing_geo_countries.php', 'listing_ports.php', 'ports.php', 'listing_carriers.php', 'carriers.php', 'listing_consignees.php', 'consignees.php', 'listing_shippers.php', 'shippers.php'],
                 'type' => 'submenu',
                 'condition' => function() {
-                    return has_full_access() || hasModuleAccess('ports') || hasModuleAccess('carriers') || hasModuleAccess('consignees') || hasModuleAccess('shippers');
+                    return has_full_access() || hasModuleAccess('geo_countries') || hasModuleAccess('ports') || hasModuleAccess('carriers') || hasModuleAccess('consignees') || hasModuleAccess('shippers');
                 },
                 'children' => [
+                    ['href' => 'listing_geo_countries.php', 'label' => 'Countries', 'pages' => ['listing_geo_countries.php'], 'condition' => function() { return has_full_access() || hasModuleAccess('geo_countries'); }],
                     ['href' => 'listing_ports.php', 'label' => 'Ports', 'pages' => ['listing_ports.php', 'ports.php'], 'condition' => function() { return has_full_access() || hasModuleAccess('ports'); }],
                     ['href' => 'listing_carriers.php', 'label' => 'Carriers', 'pages' => ['listing_carriers.php', 'carriers.php'], 'condition' => function() { return has_full_access() || hasModuleAccess('carriers'); }],
                     ['href' => 'listing_consignees.php', 'label' => 'Consignees', 'pages' => ['listing_consignees.php', 'consignees.php'], 'condition' => function() { return has_full_access() || hasModuleAccess('consignees'); }],
@@ -454,7 +455,7 @@ $sectionSystemMap = [
 ];
 
 $sectionModuleMap = [
-    'shipping' => ['shipping_advices', 'shipping_invoices', 'shipping_stocks', 'shipping_customers', 'hscodes', 'ports', 'carriers', 'consignees', 'shippers'],
+    'shipping' => ['shipping_advices', 'shipping_invoices', 'shipping_stocks', 'shipping_customers', 'hscodes', 'geo_countries', 'ports', 'carriers', 'consignees', 'shippers'],
     'accounting' => ['items', 'banks', 'customers', 'quotations', 'sale_orders', 'invoices', 'payments_received', 'credit_notes', 'vendors', 'expenses', 'purchase_orders', 'purchases', 'payments_made', 'debit_notes', 'journals', 'accounts'],
     'crm' => ['leads', 'lead_quotations', 'projects', 'jobs', 'job_statuses'],
     'hr' => ['departments', 'designations', 'attendance', 'leave_requests', 'leave_types', 'annual_leave_entitlements', 'payroll_components', 'salary_structures', 'employee_salaries', 'payroll_runs', 'payslips', 'user_documents', 'document_categories', 'air_tickets', 'gratuity_settlements', 'report_hr'],

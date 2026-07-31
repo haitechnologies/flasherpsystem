@@ -780,14 +780,14 @@ if ($total_rows == 0) $total_rows = 1;
                                     <div class="row">
                                         <label class="col-lg-3 col-form-label">HAWB / HBL:</label>
                                         <div class="col-lg-9 mt-2">
-                                            <?php echo $hawb; ?>
+                                            <?php echo nl2br(htmlspecialchars($hawb)); ?>
                                         </div>
                                     </div>
 
                                     <div class="row">
                                         <label class="col-lg-3 col-form-label">MAWB / MBL:</label>
                                         <div class="col-lg-9 mt-2">
-                                            <?php echo $mawb; ?>
+                                            <?php echo nl2br(htmlspecialchars($mawb)); ?>
                                         </div>
                                     </div>
 

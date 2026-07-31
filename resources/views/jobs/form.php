@@ -380,9 +380,9 @@ include 'admin_elements/admin_header.php';
 
                                     <?php $field = ['name'=>'payment_terms', 'label'=>'Payment Terms:', 'value'=>$payment_terms]; include 'admin_elements/form_field_text.php'; ?>
 
-                                    <?php $field = ['name'=>'hawb', 'label'=>'HAWB / HBL:', 'value'=>$hawb]; include 'admin_elements/form_field_text.php'; ?>
+                                    <?php $field = ['name'=>'hawb', 'label'=>'HAWB / HBL:', 'value'=>$hawb, 'rows'=>1, 'extra_attr'=>'style="field-sizing: content;" data-autogrow']; include 'admin_elements/form_field_textarea.php'; ?>
 
-                                    <?php $field = ['name'=>'mawb', 'label'=>'MAWB / MBL:', 'value'=>$mawb]; include 'admin_elements/form_field_text.php'; ?>
+                                    <?php $field = ['name'=>'mawb', 'label'=>'MAWB / MBL:', 'value'=>$mawb, 'rows'=>1, 'extra_attr'=>'style="field-sizing: content;" data-autogrow']; include 'admin_elements/form_field_textarea.php'; ?>
 
                                     <?php $field = ['name'=>'estimated_cost_amount', 'label'=>'Estimated Cost Amount:', 'value'=>$estimated_cost_amount, 'type'=>'number']; include 'admin_elements/form_field_text.php'; ?>
 
@@ -431,7 +431,7 @@ include 'admin_elements/admin_header.php';
                                     $dim_length = !empty($dim_length_arr[$index]) ? $dim_length_arr[$index] : '0';
                                     $dim_width = !empty($dim_width_arr[$index]) ? $dim_width_arr[$index] : '0';
                                     $dim_height = !empty($dim_height_arr[$index]) ? $dim_height_arr[$index] : '0';
-                                    $dim_pcs = !empty($dim_pcs_arr[$index]) ? $dim_pcs_arr[$index] : '1';
+                                    $dim_pcs = !empty($dim_pcs_arr[$index]) ? $dim_pcs_arr[$index] : '0';
                                     $dim_volume = !empty($dim_volume_arr[$index]) ? $dim_volume_arr[$index] : '0';
                                     $dim_cbm_val = !empty($dim_cbm_arr[$index]) ? $dim_cbm_arr[$index] : '0';
 
@@ -462,7 +462,7 @@ include 'admin_elements/admin_header.php';
                                                             <button type="button" class="btn btn-light btn-icon" onclick="this.parentNode.querySelector('input[type=number]').stepDown(); calculateItemCBM('<?php echo $dim_item; ?>');">
                                                                 <i class="ph-minus ph-sm"></i>
                                                             </button>
-                                                            <input class="form-control form-control-number text-center" type="number" name="dim_pcs[]" id="dim_pcs<?php echo $dim_item; ?>" value="<?php echo htmlspecialchars($dim_pcs); ?>" min="1" onkeyup="calculateItemCBM('<?php echo $dim_item; ?>');" onchange="calculateItemCBM('<?php echo $dim_item; ?>');">
+                                                            <input class="form-control form-control-number text-center" type="number" name="dim_pcs[]" id="dim_pcs<?php echo $dim_item; ?>" value="<?php echo htmlspecialchars($dim_pcs); ?>" min="0" onkeyup="calculateItemCBM('<?php echo $dim_item; ?>');" onchange="calculateItemCBM('<?php echo $dim_item; ?>');">
                                                             <button type="button" class="btn btn-light btn-icon" onclick="this.parentNode.querySelector('input[type=number]').stepUp(); calculateItemCBM('<?php echo $dim_item; ?>');">
                                                                 <i class="ph-plus ph-sm"></i>
                                                             </button>
@@ -882,8 +882,18 @@ function saveNewCarrier() {
 }
 
 $(document).ready(function() {
+    // Auto-grow textareas
+    $('textarea[data-autogrow]').each(function() {
+        $(this).on('input', function() {
+            this.style.height = 'auto';
+            this.style.height = this.scrollHeight + 'px';
+        });
+        // Trigger initial resize in case of pre-filled value
+        $(this).trigger('input');
+    });
+
     // MAWB dynamic label
-    var $mawbField = $('input[name="mawb"]');
+    var $mawbField = $('[name="mawb"]');
     var $mawbLabel = $mawbField.closest('.row').find('label');
     var $shipmentSelect = $('select[name="shipment_type[]"]');
 
@@ -953,7 +963,7 @@ function add_item_row() {
     new_row += '<div class="col-lg-1">';
     new_row += '<div class="input-group">';
     new_row += '<button type="button" class="btn btn-light btn-icon" onclick="this.parentNode.querySelector(\'input[type=number]\').stepDown(); calculateItemCBM(\'' + total_rows + '\');"><i class="ph-minus ph-sm"></i></button>';
-    new_row += '<input class="form-control form-control-number text-center" type="number" name="dim_pcs[]" id="dim_pcs' + total_rows + '" value="1" min="1" onkeyup="calculateItemCBM(\'' + total_rows + '\');" onchange="calculateItemCBM(\'' + total_rows + '\');">';
+    new_row += '<input class="form-control form-control-number text-center" type="number" name="dim_pcs[]" id="dim_pcs' + total_rows + '" value="0" min="0" onkeyup="calculateItemCBM(\'' + total_rows + '\');" onchange="calculateItemCBM(\'' + total_rows + '\');">';
     new_row += '<button type="button" class="btn btn-light btn-icon" onclick="this.parentNode.querySelector(\'input[type=number]\').stepUp(); calculateItemCBM(\'' + total_rows + '\');"><i class="ph-plus ph-sm"></i></button>';
     new_row += '</div></div>';
 
@@ -982,6 +992,7 @@ function clear_row(row_no) {
     document.getElementById('dim_volume' + row_no).value = '';
     document.getElementById('dim_cbm' + row_no).value = '';
     document.getElementById('row_' + row_no).style.display = 'none';
+    calculateGrand();
 }
 
 function calculateItemCBM(row_no) {
@@ -1003,9 +1014,8 @@ function calculateItemCBM(row_no) {
 
         var final_cbm = parseFloat(final_total).toFixed(2);
         document.getElementById('dim_cbm' + row_no).value = parseFloat(final_cbm);
-
-        calculateGrand();
     }
+    calculateGrand();
 }
 
 function calculateGrand() {
