@@ -53,7 +53,7 @@ class JobController extends BaseController
             $action === 'check_duplicate' => $this->handleCheckDuplicate($request),
             $action === 'ajax_ports' => $this->handleAjaxPorts($request),
             $request->isPost() && $action === 'ajax_add_carrier' => $this->handleAddCarrier($request),
-            $request->isPost() && $action === 'ajax_add_country' => $this->handleAddCountry($request),
+            $request->isPost() && $action === 'ajax_add_port' => $this->handleAddPort($request),
 
             $request->isPost() && $action === 'send_for_approval' && $id > 0
                 => $this->handleSendForApproval($request, $id),
@@ -961,27 +961,33 @@ class JobController extends BaseController
         }
     }
 
-    private function handleAddCountry(Request $request): Response
+    private function handleAddPort(Request $request): Response
     {
-        $name = trim($request->getString('country_name'));
-        if (empty($name)) {
-            return Response::json(['success' => false, 'message' => 'Country name is required.']);
+        $portName = trim($request->getString('port_name'));
+        $portCode = trim($request->getString('port_code'));
+        $countryId = $request->getInt('country_id');
+
+        if (empty($portName)) {
+            return Response::json(['success' => false, 'message' => 'Port name is required.']);
+        }
+        if ($countryId <= 0) {
+            return Response::json(['success' => false, 'message' => 'Please select a country.']);
         }
 
         try {
             $existing = $this->db->fetchOne(
-                "SELECT id FROM `" . DB::GEO_COUNTRIES . "` WHERE country = :name",
-                ['name' => $name]
+                "SELECT id FROM `" . DB::PORTS . "` WHERE port_name = :name AND country_id = :country_id",
+                ['name' => $portName, 'country_id' => $countryId]
             );
             if ($existing) {
-                return Response::json(['success' => true, 'id' => (int)$existing['id'], 'country_name' => $name]);
+                return Response::json(['success' => true, 'id' => (int)$existing['id'], 'port_name' => $portName, 'port_code' => $portCode]);
             }
 
             $newId = $this->db->insert(
-                "INSERT INTO `" . DB::GEO_COUNTRIES . "` (country, publish, is_active, created_at, updated_at) VALUES (:country_name, 1, 1, NOW(), NOW())",
-                ['country_name' => $name]
+                "INSERT INTO `" . DB::PORTS . "` (port_name, port_code, country_id, organization_id, publish, is_active, created_at, updated_at) VALUES (:port_name, :port_code, :country_id, :org_id, 1, 1, NOW(), NOW())",
+                ['port_name' => $portName, 'port_code' => $portCode ?: null, 'country_id' => $countryId, 'org_id' => $this->orgId]
             );
-            return Response::json(['success' => true, 'id' => $newId, 'country_name' => $name]);
+            return Response::json(['success' => true, 'id' => $newId, 'port_name' => $portName, 'port_code' => $portCode]);
         } catch (\Throwable $e) {
             return Response::json(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
         }
