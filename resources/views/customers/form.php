@@ -32,6 +32,7 @@ declare(strict_types=1);
  * @var string $corporate_tax_number
  * @var string $license_number
  * @var string $license_expiry
+ * @var string $opening_balance
  * @var array $currencyList
  * @var string $currency
  * @var string $exchange_rate
@@ -257,6 +258,12 @@ include 'admin_elements/admin_header.php';
                         <div class="card">
                             <div class="card-body">
                                 <input type="hidden" name="payment_term" id="payment_term" value="0">
+                                <div class="row mb-2">
+                                    <label class="col-lg-4 col-form-label">Opening Balance:</label>
+                                    <div class="col-lg-8">
+                                        <input type="text" name="opening_balance" id="opening_balance" value="<?php echo $opening_balance; ?>" class="form-control" placeholder="0.00">
+                                    </div>
+                                </div>
                                 <div class="row mb-2">
                                     <label class="col-lg-4 col-form-label">TAX:</label>
                                     <div class="col-lg-8">

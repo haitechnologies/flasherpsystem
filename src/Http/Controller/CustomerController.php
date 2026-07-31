@@ -208,6 +208,7 @@ class CustomerController extends BaseController
         $x = '';
         $facebook = '';
         $instagram = '';
+        $opening_balance = '0';
         $is_active = 1;
 
         if ($id > 0) {
@@ -252,6 +253,7 @@ class CustomerController extends BaseController
                 $x = (string)$customer->x;
                 $facebook = (string)$customer->facebook;
                 $instagram = (string)$customer->instagram;
+                $opening_balance = (string)($customer->openingBalance ?? '0');
                 $is_active = $customer->isActive ? 1 : 0;
             } catch (NotFoundException $e) {
                 $error_message = $e->getMessage();
@@ -324,6 +326,7 @@ class CustomerController extends BaseController
             'corporate_tax_number' => $corporate_tax_number,
             'license_number' => $license_number,
             'license_expiry' => $license_expiry,
+            'opening_balance' => $opening_balance,
             'currencyList' => $currencyList,
             'currency' => $currency,
             'exchange_rate' => $exchange_rate,

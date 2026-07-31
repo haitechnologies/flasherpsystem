@@ -104,8 +104,9 @@ DEPLOYMENT_*.md
 deploy-exclude.txt
 *.md
 
-# keep README.md
+# keep README.md and CHANGELOG.md
 !README.md
+!CHANGELOG.md
 
 # ============================================================
 # TESTS (not for production)
