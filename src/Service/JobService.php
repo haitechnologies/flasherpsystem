@@ -508,6 +508,10 @@ class JobService
         if (empty($dateStr)) {
             return date('Y-m-d');
         }
+        $dt = \DateTime::createFromFormat('d-m-Y', $dateStr);
+        if ($dt) {
+            return $dt->format('Y-m-d');
+        }
         if (strpos($dateStr, '-') === false) {
             return \App\Helper\DateHelper::toDisplayDate($dateStr) ?: $dateStr;
         }
@@ -521,6 +525,10 @@ class JobService
     {
         if (empty($dateStr)) {
             return '1970-01-01';
+        }
+        $dt = \DateTime::createFromFormat('d-m-Y', $dateStr);
+        if ($dt) {
+            return $dt->format('Y-m-d');
         }
         if (strpos($dateStr, '-') === false) {
             return \App\Helper\DateHelper::toDisplayDate($dateStr) ?: $dateStr;
