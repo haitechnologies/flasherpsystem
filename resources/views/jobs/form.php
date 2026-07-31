@@ -604,7 +604,7 @@ include 'admin_elements/admin_header.php';
                                         <label class="col-lg-3 col-form-label" for="landing_port">Port of Loading (POL):</label>
                                         <div class="col-lg-9">
                                             <div class="input-group">
-                                            <select class="form-select" name="landing_port" id="landing_port">
+                                            <select class="form-control select" name="landing_port" id="landing_port">
                                                 <option value="0"></option>
                                                 <?php
                                                 if (!empty($landing_country) && $landing_country !== '0') {
@@ -645,7 +645,7 @@ include 'admin_elements/admin_header.php';
                                         <label class="col-lg-3 col-form-label" for="destination_port">Port of Destination (POD):</label>
                                         <div class="col-lg-9">
                                             <div class="input-group">
-                                            <select class="form-select" name="destination_port" id="destination_port">
+                                            <select class="form-control select" name="destination_port" id="destination_port">
                                                 <option value="0"></option>
                                                 <?php
                                                 if (!empty($destination_country) && $destination_country !== '0') {
