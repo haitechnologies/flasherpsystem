@@ -91,7 +91,7 @@ class JobController extends BaseController
 
             $jobItems = $this->buildJobItemsData($request);
             if (!empty($jobItems)) {
-                $this->jobItemService->replaceForJob($id, $jobItems, $this->orgId);
+                $this->jobItemService->replaceForJob($id, $this->orgId, $jobItems);
             }
 
             flash_success('The Job has been updated successfully.');
@@ -118,7 +118,7 @@ class JobController extends BaseController
 
             $jobItems = $this->buildJobItemsData($request);
             if (!empty($jobItems)) {
-                $this->jobItemService->replaceForJob($id, $jobItems, $this->orgId);
+                $this->jobItemService->replaceForJob($id, $this->orgId, $jobItems);
             }
 
             flash_success('The Job has been saved successfully.');
