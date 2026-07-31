@@ -1,5 +1,11 @@
 ## 2026-07-31
 
+### Fixed — Customer Module
+- **Approve/Disapprove logic**: Explicit 3-way badge (Approved green / Awaiting Approval amber) and conditional button display. Restricted to Accounts (role=5) and FullAccess roles — no other role can approve/disapprove. Action handlers also guarded.
+- **Opening Balance display**: Now shows balance value with Edit option when set, "Enter" link only when unset. Modal pre-populates existing balance.
+- **Opening Balance accounting**: `updateOpeningBalance()` now creates a real journal entry (Debit: Accounts Receivable #9, Credit: Opening Balance Offset #118). Transactional — both customer record and journal succeed or rollback together.
+- **Receivables calculation**: `getReceivables()` now includes `opening_balance` in total (invoices + opening balance).
+
 ### Added — Geo Data Import
 - **erp_geo_countries**: Added `alpha2_code`, `alpha3_code`, `numeric_code` columns. Changed `dialing_code` from `INT` to `VARCHAR(20)`. Imported 72 new countries + updated 196 existing from uaehscodes (269 total with ISO codes). UAE now has proper ISO data (AE/ARE/784/971).
 - **erp_geo_states**: Imported 4,120 states from uaehscodes (was 0). UAE now has 7 proper emirates. Removed 6 transliteration duplicates from uaehscodes.

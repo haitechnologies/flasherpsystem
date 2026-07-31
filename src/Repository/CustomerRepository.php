@@ -544,7 +544,15 @@ class CustomerRepository
                 AND organization_id = :org_id 
                 AND invoice_status IN ('sent', 'partially_paid', 'overdue')";
         $row = $this->db->fetchOne($sql, ['customer_id' => $customerId, 'org_id' => $orgId]);
-        return (float)($row['total'] ?? 0.00);
+        $invoiceTotal = (float)($row['total'] ?? 0.00);
+
+        $cust = $this->db->fetchOne(
+            "SELECT COALESCE(opening_balance, 0) as ob FROM `{DB::CUSTOMERS}` WHERE id = :id AND organization_id = :org_id",
+            ['id' => $customerId, 'org_id' => $orgId]
+        );
+        $openingBalance = (float)($cust['ob'] ?? 0.00);
+
+        return $invoiceTotal + $openingBalance;
     }
 
     /**

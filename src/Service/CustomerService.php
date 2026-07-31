@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use App\Core\Container;
 use App\Model\Customer;
 use App\Model\CustomerContact;
 use App\Model\CustomerAddress;
@@ -719,62 +720,112 @@ class CustomerService
     public function updateOpeningBalance(int $id, float $balance, int $orgId, int $userId): Customer
     {
         $customer = $this->getCustomer($id, $orgId);
-        $updated = new Customer(
-            id: $customer->id,
-            organizationId: $customer->organizationId,
-            leadId: $customer->leadId,
-            customerOwner: $customer->customerOwner,
-            customerType: $customer->customerType,
-            customerStatus: $customer->customerStatus,
-            customerSource: $customer->customerSource,
-            assignedTo: $customer->assignedTo,
-            salutation: $customer->salutation,
-            firstName: $customer->firstName,
-            lastName: $customer->lastName,
-            companyName: $customer->companyName,
-            displayName: $customer->displayName,
-            address: $customer->address,
-            email: $customer->email,
-            phone: $customer->phone,
-            mobile: $customer->mobile,
-            paymentTerm: $customer->paymentTerm,
-            taxTreatment: $customer->taxTreatment,
-            trn: $customer->trn,
-            corporateTaxNumber: $customer->corporateTaxNumber,
-            licenseNumber: $customer->licenseNumber,
-            licenseExpiry: $customer->licenseExpiry,
-            salesPerson: $customer->salesPerson,
-            leadCategory: $customer->leadCategory,
-            csAgent: $customer->csAgent,
-            rating: $customer->rating,
-            currency: $customer->currency,
-            openingBalance: $balance,
-            exchangeRate: $customer->exchangeRate,
-            website: $customer->website,
-            department: $customer->department,
-            designation: $customer->designation,
-            x: $customer->x,
-            facebook: $customer->facebook,
-            instagram: $customer->instagram,
-            photo: $customer->photo,
-            description: $customer->description,
-            tags: $customer->tags,
-            contactedDate: $customer->contactedDate,
-            approved: $customer->approved,
-            approvedBy: $customer->approvedBy,
-            approvedAt: $customer->approvedAt,
-            publish: $customer->publish,
-            isActive: $customer->isActive,
-            createdAt: $customer->createdAt,
-            createdBy: $customer->createdBy,
-            updatedBy: $userId,
-            creditLimit: $customer->creditLimit,
-            discountType: $customer->discountType,
-            discountTypeValue: $customer->discountTypeValue,
-            subscriptionTier: $customer->subscriptionTier,
-            subscriptionExpiresAt: $customer->subscriptionExpiresAt
-        );
-        return $this->customerRepo->save($updated);
+        $db = Container::getInstance()->get(\App\Core\Database::class);
+        $db->beginTransaction();
+        try {
+            $updated = new Customer(
+                id: $customer->id,
+                organizationId: $customer->organizationId,
+                leadId: $customer->leadId,
+                customerOwner: $customer->customerOwner,
+                customerType: $customer->customerType,
+                customerStatus: $customer->customerStatus,
+                customerSource: $customer->customerSource,
+                assignedTo: $customer->assignedTo,
+                salutation: $customer->salutation,
+                firstName: $customer->firstName,
+                lastName: $customer->lastName,
+                companyName: $customer->companyName,
+                displayName: $customer->displayName,
+                address: $customer->address,
+                email: $customer->email,
+                phone: $customer->phone,
+                mobile: $customer->mobile,
+                paymentTerm: $customer->paymentTerm,
+                taxTreatment: $customer->taxTreatment,
+                trn: $customer->trn,
+                corporateTaxNumber: $customer->corporateTaxNumber,
+                licenseNumber: $customer->licenseNumber,
+                licenseExpiry: $customer->licenseExpiry,
+                salesPerson: $customer->salesPerson,
+                leadCategory: $customer->leadCategory,
+                csAgent: $customer->csAgent,
+                rating: $customer->rating,
+                currency: $customer->currency,
+                openingBalance: $balance,
+                exchangeRate: $customer->exchangeRate,
+                website: $customer->website,
+                department: $customer->department,
+                designation: $customer->designation,
+                x: $customer->x,
+                facebook: $customer->facebook,
+                instagram: $customer->instagram,
+                photo: $customer->photo,
+                description: $customer->description,
+                tags: $customer->tags,
+                contactedDate: $customer->contactedDate,
+                approved: $customer->approved,
+                approvedBy: $customer->approvedBy,
+                approvedAt: $customer->approvedAt,
+                publish: $customer->publish,
+                isActive: $customer->isActive,
+                createdAt: $customer->createdAt,
+                createdBy: $customer->createdBy,
+                updatedBy: $userId,
+                creditLimit: $customer->creditLimit,
+                discountType: $customer->discountType,
+                discountTypeValue: $customer->discountTypeValue,
+                subscriptionTier: $customer->subscriptionTier,
+                subscriptionExpiresAt: $customer->subscriptionExpiresAt
+            );
+            $saved = $this->customerRepo->save($updated);
+
+            $this->createOpeningBalanceJournal($id, $balance, $orgId, $userId, $customer->displayName);
+
+            $db->commit();
+            return $saved;
+        } catch (\Throwable $e) {
+            $db->rollBack();
+            throw $e;
+        }
+    }
+
+    private function createOpeningBalanceJournal(int $customerId, float $balance, int $orgId, int $userId, string $customerName): void
+    {
+        if ($balance == 0) {
+            return;
+        }
+
+        $journalService = Container::getInstance()->get(JournalService::class);
+
+        $journalData = [
+            'journal_status' => 'approved',
+            'journal_date' => date('Y-m-d'),
+            'reference_no' => 'CUST-OB-' . $customerId,
+            'notes' => "Opening balance for customer: {$customerName}",
+            'reporting_method' => 'accrual',
+            'reference_type' => 'customer_opening_balance',
+            'reference_id' => $customerId,
+            'currency' => 'AED',
+            'warehouse_id' => 0,
+        ];
+
+        $itemsData = [
+            [
+                'account' => 9,
+                'description' => "Opening Balance — {$customerName}",
+                'debit' => abs($balance),
+                'credit' => 0.0,
+            ],
+            [
+                'account' => 118,
+                'description' => "Opening Balance Offset — {$customerName}",
+                'debit' => 0.0,
+                'credit' => abs($balance),
+            ],
+        ];
+
+        $journalService->createJournal($journalData, $itemsData, $orgId, $userId);
     }
 
     /**

@@ -521,8 +521,8 @@
                         </div>
 
                         <div class="alert alert-warning fade show" role="alert">
-                            <i class="ph-warning-circle me-2"></i>
-                            <small>The opening balance is managed according to accounting standards. A journal entry will be created to record this adjustment in your accounting system.</small>
+                            <i class="ph-books me-2"></i>
+                            <small>A journal entry will be automatically created — Debit: Accounts Receivable, Credit: Opening Balance Offset. This ensures the opening balance is reflected in your general ledger and trial balance.</small>
                         </div>
                     </div>
 
