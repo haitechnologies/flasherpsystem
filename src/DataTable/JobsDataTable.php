@@ -78,11 +78,11 @@ class JobsDataTable extends BaseDataTable
 
     private function formatDate(string $dateStr): string
     {
-        if (empty($dateStr)) {
+        if (empty($dateStr) || $dateStr === '1970-01-01') {
             return '';
         }
-        $dt = \DateTime::createFromFormat('Y-m-d', $dateStr);
-        return $dt ? htmlspecialchars($dt->format('d M Y')) : htmlspecialchars($dateStr);
+        $ts = strtotime($dateStr);
+        return $ts ? htmlspecialchars(date('d M Y', $ts)) : htmlspecialchars($dateStr);
     }
 
 }
