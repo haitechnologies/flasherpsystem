@@ -380,9 +380,9 @@ include 'admin_elements/admin_header.php';
 
                                     <?php $field = ['name'=>'payment_terms', 'label'=>'Payment Terms:', 'value'=>$payment_terms]; include 'admin_elements/form_field_text.php'; ?>
 
-                                    <?php $field = ['name'=>'hawb', 'label'=>'HAWB / HBL:', 'value'=>$hawb, 'rows'=>1, 'extra_attr'=>'style="field-sizing: content;" data-autogrow']; include 'admin_elements/form_field_textarea.php'; ?>
+                                    <?php $field = ['name'=>'hawb', 'label'=>'HAWB / HBL:', 'value'=>$hawb, 'rows'=>1, 'extra_attr'=>'data-autogrow']; include 'admin_elements/form_field_textarea.php'; ?>
 
-                                    <?php $field = ['name'=>'mawb', 'label'=>'MAWB / MBL:', 'value'=>$mawb, 'rows'=>1, 'extra_attr'=>'style="field-sizing: content;" data-autogrow']; include 'admin_elements/form_field_textarea.php'; ?>
+                                    <?php $field = ['name'=>'mawb', 'label'=>'MAWB / MBL:', 'value'=>$mawb, 'rows'=>1, 'extra_attr'=>'data-autogrow']; include 'admin_elements/form_field_textarea.php'; ?>
 
                                     <?php $field = ['name'=>'estimated_cost_amount', 'label'=>'Estimated Cost Amount:', 'value'=>$estimated_cost_amount, 'type'=>'number']; include 'admin_elements/form_field_text.php'; ?>
 
