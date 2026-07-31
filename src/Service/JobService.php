@@ -295,7 +295,7 @@ class JobService
                 booksCustomerId: isset($data['customer_id']) ? (int)$data['customer_id'] : $job->booksCustomerId,
                 quoteId: isset($data['quote_id']) ? (int)$data['quote_id'] : $job->quoteId,
                 projectId: isset($data['project_id']) ? (int)$data['project_id'] : $job->projectId,
-                projectCreated: isset($data['project_created']) ? trim((string)$data['project_created']) : $job->projectCreated,
+                projectCreated: isset($data['project_created']) ? (empty($data['project_created']) ? '0' : trim((string)$data['project_created'])) : $job->projectCreated,
                 qrcode: isset($data['qrcode']) ? (empty($data['qrcode']) ? null : trim((string)$data['qrcode'])) : $job->qrcode,
                 modifiedBy: $job->modifiedBy,
                 customerType: $job->customerType,
