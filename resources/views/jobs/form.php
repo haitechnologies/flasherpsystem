@@ -380,9 +380,19 @@ include 'admin_elements/admin_header.php';
 
                                     <?php $field = ['name'=>'payment_terms', 'label'=>'Payment Terms:', 'value'=>$payment_terms]; include 'admin_elements/form_field_text.php'; ?>
 
-                                    <?php $field = ['name'=>'hawb', 'label'=>'HAWB / HBL:', 'value'=>$hawb, 'rows'=>2, 'extra_attr'=>'data-autogrow']; include 'admin_elements/form_field_textarea.php'; ?>
+                                    <div class="row mb-2">
+                                        <label class="col-lg-3 col-form-label" for="hawb">HAWB / HBL:</label>
+                                        <div class="col-lg-9">
+                                            <textarea class="form-control auto-grow" name="hawb" id="hawb" rows="2"><?php echo htmlspecialchars((string)$hawb); ?></textarea>
+                                        </div>
+                                    </div>
 
-                                    <?php $field = ['name'=>'mawb', 'label'=>'MAWB / MBL:', 'value'=>$mawb, 'rows'=>2, 'extra_attr'=>'data-autogrow']; include 'admin_elements/form_field_textarea.php'; ?>
+                                    <div class="row mb-2">
+                                        <label class="col-lg-3 col-form-label" for="mawb">MAWB / MBL:</label>
+                                        <div class="col-lg-9">
+                                            <textarea class="form-control auto-grow" name="mawb" id="mawb" rows="2"><?php echo htmlspecialchars((string)$mawb); ?></textarea>
+                                        </div>
+                                    </div>
 
                                     <?php $field = ['name'=>'estimated_cost_amount', 'label'=>'Estimated Cost Amount:', 'value'=>$estimated_cost_amount, 'type'=>'number']; include 'admin_elements/form_field_text.php'; ?>
 
@@ -984,13 +994,12 @@ function saveNewPort() {
 
 $(document).ready(function() {
     // Auto-grow textareas
-    $('textarea[data-autogrow]').each(function() {
-        $(this).on('input keyup', function() {
-            this.style.height = '0px';
-            this.style.height = this.scrollHeight + 'px';
+    $('textarea.auto-grow').each(function() {
+        var $this = $(this);
+        $this.on('input', function() {
+            $this.css('height', 'auto').css('height', this.scrollHeight + 2 + 'px');
         });
-        // Trigger initial resize in case of pre-filled value
-        $(this).trigger('input');
+        $this.trigger('input');
     });
 
     // MAWB dynamic label
