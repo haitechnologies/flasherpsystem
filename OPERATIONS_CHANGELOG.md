@@ -1,5 +1,11 @@
 ## 2026-07-31
 
+### Added — Geo Data Import
+- **erp_geo_countries**: Added `alpha2_code`, `alpha3_code`, `numeric_code` columns. Changed `dialing_code` from `INT` to `VARCHAR(20)`. Imported 72 new countries + updated 196 existing from uaehscodes (269 total with ISO codes). UAE now has proper ISO data (AE/ARE/784/971).
+- **erp_geo_states**: Imported 4,120 states from uaehscodes (was 0). UAE now has 7 proper emirates. Removed 6 transliteration duplicates from uaehscodes.
+- **uae_geo_constants.php**: Updated UAE_COUNTRY_ID to 56 and emirate IDs to match actual DB records.
+- **Migration**: `migrations/geo_data_import_20260731.sql` — cross-database import from uaehscodes.
+
 ### Fixed — Jobs Module
 - **Missing columns**: `erp_jobs.cbm` added (`varchar(255)`) — migration from 2026-07-29 was never applied. Also added 12 missing columns (`quotation_id`, `subject`, `terms_and_conditions`, `grand_subtotal`, `grand_discount_type`, `grand_discount_type_value`, `grand_discount_amount`, `grand_after_discount`, `customer_notes`, `grand_tax`, `grand_total`, `customer_type`) — all referenced in `JobRepository` queries but absent from production schema, causing SQLSTATE[42S22] on every save.
 - **Date picker**: Calendar icon now clickable to open datepicker across all date fields (`form_field_date.php`). Added `z-index: 10000 !important` to prevent icons/buttons from overlapping the popup (`haipulse-dashboard-compat.css`).

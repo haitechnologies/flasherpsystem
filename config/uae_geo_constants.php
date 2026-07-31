@@ -6,7 +6,7 @@
  */
 
 // UAE Country Data
-define('UAE_COUNTRY_ID', 1);
+define('UAE_COUNTRY_ID', 56);
 define('UAE_COUNTRY_NAME', 'United Arab Emirates');
 define('UAE_COUNTRY_NAME_AR', 'الإمارات العربية المتحدة');
 define('UAE_COUNTRY_ISO2', 'AE');
@@ -16,55 +16,55 @@ define('UAE_COUNTRY_ALPHA3_CODE', 'ARE');
 
 // UAE States/Emirates Data (English and Arabic)
 const UAE_STATES = [
-    1 => [
-        'id' => 1,
-        'name' => 'Abu Dhabi',
-        'name_ar' => 'أبو ظبي',
-        'country_id' => 1,
-        'state_name' => 'Abu Dhabi'
-    ],
-    2 => [
-        'id' => 2,
-        'name' => 'Dubai',
-        'name_ar' => 'دبي',
-        'country_id' => 1,
-        'state_name' => 'Dubai'
-    ],
-    3 => [
-        'id' => 3,
-        'name' => 'Sharjah',
-        'name_ar' => 'الشارقة',
-        'country_id' => 1,
-        'state_name' => 'Sharjah'
-    ],
-    4 => [
-        'id' => 4,
+    3797 => [
+        'id' => 3797,
         'name' => 'Ajman',
         'name_ar' => 'عجمان',
-        'country_id' => 1,
+        'country_id' => 56,
         'state_name' => 'Ajman'
     ],
-    5 => [
-        'id' => 5,
-        'name' => 'Umm Al Quwain',
-        'name_ar' => 'أم القيوين',
-        'country_id' => 1,
-        'state_name' => 'Umm Al Quwain'
+    4121 => [
+        'id' => 4121,
+        'name' => 'Abu Dhabi',
+        'name_ar' => 'أبو ظبي',
+        'country_id' => 56,
+        'state_name' => 'Abu Dhabi'
     ],
-    6 => [
-        'id' => 6,
-        'name' => 'Ras Al Khaimah',
-        'name_ar' => 'رأس الخيمة',
-        'country_id' => 1,
-        'state_name' => 'Ras Al Khaimah'
+    3798 => [
+        'id' => 3798,
+        'name' => 'Dubai',
+        'name_ar' => 'دبي',
+        'country_id' => 56,
+        'state_name' => 'Dubai'
     ],
-    7 => [
-        'id' => 7,
+    4124 => [
+        'id' => 4124,
         'name' => 'Fujairah',
         'name_ar' => 'الفجيرة',
-        'country_id' => 1,
+        'country_id' => 56,
         'state_name' => 'Fujairah'
-    ]
+    ],
+    4123 => [
+        'id' => 4123,
+        'name' => 'Ras Al Khaimah',
+        'name_ar' => 'رأس الخيمة',
+        'country_id' => 56,
+        'state_name' => 'Ras Al Khaimah'
+    ],
+    3800 => [
+        'id' => 3800,
+        'name' => 'Sharjah',
+        'name_ar' => 'الشارقة',
+        'country_id' => 56,
+        'state_name' => 'Sharjah'
+    ],
+    4122 => [
+        'id' => 4122,
+        'name' => 'Umm Al Quwain',
+        'name_ar' => 'أم القيوين',
+        'country_id' => 56,
+        'state_name' => 'Umm Al Quwain'
+    ],
 ];
 
 /**
