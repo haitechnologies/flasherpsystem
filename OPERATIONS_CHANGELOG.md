@@ -1,6 +1,7 @@
 ## 2026-07-31
 
 ### Fixed — Customer Module
+- **Approve/Disapprove badge + buttons not showing**: Root cause was `getTableAttr()` returning `''` for `0` values — `!empty($row[0])` evaluates `empty(0)` as `true`. Fixed to `$row[0] !== null` check in `config/globals.php:554`. This affects ALL modules using `getTableAttr()` with zero values.
 - **Approve/Disapprove logic**: Explicit 3-way badge (Approved green / Awaiting Approval amber) and conditional button display. Restricted to Accounts (role=5) and FullAccess roles — no other role can approve/disapprove. Action handlers also guarded.
 - **Opening Balance display**: Now shows balance value with Edit option when set, "Enter" link only when unset. Modal pre-populates existing balance.
 - **Opening Balance accounting**: `updateOpeningBalance()` now creates a real journal entry (Debit: Accounts Receivable #9, Credit: Opening Balance Offset #118). Transactional — both customer record and journal succeed or rollback together.

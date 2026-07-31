@@ -47,8 +47,8 @@ $created_by     = getTableAttr('created_by', DB::CUSTOMERS, $customer_id);
         </div>
         <div class="my-1 ms-auto d-flex align-items-center gap-2 flex-wrap">
             <a href="listing_<?php echo $module; ?>.php" class="btn btn-light btn-sm">Cancel</a>
-            <?php $can_approve = Roles::hasFullAccess(\App\Core\Session::roleId()) || Roles::isAccounts(\App\Core\Session::roleId()); ?>
-            <?php if (granted_('edit', 'customers') && $can_approve) { ?>
+            <?php $canApprove = Roles::hasFullAccess(\App\Core\Session::roleId()) || Roles::isAccounts(\App\Core\Session::roleId()); ?>
+            <?php if ($canApprove && granted_('edit', 'customers')) { ?>
                 <?php if ($approved == 0) { ?>
                     <a href="customer_overview.php?action=approved&customer_id=<?php echo $customer_id; ?>&approve=1" class="btn btn-success btn-sm"><i class="ph-check-circle me-1"></i> Approve</a>
                 <?php } elseif ($approved == 1) { ?>

@@ -551,8 +551,8 @@ function convert_number_to_words($num)
     $row = $result ? $result->fetch_row() : null;
     $stmt->close();
 
-    if (!empty($row[0])) {
-      return stripslashes($row[0]);
+    if ($row !== null && $row[0] !== null) {
+      return stripslashes((string)$row[0]);
     }
 
     return '';
