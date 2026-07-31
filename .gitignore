@@ -133,6 +133,7 @@ logs/
 # SQL DUMPS
 # ============================================================
 *.sql
+!migrations/*.sql
 haizon_raw.sql
 haizon_live.sql
 
