@@ -1,7 +1,7 @@
 <?php
 
 include('admin_elements/admin_header.php');
-require 'vendor/autoload.php';
+require '../vendor/autoload.php';
 
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;

@@ -138,6 +138,15 @@ if ($action == "add_$module") {
                 */
                 $created_by = getTableAttr('created_by', DB::SHIPPING_ADVICES, $id);
 
+                $customer_name = $customer_address = $incoterm = $transport_mode = '';
+                $exit_point = $destination_port = $shipment_type = '';
+                $invoice_date = $invoice_no = $awb_no = $license_no = $mirsal_II_code = '';
+                $country_of_origin = $currency = $payment_method = '';
+                $grand_advice_value = $grand_advice_weight = $grand_advice_qty = '';
+                $total_invoice_rows = 0;
+                $invoice_pkgs = $invoice_pkgs_unit = $invoice_weight = $invoice_weight_unit = '';
+                $invoice_grand_qty = $invoice_grand_total_amount = '';
+
                 if (
                     (!empty($id) && Session::roleId() == '1')
                     ||

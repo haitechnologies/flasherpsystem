@@ -12,6 +12,7 @@ $module_caption = 'Job';
 $tbl_name = DB::JOBS;
 $error_message = '';
 $success_message = '';
+$page = $_GET['page'] ?? '';
 
 include('admin_elements/permissions.php');
 

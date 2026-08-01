@@ -105,17 +105,17 @@ foreach ($consignees as $c) {
 }
 
 $origin_options = '';
-$origins = $db->fetchAll("SELECT id, alpha3_code, country_name FROM `" . DB::GEO_COUNTRIES . "` WHERE is_active=1 ORDER BY country_name");
+$origins = $db->fetchAll("SELECT id, alpha3_code, country FROM `" . DB::GEO_COUNTRIES . "` WHERE is_active=1 ORDER BY country");
 foreach ($origins as $o) {
     $sel = ((string)$o['id'] === $origin) ? 'selected' : '';
-    $origin_options .= '<option value="' . $o['id'] . '" ' . $sel . '>' . $o['alpha3_code'] . ' - ' . $o['country_name'] . '</option>';
+    $origin_options .= '<option value="' . $o['id'] . '" ' . $sel . '>' . $o['alpha3_code'] . ' - ' . $o['country'] . '</option>';
 }
 
 $destination_options = '';
-$destinations = $db->fetchAll("SELECT id, alpha3_code, country_name FROM `" . DB::GEO_COUNTRIES . "` WHERE is_active=1 ORDER BY country_name");
+$destinations = $db->fetchAll("SELECT id, alpha3_code, country FROM `" . DB::GEO_COUNTRIES . "` WHERE is_active=1 ORDER BY country");
 foreach ($destinations as $d) {
     $sel = ((string)$d['id'] === $destination) ? 'selected' : '';
-    $destination_options .= '<option value="' . $d['id'] . '" ' . $sel . '>' . $d['alpha3_code'] . ' - ' . $d['country_name'] . '</option>';
+    $destination_options .= '<option value="' . $d['id'] . '" ' . $sel . '>' . $d['alpha3_code'] . ' - ' . $d['country'] . '</option>';
 }
 ?>
 <div class="content-wrapper">

@@ -12,7 +12,7 @@ $tbl_name = DB::SHIPPING_INVOICES;
 $error_message = '';
 $success_message = '';
 
-require 'vendor/autoload.php';
+require '../vendor/autoload.php';
 
 include('admin_elements/permissions.php');
 

@@ -1,3 +1,21 @@
+## 2026-08-01 (Error Log Fixes — Live Debug)
+
+### Fixed
+- **`dashboard/listing_purchases.php`**: Fixed `require 'vendor/autoload.php'` → `require '../vendor/autoload.php'`
+- **`dashboard/listing_purchase_orders.php`**: Fixed `require 'vendor/autoload.php'` → `require '../vendor/autoload.php'`
+- **`dashboard/listing_expenses.php`**: Fixed `require 'vendor/autoload.php'` → `require '../vendor/autoload.php'`
+- **`dashboard/listing_credit_notes.php`**: Fixed `require 'vendor/autoload.php'` → `require '../vendor/autoload.php'`
+- **`dashboard/listing_sale_orders.php`**: Fixed `require 'vendor/autoload.php'` → `require '../vendor/autoload.php'`
+- **`dashboard/listing_invoices.php`**: Fixed `require 'vendor/autoload.php'` → `require '../vendor/autoload.php'`
+- **`dashboard/listing_shipping_invoices.php`**: Fixed `require 'vendor/autoload.php'` → `require '../vendor/autoload.php'`
+- **`dashboard/report_leads.php`**: Fixed `require 'vendor/autoload.php'` → `require '../vendor/autoload.php'`
+- **`resources/views/recurring_invoices/form.php`**: Fixed `country_name` → `country` in geo_countries SELECT (actual column name)
+- **`dashboard/listing_jobs.php`**: Added `$page = $_GET['page'] ?? '';` initialization (was undefined)
+- **`dashboard/view_shipping_advice.php`**: Added default variable initializations for ~20 undefined variables
+
+### Added
+- **`migrations/add_missing_modules_20260801.sql`**: Registers 5 missing module slugs in `erp_modules` — `customer_statement`, `customer_transactions`, `customer_comments`, `customer_billing_addresses`, `carriers` — with full permissions and role grants.
+
 ## 2026-08-01 (CS Agents)
 
 ### Added
