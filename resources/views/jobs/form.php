@@ -136,6 +136,11 @@ foreach ($usersList as $row) {
     $users_options[$row['id']] = $row['full_name'];
 }
 
+$cs_agents_options = [];
+foreach ($csAgentsList as $row) {
+    $cs_agents_options[$row['id']] = $row['name'];
+}
+
 $currency_options_html = '';
 foreach ($currenciesList as $row) {
     $sel = ((string)$row['id'] === $currency) ? 'selected' : '';
@@ -327,7 +332,7 @@ include 'admin_elements/admin_header.php';
 
                                     <?php $field = ['name'=>'job_ref_no', 'label'=>'Job Ref No:', 'required'=>true, 'value'=>$job_ref_no, 'extra_attr'=>'data-check-duplicate="1"']; include 'admin_elements/form_field_text.php'; ?>
 
-                                    <?php $field = ['name'=>'cs_agent', 'label'=>'CS Agent:', 'options'=>$users_options, 'selected'=>$cs_agent]; include 'admin_elements/form_field_select.php'; ?>
+                                    <?php $field = ['name'=>'cs_agent', 'label'=>'CS Agent:', 'options'=>$cs_agents_options, 'selected'=>$cs_agent]; include 'admin_elements/form_field_select.php'; ?>
 
                                     <?php $field = ['name'=>'services[]', 'label'=>'Type of Services:', 'options_html'=>$services_options_html, 'extra_class'=>'form-control select select2-enable', 'multiple'=>true, 'empty_option'=>false]; include 'admin_elements/form_field_select.php'; ?>
 

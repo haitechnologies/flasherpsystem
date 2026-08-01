@@ -1,3 +1,19 @@
+## 2026-08-01 (CS Agents)
+
+### Added
+- **`erp_cs_agents` table**: Dedicated table for CS agent assignment (id, name, email, is_active, timestamps)
+- **DB constant**: `DB::CS_AGENTS` in `src/Core/DB.php`
+- **Migration**: `migrations/cs_agents_20260801.sql` — seeds 3 Movestic Cargo agents:
+  - Accounts Movestic Cargo (accounts@movesticargo.com)
+  - Sales Movestic Cargo (sales@movesticargo.com)
+  - Operations Movestic Cargo (cargo@movesticargo.com)
+
+### Changed
+- **`src/Http/Controller/JobController.php`**: CS Agent dropdown now queries `erp_cs_agents` instead of `erp_users`
+- **`resources/views/jobs/form.php`**: CS Agent select uses `$cs_agents_options` (from cs_agents table)
+- **`dashboard/view_job.php:649`**: CS Agent display resolved from `erp_cs_agents.name` instead of `erp_users.full_name`
+- **`dashboard/pdf_job.php:98`**: CS Agent name resolved from `erp_cs_agents` instead of `getUsernameByID()`
+
 ## 2026-08-01 (Geo & Ports Data Migration)
 
 ### Added

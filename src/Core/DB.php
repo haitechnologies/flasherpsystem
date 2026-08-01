@@ -342,6 +342,9 @@ class DB
     /** Shippers master data */
     public const SHIPPERS = self::PREFIX . 'shippers';
 
+    /** CS Agents master data (Movestic cargo agents) */
+    public const CS_AGENTS = self::PREFIX . 'cs_agents';
+
     /** Drivers master data */
     /** @deprecated Use DB::USERS with vehicle_id instead */
     public const DRIVERS = self::PREFIX . 'drivers';

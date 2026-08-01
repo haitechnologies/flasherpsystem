@@ -759,6 +759,11 @@ class JobController extends BaseController
             $countriesList = [];
         }
         try {
+            $csAgentsList = $this->db->fetchAll("SELECT id, name FROM `" . DB::CS_AGENTS . "` WHERE is_active=1 ORDER BY id");
+        } catch (\Throwable $e) {
+            $csAgentsList = [];
+        }
+        try {
             $quotesList = $this->db->fetchAll("SELECT id, quotation_no FROM `" . DB::QUOTATIONS . "` WHERE organization_id = :org_id ORDER BY id DESC", ['org_id' => $this->orgId]);
         } catch (\Throwable $e) {
             $quotesList = [];
@@ -881,6 +886,7 @@ class JobController extends BaseController
             'tagsList' => $tagsList,
             'servicesList' => $servicesList,
             'countriesList' => $countriesList,
+            'csAgentsList' => $csAgentsList,
             'quotesList' => $quotesList,
             'canCreate' => $this->canCreate(),
             'canEdit' => $this->canEdit(),
