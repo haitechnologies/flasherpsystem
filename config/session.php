@@ -67,28 +67,6 @@ if (!function_exists('startScopedSession')) {
     }
 }
 
-// Backward-compatible aliases for older includes that may still call legacy helper names.
-if (!function_exists('haizonSessionIsProduction')) {
-    function haizonSessionIsProduction(): bool
-    {
-        return flasherpsystemSessionIsProduction();
-    }
-}
-
-if (!function_exists('haizonSessionBasePath')) {
-    function haizonSessionBasePath(): string
-    {
-        return flasherpsystemSessionBasePath();
-    }
-}
-
-if (!function_exists('haizonSessionCookiePath')) {
-    function haizonSessionCookiePath(string $scope): string
-    {
-        return flasherpsystemSessionCookiePath($scope);
-    }
-}
-
 if (!function_exists('startFrontendSession')) {
     function startFrontendSession(): void
     {
