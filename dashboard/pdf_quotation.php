@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . '/admin_elements/error_handler_init.php';
+require_once __DIR__ . '/../vendor/autoload.php';
 
 use App\Core\DB;
 use App\Core\Session;
@@ -132,18 +133,30 @@ if (!empty($id)) {
     $warehouse_id           = s__($row['warehouse_id']);
 
     // Customer Billing Address 
-    $rs_billing = $mysqli->query("SELECT * FROM `" . DB::CUSTOMER_ADDRESSES . "` WHERE addressable_type='Customer' AND addressable_id=$customer_id AND type='billing'");
-    $row_billing = $rs_billing->fetch_array();
+    $billing_attention      = '';
+    $billing_country        = '';
+    $billing_address_line1  = '';
+    $billing_address_line2  = '';
+    $billing_city           = '';
+    $billing_state          = '';
+    $billing_zipcode        = '';
+    $billing_phone          = '';
+    $billing_fax            = '';
 
-    $billing_attention      = (!empty($row_billing['attention']) ? s__($row_billing['attention']) : '');
-    $billing_country        = (!empty($row_billing['country']) ? s__($row_billing['country']) : '');
-    $billing_address_line1  = (!empty($row_billing['address_line1']) ? s__($row_billing['address_line1']) : '');
-    $billing_address_line2  = (!empty($row_billing['address_line2']) ? s__($row_billing['address_line2']) : '');
-    $billing_city           = (!empty($row_billing['city']) ? s__($row_billing['city']) : '');
-    $billing_state          = (!empty($row_billing['state']) ? s__($row_billing['state']) : '');
-    $billing_zipcode        = (!empty($row_billing['zipcode']) ? s__($row_billing['zipcode']) : '');
-    $billing_phone          = (!empty($row_billing['phone']) ? s__($row_billing['phone']) : '');
-    $billing_fax            = (!empty($row_billing['fax']) ? s__($row_billing['fax']) : '');
+    if (!empty($customer_id)) {
+        $rs_billing = $mysqli->query("SELECT * FROM `" . DB::CUSTOMER_ADDRESSES . "` WHERE addressable_type='Customer' AND addressable_id=$customer_id AND type='billing'");
+        $row_billing = $rs_billing->fetch_array();
+
+        $billing_attention      = (!empty($row_billing['attention']) ? s__($row_billing['attention']) : '');
+        $billing_country        = (!empty($row_billing['country']) ? s__($row_billing['country']) : '');
+        $billing_address_line1  = (!empty($row_billing['address_line1']) ? s__($row_billing['address_line1']) : '');
+        $billing_address_line2  = (!empty($row_billing['address_line2']) ? s__($row_billing['address_line2']) : '');
+        $billing_city           = (!empty($row_billing['city']) ? s__($row_billing['city']) : '');
+        $billing_state          = (!empty($row_billing['state']) ? s__($row_billing['state']) : '');
+        $billing_zipcode        = (!empty($row_billing['zipcode']) ? s__($row_billing['zipcode']) : '');
+        $billing_phone          = (!empty($row_billing['phone']) ? s__($row_billing['phone']) : '');
+        $billing_fax            = (!empty($row_billing['fax']) ? s__($row_billing['fax']) : '');
+    }
 
     $quotation_date         = processDateYtoD($quotation_date);
     $expiry_date            = ($expiry_date == '1970-01-01' || empty($expiry_date)) ? '' : processDateDtoY($expiry_date);
@@ -239,20 +252,32 @@ $company_name = s__(getTableAttrv('setting_value', DB::SYSTEM_SETTINGS, 'setting
 
 // Warehouse / Organization info
 $warehouse_information = '';
-    $rs_warehouse = $mysqli->query("SELECT * FROM `" . DB::ORGANIZATIONS . "` WHERE id = $warehouse_id");
-$row_warehouse = $rs_warehouse->fetch_array();
+$warehouse_name = '';
+$warehouse_no   = '';
+$street1        = '';
+$street2        = '';
+$w_country      = '';
+$w_state        = '';
+$w_phone        = '';
+$w_email        = '';
+$w_trn          = '';
 
-$warehouse_name     = s__($row_warehouse['warehouse_name'] ?? '');
-$warehouse_no       = s__($row_warehouse['warehouse_no'] ?? '');
-$street1            = s__($row_warehouse['street1'] ?? '');
-$street2            = s__($row_warehouse['street2'] ?? '');
-$w_country          = s__($row_warehouse['country'] ?? '');
-$w_country          = getTableAttr('country', DB::GEO_COUNTRIES, $w_country);
-$w_state            = s__($row_warehouse['state'] ?? '');
-$w_state            = getTableAttr('state', DB::GEO_STATES, $w_state);
-$w_phone            = s__($row_warehouse['phone'] ?? '');
-$w_email            = s__($row_warehouse['email'] ?? '');
-$w_trn              = s__($row_warehouse['trn'] ?? '');
+if (!empty($warehouse_id)) {
+    $rs_warehouse = $mysqli->query("SELECT * FROM `" . DB::ORGANIZATIONS . "` WHERE id = $warehouse_id");
+    $row_warehouse = $rs_warehouse->fetch_array();
+
+    $warehouse_name     = s__($row_warehouse['warehouse_name'] ?? '');
+    $warehouse_no       = s__($row_warehouse['warehouse_no'] ?? '');
+    $street1            = s__($row_warehouse['street1'] ?? '');
+    $street2            = s__($row_warehouse['street2'] ?? '');
+    $w_country          = s__($row_warehouse['country'] ?? '');
+    $w_country          = getTableAttr('country', DB::GEO_COUNTRIES, $w_country);
+    $w_state            = s__($row_warehouse['state'] ?? '');
+    $w_state            = getTableAttr('state', DB::GEO_STATES, $w_state);
+    $w_phone            = s__($row_warehouse['phone'] ?? '');
+    $w_email            = s__($row_warehouse['email'] ?? '');
+    $w_trn              = s__($row_warehouse['trn'] ?? '');
+}
 
 $warehouse_information .= (!empty($warehouse_name) ? '<strong>'.$warehouse_name . '</strong><br />' : '');
 $warehouse_information .= (!empty($warehouse_no) ? $warehouse_no . '<br />' : '');
