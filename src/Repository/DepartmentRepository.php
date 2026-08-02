@@ -31,7 +31,7 @@ class DepartmentRepository
      */
     public function find(int $id): ?Department
     {
-        $sql = "SELECT id, organization_id, department, publish, created_at, updated_at, created_by 
+        $sql = "SELECT id, organization_id, department, email, publish, created_at, updated_at, created_by 
                 FROM DB::DEPARTMENTS 
                 WHERE id = :id";
 

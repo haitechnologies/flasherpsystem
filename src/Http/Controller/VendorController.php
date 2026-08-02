@@ -264,6 +264,11 @@ class VendorController extends BaseController
             $usersList = [];
         }
         try {
+            $departmentsList = $this->db->fetchAll("SELECT id, department, email FROM `" . DB::DEPARTMENTS . "` WHERE is_active=1 ORDER BY department");
+        } catch (\Throwable $e) {
+            $departmentsList = [];
+        }
+        try {
             $taxTreatmentsList = $this->db->fetchAll("SELECT id, tax_treatment FROM `" . DB::TAX_TREATMENTS . "` WHERE is_active=1 ORDER BY id ASC");
         } catch (\Throwable $e) {
             $taxTreatmentsList = [];
@@ -298,6 +303,7 @@ class VendorController extends BaseController
             'sourcesList' => $sourcesList,
             'vendor_source' => $vendor_source,
             'usersList' => $usersList,
+            'departmentsList' => $departmentsList,
             'assigned_to' => $assigned_to,
             'is_active' => $is_active,
             'vendor_owner' => $vendor_owner,

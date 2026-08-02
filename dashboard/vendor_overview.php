@@ -229,7 +229,7 @@ if (!empty($vendor_id)) {
     $sales_person           = getTableAttr("full_name", tbl_users, $sales_person);
 
     $cs_agent               = s__($row['cs_agent']);
-    $cs_agent               = getTableAttr("full_name", tbl_users, $cs_agent);
+    $cs_agent               = getTableAttr("department", DB::DEPARTMENTS, $cs_agent);
 
     $lead_category          = s__($row['lead_category']);
     $rating                 = s__($row['rating']);

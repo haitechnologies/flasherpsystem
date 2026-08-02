@@ -343,6 +343,7 @@ class DB
     public const SHIPPERS = self::PREFIX . 'shippers';
 
     /** CS Agents master data (Movestic cargo agents) */
+    /** @deprecated Use DB::DEPARTMENTS instead */
     public const CS_AGENTS = self::PREFIX . 'cs_agents';
 
     /** Drivers master data */

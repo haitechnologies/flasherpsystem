@@ -95,7 +95,7 @@ $shipping_country       = getTableAttr('country', DB::GEO_COUNTRIES, (int)($row[
 $billing_country        = getTableAttr('country', DB::GEO_COUNTRIES, (int)($row['billing_country'] ?? 0));
 $container_type_label   = getTableAttr('container_type', DB::CONTAINER_TYPES, (int)($row['container_type'] ?? 0));
 $sales_person_name      = getUsernameByID($sales_person_id);
-$cs_agent_name          = getTableAttr('name', DB::CS_AGENTS, $cs_agent_id);
+$cs_agent_name          = getTableAttr('department', DB::DEPARTMENTS, $cs_agent_id);
 $created_by_name        = getUsernameByID((int)($row['created_by'] ?? 0));
 $modified_by_name       = getUsernameByID((int)($row['modified_by'] ?? 0));
 

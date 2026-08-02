@@ -203,7 +203,7 @@ $currency                   = s__($customerObj->currency);
 $exchange_rate              = s__($customerObj->exchangeRate);
 
 $sales_person               = $customerObj->salesPerson ? getTableAttr("full_name", DB::USERS, $customerObj->salesPerson) : '';
-$cs_agent                   = $customerObj->csAgent ? getTableAttr("full_name", DB::USERS, $customerObj->csAgent) : '';
+$cs_agent                   = $customerObj->csAgent ? getTableAttr("department", DB::DEPARTMENTS, $customerObj->csAgent) : '';
 
 $lead_category              = s__($customerObj->leadCategory);
 $rating                     = s__($customerObj->rating);

@@ -17,6 +17,7 @@ readonly class Department
         public ?int $organizationId,
         public string $department,
         public bool $publish,
+        public ?string $email = null,
         public ?string $createdAt = null,
         public ?string $updatedAt = null,
         public int $createdBy = 0
@@ -34,6 +35,7 @@ readonly class Department
             'id' => $this->id,
             'organization_id' => $this->organizationId,
             'department' => $this->department,
+            'email' => $this->email,
             'publish' => $this->publish ? 1 : 0,
             'created_at' => $this->createdAt,
             'updated_at' => $this->updatedAt,

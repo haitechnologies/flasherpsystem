@@ -377,9 +377,9 @@ include 'admin_elements/admin_header.php';
                                     <div class="col-lg-8">
                                         <select class="form-select" name="cs_agent" id="cs_agent">
                                             <option value='0'></option>
-                                            <?php foreach ($usersList as $row): ?>
+                                            <?php foreach ($departmentsList as $row): ?>
                                                 <option value="<?php echo $row['id']; ?>" <?php echo (string)$row['id'] === $cs_agent ? 'selected' : ''; ?>>
-                                                    <?php echo $row['full_name']; ?>
+                                                    <?php echo $row['department'] . ($row['email'] ? ' (' . $row['email'] . ')' : ''); ?>
                                                 </option>
                                             <?php endforeach; ?>
                                         </select>

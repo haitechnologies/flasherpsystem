@@ -1,4 +1,50 @@
-## 2026-08-02 (Project Rename: haizon → flasherpsystem)
+## 2026-08-02 (CS Agent → Departments Unification)
+
+### Changed
+- **CS Agent dropdown unified to `erp_departments`**: All CS agent selection fields across jobs, customers, and vendors now use departments instead of `erp_cs_agents` / `erp_users`. Dropdown shows department name + email in parentheses.
+- **`src/Http/Controller/JobController.php:762`**: CS agent list query changed from `DB::CS_AGENTS` to `DB::DEPARTMENTS` — fetches `id, department, email` ordered by department.
+- **`src/Http/Controller/CustomerController.php:287-291`**: Added `departmentsList` query (`DB::DEPARTMENTS`, active only) and passes it to view.
+- **`src/Http/Controller/VendorController.php:267-271`**: Added `departmentsList` query and passes it to view.
+- **`resources/views/jobs/form.php:139-142`**: CS agent options built from `$departmentsList` with label `"$department ($email)"`; variable renamed `$csAgentsList` → `$departmentsList`, `$cs_agents_options` → `$departments_options`.
+- **`resources/views/customers/form.php:378-384`**: CS agent dropdown switched from `$usersList` (`full_name`) to `$departmentsList` (`department (email)`).
+- **`resources/views/vendors/form.php:352-358`**: CS agent dropdown switched from `$usersList` to `$departmentsList`.
+- **`dashboard/view_job.php:649`**: CS agent display lookup changed from `getTableAttr('name', DB::CS_AGENTS, ...)` to `getTableAttr('department', DB::DEPARTMENTS, ...)`.
+- **`dashboard/pdf_job.php:98`**: CS agent name resolved from `getTableAttr('department', DB::DEPARTMENTS, ...)` instead of `DB::CS_AGENTS`.
+- **`dashboard/customer_overview.php:206`**: CS agent resolved from `DB::DEPARTMENTS.department` instead of `DB::USERS.full_name`.
+- **`dashboard/customer_mails.php:93`**: CS agent resolved from `DB::DEPARTMENTS.department` instead of `DB::USERS.full_name`.
+- **`dashboard/vendor_overview.php:232`**: CS agent resolved from `DB::DEPARTMENTS.department` instead of `tbl_users.full_name`.
+- **`src/Core/DB.php:346`**: `DB::CS_AGENTS` marked `@deprecated` — use `DB::DEPARTMENTS` instead.
+
+### Added
+- **`migrations/012_cs_agent_to_departments.php`**: PHP migration — remaps `cs_agent` FK from old `cs_agents` IDs to matching `departments.id` in `erp_jobs`, `erp_customers`, `erp_vendors`. Uses name-based matching (Accounts/Sales/Operations Movestic Cargo).
+- **`migrations/cs_agent_to_departments_20260802.sql`**: Standalone SQL version of the same migration for live manual deployment.
+
+### Live Migration Instructions
+```sql
+-- Run on production database (adjust 'erp_' prefix if different):
+
+UPDATE erp_jobs j
+JOIN erp_cs_agents ca ON j.cs_agent = ca.id
+JOIN erp_departments d ON d.department = ca.name
+SET j.cs_agent = d.id;
+
+UPDATE erp_customers c
+JOIN erp_cs_agents ca ON c.cs_agent = ca.id
+JOIN erp_departments d ON d.department = ca.name
+SET c.cs_agent = d.id;
+
+UPDATE erp_vendors v
+JOIN erp_cs_agents ca ON v.cs_agent = ca.id
+JOIN erp_departments d ON d.department = ca.name
+SET v.cs_agent = d.id;
+
+-- Requirements before running:
+-- 1. erp_departments must have 3 Movestic Cargo departments (run departments_movestic_cargo_20260802.sql first)
+-- 2. erp_cs_agents must have the 3 matching entries (run cs_agents_20260801.sql first)
+-- 3. Verify no orphaned references: cs_agent values in jobs/customers/vendors should only point to cs_agents IDs 1,2,3
+```
+
+
 
 ### Changed
 - **Project rename**: All branding, code references, paths, and identifiers renamed from `haizon` → `flasherpsystem`.

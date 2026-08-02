@@ -646,7 +646,7 @@ if ($total_rows == 0) $total_rows = 1;
                                     <div class="row">
                                         <label class="col-lg-3 col-form-label">CS Agent: </label>
                                         <div class="col-lg-9 mt-2">
-                                            <?php echo getTableAttr('name', DB::CS_AGENTS, $cs_agent); ?>
+                                            <?php echo getTableAttr('department', DB::DEPARTMENTS, $cs_agent); ?>
 
                                         </div>
                                     </div>
