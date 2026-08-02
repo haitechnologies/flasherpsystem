@@ -1,6 +1,6 @@
 {
-    "name": "haitechnologies/haizon",
-    "description": "Haizon business directory and classifieds platform",
+    "name": "haitechnologies/flasherpsystem",
+    "description": "Flash ERP System business directory and classifieds platform",
     "license": "proprietary",
     "require": {
         "phpoffice/phpspreadsheet": "^2.1",

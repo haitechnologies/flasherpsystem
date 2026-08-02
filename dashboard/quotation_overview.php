@@ -1,6 +1,7 @@
 <?php
 
 use App\Core\DB;
+use App\Core\Session;
 include('admin_elements/admin_header.php');
 
 $module = 'quotations';
@@ -16,6 +17,8 @@ $success_message = '';
 |
 */
 include('admin_elements/permissions.php');
+
+$activeOrganizationId = dashboardRequireActiveOrganization();
 
 
 /*
@@ -34,7 +37,7 @@ if (empty($quotation_id) && isset($_REQUEST['id'])) $quotation_id = e_s__($_REQU
 
 // ------------------ CHECK IF EXISTS ----------------
 //VERIFY IF IS VALID 
-$rs_valid     = $mysqli->query("SELECT id FROM `" . tbl_quotations . "` WHERE id='". $quotation_id."'");
+$rs_valid     = $mysqli->query("SELECT id FROM `" . tbl_quotations . "` WHERE id='". $quotation_id."' AND organization_id=$activeOrganizationId");
 if ($rs_valid->num_rows == 0) {
     flash_error('Invalid Record in the database.');
     header("Location:listing_quotations.php");
@@ -48,7 +51,34 @@ if (isset($_REQUEST['quotation_status']) && !empty($_REQUEST['quotation_status']
     $quotation_status   = e_s__($_REQUEST['quotation_status']);
 }
 
-
+/*
+|--------------------------------------------------------------------------
+| ACTION SECURITY GATE
+|--------------------------------------------------------------------------
+*/
+$post_actions = ["convert_$module", "clone_$module", "update_$module", "delete_$module"];
+if (in_array($action, $post_actions)) {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        flash_error('Invalid request method.');
+        header("Location: quotation_overview.php?quotation_id=$quotation_id");
+        exit;
+    }
+    if (!validate_csrf_token($_POST['csrf_token'] ?? '')) {
+        flash_error('Invalid security token. Please refresh the page and try again.');
+        header("Location: quotation_overview.php?quotation_id=$quotation_id");
+        exit;
+    }
+    if ($action !== "delete_$module" && !granted('edit', $module_id)) {
+        flash_error('Access denied.');
+        header("Location: quotation_overview.php?quotation_id=$quotation_id");
+        exit;
+    }
+    if ($action === "delete_$module" && !granted('delete', $module_id)) {
+        flash_error('Access denied.');
+        header("Location: quotation_overview.php?quotation_id=$quotation_id");
+        exit;
+    }
+}
 
 
 /*
@@ -94,8 +124,8 @@ if (($action == "convert_$module" && !empty($quotation_id))) {
 
 
     // -- Invoice
-    $result = $mysqli->query("INSERT INTO `" . tbl_invoices . "` (customer_id, warehouse_id, subject, job_reference_no, invoice_date, expiry_date, grand_subtotal, grand_discount_type, grand_discount_type_value, grand_discount_amount, grand_after_discount, grand_tax, grand_total, customer_notes, terms_and_conditions, invoice_status, is_active, created_at, updated_at)
-    SELECT customer_id, warehouse_id, subject, job_reference_no, NOW(), NOW(), grand_subtotal, grand_discount_type, grand_discount_type_value, grand_discount_amount, grand_after_discount, grand_tax, grand_total, customer_notes, terms_and_conditions, 'draft', is_active, NOW(), NOW() FROM `" . tbl_quotations . "` WHERE id = $quotation_id;");
+    $result = $mysqli->query("INSERT INTO `" . tbl_invoices . "` (organization_id, customer_id, warehouse_id, subject, job_reference_no, invoice_date, expiry_date, grand_subtotal, grand_discount_type, grand_discount_type_value, grand_discount_amount, grand_after_discount, grand_tax, grand_total, customer_notes, terms_and_conditions, invoice_status, is_active, created_at, updated_at)
+    SELECT organization_id, customer_id, warehouse_id, subject, job_reference_no, NOW(), NOW(), grand_subtotal, grand_discount_type, grand_discount_type_value, grand_discount_amount, grand_after_discount, grand_tax, grand_total, customer_notes, terms_and_conditions, 'draft', is_active, NOW(), NOW() FROM `" . tbl_quotations . "` WHERE id = $quotation_id;");
 
     $new_invoice_id = $mysqli->insert_id;
     fp__($tbl_name, $new_invoice_id);
@@ -104,10 +134,15 @@ if (($action == "convert_$module" && !empty($quotation_id))) {
     $mysqli->query("UPDATE `" . tbl_invoices . "` SET invoice_no = '" . $invoice_no . "', quotation_id = $quotation_id WHERE id=$new_invoice_id");
 
     // -- Invoice Items
-    $result = $mysqli->query("INSERT INTO `" . tbl_invoice_items . "` ( invoice_id, service, description, qty, rate, discount_type, discount_type_value, discount_amount, tax, tax_amount, sub_total, total, created_at, updated_at, created_by) 
-    SELECT $new_invoice_id, service, description, qty, rate, discount_type, discount_type_value, discount_amount, tax, tax_amount, sub_total, total, NOW(), NOW(), '" . Session::userId() . "' FROM `" . tbl_quotation_items . "` WHERE quotation_id = $quotation_id");
+    $result = $mysqli->query("INSERT INTO `" . tbl_invoice_items . "` (organization_id, invoice_id, service, description, qty, rate, discount_type, discount_type_value, discount_amount, tax, tax_amount, sub_total, total, created_at, updated_at, created_by) 
+    SELECT organization_id, $new_invoice_id, service, description, qty, rate, discount_type, discount_type_value, discount_amount, tax, tax_amount, sub_total, total, NOW(), NOW(), '" . Session::userId() . "' FROM `" . tbl_quotation_items . "` WHERE quotation_id = $quotation_id");
 
     fp__(tbl_invoice_items, $mysqli->insert_id);
+
+    // -- Dimension Items (copy from quotation to invoice)
+    $mysqli->query("INSERT INTO `" . DB::DIMENSION_ITEMS . "` (module_type, record_id, pcs, unit, length, width, height, formula, cbm, volume, created_at, updated_at, created_by)
+    SELECT 'invoices', $new_invoice_id, pcs, unit, length, width, height, formula, cbm, volume, NOW(), NOW(), '" . Session::userId() . "'
+    FROM `" . DB::DIMENSION_ITEMS . "` WHERE module_type='quotations' AND record_id = $quotation_id");
 
 
     $success_message = 'This Quotation has been Converted to Invoice Successfully. Please click here to view. <a href="invoice_overview.php?invoice_id=' . $new_invoice_id . '"> ' . $invoice_no . '</a>';
@@ -151,15 +186,15 @@ if (($action == "convert_$module" && !empty($quotation_id))) {
 
 
     // -- Quotation
-    $result = $mysqli->query("INSERT INTO `" . tbl_quotations . "` (customer_id, lead_id, warehouse_id, quotation_no, subject, job_reference_no, quotation_date, expiry_date, expected_shipment_date, payment_term, shipment_type, sales_person, mawb_bol, hwb_hbol, shipper_id, consignee_id, origin_port, origin_country, destination_port, no_of_packs, gross_weight, chargeable_weight, volume, grand_subtotal, grand_discount_type, grand_discount_type_value, grand_discount_amount, grand_after_discount, grand_tax, grand_total, customer_notes, terms_and_conditions, quotation_status, is_active, created_at, updated_at)
-    SELECT customer_id, lead_id, warehouse_id, '" . $quotation_no . "', subject, FLOOR(111 + (RAND() * 889)), NOW(), NOW(), expected_shipment_date, payment_term, shipment_type, sales_person, mawb_bol, hwb_hbol, shipper_id, consignee_id, origin_port, origin_country, destination_port, no_of_packs, gross_weight, chargeable_weight, volume, grand_subtotal, grand_discount_type, grand_discount_type_value, grand_discount_amount, grand_after_discount, grand_tax, grand_total, customer_notes, terms_and_conditions, 'draft', is_active, NOW(), NOW() FROM `" . tbl_quotations . "` WHERE id = $quotation_id;");
+    $result = $mysqli->query("INSERT INTO `" . tbl_quotations . "` (organization_id, customer_id, lead_id, warehouse_id, quotation_no, subject, job_reference_no, quotation_date, expiry_date, expected_shipment_date, payment_term, shipment_type, sales_person, mawb_bol, hwb_hbol, shipper_id, consignee_id, origin_port, origin_country, destination_port, no_of_packs, gross_weight, chargeable_weight, volume, grand_subtotal, grand_discount_type, grand_discount_type_value, grand_discount_amount, grand_after_discount, grand_tax, grand_total, customer_notes, terms_and_conditions, quotation_status, is_active, created_at, updated_at)
+    SELECT organization_id, customer_id, lead_id, warehouse_id, '" . $quotation_no . "', subject, FLOOR(111 + (RAND() * 889)), NOW(), NOW(), expected_shipment_date, payment_term, shipment_type, sales_person, mawb_bol, hwb_hbol, shipper_id, consignee_id, origin_port, origin_country, destination_port, no_of_packs, gross_weight, chargeable_weight, volume, grand_subtotal, grand_discount_type, grand_discount_type_value, grand_discount_amount, grand_after_discount, grand_tax, grand_total, customer_notes, terms_and_conditions, 'draft', is_active, NOW(), NOW() FROM `" . tbl_quotations . "` WHERE id = $quotation_id;");
 
     $new_cloned_id = $mysqli->insert_id;
     fp__($tbl_name, $new_cloned_id);
 
     // -- Quotation Items
-    $result = $mysqli->query("INSERT INTO `" . tbl_quotation_items . "` ( quotation_id, service, description, qty, rate, discount_type, discount_type_value, discount_amount, tax, tax_amount, sub_total, total, created_at, updated_at, created_by) 
-    SELECT $new_cloned_id, service, description, qty, rate, discount_type, discount_type_value, discount_amount, tax, tax_amount, sub_total, total, NOW(), NOW(), '" . Session::userId() . "' FROM `" . tbl_quotation_items . "` WHERE quotation_id = $quotation_id");
+    $result = $mysqli->query("INSERT INTO `" . tbl_quotation_items . "` (organization_id, quotation_id, service, description, qty, rate, discount_type, discount_type_value, discount_amount, tax, tax_amount, sub_total, total, created_at, updated_at, created_by) 
+    SELECT organization_id, $new_cloned_id, service, description, qty, rate, discount_type, discount_type_value, discount_amount, tax, tax_amount, sub_total, total, NOW(), NOW(), '" . Session::userId() . "' FROM `" . tbl_quotation_items . "` WHERE quotation_id = $quotation_id");
 
     fp__(tbl_quotation_items, $mysqli->insert_id);
 
@@ -183,19 +218,22 @@ if (($action == "convert_$module" && !empty($quotation_id))) {
 */
 } else if (($action == "update_$module" && !empty($quotation_id) && !empty($quotation_status))) {
 
-
-    $result = $mysqli->query("UPDATE `$tbl_name` SET quotation_status = '" . $quotation_status . "' WHERE id=$quotation_id");
-
-    if ($result) {
-        $success_message = "The $module_caption status has been updated successfully.";
-        // --------------------------------------------------------------------------------
-        flash_success($success_message);
-        header("Location:quotation_overview.php?quotation_id=$quotation_id");
-        exit;
-        // $error_message = "Sorry! $module Status Could Not Be Updated.";
+    $allowed_statuses = ['draft', 'sent', 'accepted', 'declined', 'expired', 'confirmed', 'rejected', 'pending', 'approved', 'invoiced', 'not_confirmed', 'on_hold', 'cancelled'];
+    if (!in_array($quotation_status, $allowed_statuses, true)) {
+        $error_message = "Invalid status value.";
     } else {
-        $error_message = "Sorry! $module Status Could Not Be Updated.";
+        $result = $mysqli->query("UPDATE `$tbl_name` SET quotation_status = '" . $quotation_status . "' WHERE id=$quotation_id AND organization_id=$activeOrganizationId");
+
+        if ($result) {
+            $success_message = "The $module_caption status has been updated successfully.";
+            flash_success($success_message);
+            header("Location:quotation_overview.php?quotation_id=$quotation_id");
+            exit;
+        } else {
+            $error_message = "Sorry! $module Status Could Not Be Updated.";
+        }
     }
+
 
 
     /*
@@ -206,8 +244,14 @@ if (($action == "convert_$module" && !empty($quotation_id))) {
 */
 } else if (($action == "delete_$module" && !empty($quotation_id)) && granted('delete', $module_id)) {
 
-    if (is_SystemAdmin() || is_SuperAdmin()) {
-        $mysqli->query("DELETE FROM `$tbl_name` WHERE id=$quotation_id");
+    if (Session::roleId() == '1') {
+        $mysqli->query("DELETE FROM `" . DB::DIMENSION_ITEMS . "` WHERE module_type='quotations' AND record_id=$quotation_id");
+        $mysqli->query("DELETE FROM `" . DB::QUOTATION_ITEMS . "` WHERE quotation_id=$quotation_id AND organization_id=$activeOrganizationId");
+        $mysqli->query("DELETE FROM `$tbl_name` WHERE id=$quotation_id AND organization_id=$activeOrganizationId");
+    } else {
+        $mysqli->query("DELETE FROM `" . DB::DIMENSION_ITEMS . "` WHERE module_type='quotations' AND record_id=$quotation_id");
+        $mysqli->query("DELETE FROM `" . DB::QUOTATION_ITEMS . "` WHERE quotation_id=$quotation_id AND organization_id=$activeOrganizationId");
+        $mysqli->query("DELETE FROM `$tbl_name` WHERE id=$quotation_id AND created_by='" . Session::userId() . "' AND organization_id=$activeOrganizationId");
     }
 
     if ($mysqli->affected_rows > 0) {
@@ -269,7 +313,7 @@ if (($action == "convert_$module" && !empty($quotation_id))) {
                 */
                 if (!empty($quotation_id)) {
 
-                    $result = $mysqli->query("SELECT * FROM `$tbl_name` WHERE id=$quotation_id");
+                    $result = $mysqli->query("SELECT * FROM `$tbl_name` WHERE id=$quotation_id AND organization_id=$activeOrganizationId");
                     $row = $result->fetch_array();
 
                     $customer_id            = s__($row['customer_id']);
@@ -373,7 +417,7 @@ if (($action == "convert_$module" && !empty($quotation_id))) {
                         $billing_attention      = (!empty($row_billing['attention']) ? s__($row_billing['attention']) : '');
 
                         $billing_country        = (!empty($row_billing['country']) ? s__($row_billing['country']) : '');
-                        $billing_country        = (!empty($billing_country) ? getTableAttr('country_name', tbl_geo_countries, $billing_country) : '');
+                        $billing_country        = (!empty($billing_country) ? getTableAttr('country', tbl_geo_countries, $billing_country) : '');
 
                         $billing_address_line1  = (!empty($row_billing['address_line1']) ? s__($row_billing['address_line1']) : '');
                         $billing_address_line2  = (!empty($row_billing['address_line2']) ? s__($row_billing['address_line2']) : '');
@@ -497,11 +541,11 @@ if (($action == "convert_$module" && !empty($quotation_id))) {
                                             ?>
 
                                                 <tr>
-                                                    <td><a href="invoice_overview.php?invoice_id=<?php echo $id; ?>"><?php echo $invoice_date; ?></a></td>
-                                                    <td><a href="invoice_overview.php?invoice_id=<?php echo $id; ?>"><?php echo $invoice_no; ?></a></td>
-                                                    <td><a href="invoice_overview.php?invoice_id=<?php echo $id; ?>"><?php echo $invoice_status; ?></a></td>
-                                                    <td><a href="invoice_overview.php?invoice_id=<?php echo $id; ?>"><?php echo $expiry_date; ?></a></td>
-                                                    <td><a href="invoice_overview.php?invoice_id=<?php echo $id; ?>"><?php echo $grand_total; ?></a></td>
+                                                    <td><a href="invoice_overview.php?invoice_id=<?php echo $id; ?>"><?php echo e($invoice_date); ?></a></td>
+                                                    <td><a href="invoice_overview.php?invoice_id=<?php echo $id; ?>"><?php echo e($invoice_no); ?></a></td>
+                                                    <td><a href="invoice_overview.php?invoice_id=<?php echo $id; ?>"><?php echo e($invoice_status); ?></a></td>
+                                                    <td><a href="invoice_overview.php?invoice_id=<?php echo $id; ?>"><?php echo e($expiry_date); ?></a></td>
+                                                    <td><a href="invoice_overview.php?invoice_id=<?php echo $id; ?>"><?php echo e($grand_total); ?></a></td>
                                                     <td><a href="invoice_overview.php?invoice_id=<?php echo $id; ?>"></a></td>
                                                 </tr>
 
@@ -546,18 +590,18 @@ if (($action == "convert_$module" && !empty($quotation_id))) {
                                                 $quotation_to_link = "lead.php?id=$lead_id";
                                             }
                                             ?>
-                                            <h5 class="my-2"><a href="<?php echo $quotation_to_link; ?>"><?php echo $display_name; ?></a></h5>
+                                            <h5 class="my-2"><a href="<?php echo $quotation_to_link; ?>"><?php echo e($display_name); ?></a></h5>
                                         </li>
-                                        <li><span class="fw-semibold"><?php echo $company_name; ?></span></li>
-                                        <li><?php echo $billing_attention; ?></li>
-                                        <li><?php echo $billing_country; ?></li>
-                                        <li><?php echo $billing_address_line1; ?></li>
-                                        <li><?php echo $billing_address_line2; ?></li>
-                                        <li><?php echo $billing_city; ?></li>
-                                        <li><?php echo $billing_state; ?></li>
-                                        <li><?php echo $billing_zipcode; ?></li>
-                                        <li><?php echo $billing_phone; ?></li>
-                                        <li><?php echo $billing_fax; ?></li>
+                                        <li><?php echo e($company_name); ?></li>
+                                        <li><?php echo e($billing_attention); ?></li>
+                                        <li><?php echo e($billing_country); ?></li>
+                                        <li><?php echo e($billing_address_line1); ?></li>
+                                        <li><?php echo e($billing_address_line2); ?></li>
+                                        <li><?php echo e($billing_city); ?></li>
+                                        <li><?php echo e($billing_state); ?></li>
+                                        <li><?php echo e($billing_zipcode); ?></li>
+                                        <li><?php echo e($billing_phone); ?></li>
+                                        <li><?php echo e($billing_fax); ?></li>
                                     </ul>
 
                                 </div>
@@ -574,7 +618,7 @@ if (($action == "convert_$module" && !empty($quotation_id))) {
                             $street2            = s__($row_warehouse['street2']);
 
                             $country            = s__($row_warehouse['country']);
-                            $country            = getTableAttr('country_name', tbl_geo_countries, $country);
+                            $country            = getTableAttr('country', tbl_geo_countries, $country);
 
                             $state              = s__($row_warehouse['state']);
                             $state            = getTableAttr('state_name', tbl_geo_states, $state);
@@ -583,23 +627,23 @@ if (($action == "convert_$module" && !empty($quotation_id))) {
                             $email              = s__($row_warehouse['email']);
                             $trn                = s__($row_warehouse['trn']);
 
-                            $warehouse_information .= (!empty($warehouse_name) ? '<strong>' . $warehouse_name . '</strong><br />' : '');
-                            $warehouse_information .= (!empty($warehouse_no) ? $warehouse_no . '<br />' : '');
-                            $warehouse_information .= (!empty($street1) ? $street1 . '<br />' : '');
-                            $warehouse_information .= (!empty($street2) ? $street2 . '<br />' : '');
-                            $warehouse_information .= (!empty($state) ? $state . ', ' : '');
-                            $warehouse_information .= (!empty($country) ? $country . '<br />' : '');
-                            $warehouse_information .= (!empty($phone) ? $phone . '<br />' : '');
-                            $warehouse_information .= (!empty($email) ? $email . '<br />' : '');
-                            $warehouse_information .= (!empty($trn) ? $trn : '');
+                            $warehouse_information .= (!empty($warehouse_name) ? '<strong>' . e($warehouse_name) . '</strong><br />' : '');
+                            $warehouse_information .= (!empty($warehouse_no) ? e($warehouse_no) . '<br />' : '');
+                            $warehouse_information .= (!empty($street1) ? e($street1) . '<br />' : '');
+                            $warehouse_information .= (!empty($street2) ? e($street2) . '<br />' : '');
+                            $warehouse_information .= (!empty($state) ? e($state) . ', ' : '');
+                            $warehouse_information .= (!empty($country) ? e($country) . '<br />' : '');
+                            $warehouse_information .= (!empty($phone) ? e($phone) . '<br />' : '');
+                            $warehouse_information .= (!empty($email) ? e($email) . '<br />' : '');
+                            $warehouse_information .= (!empty($trn) ? e($trn) : '');
                             ?>
                             <div class="col-sm-6">
                                 <div class="text-sm-end mb-4">
                                     <?php echo $warehouse_information; ?>
-                                    <h6 class="text-primary mb-2 mt-lg-2">Quotation #<?php echo $quotation_no; ?></h6>
+                                    <h6 class="text-primary mb-2 mt-lg-2">Quotation #<?php echo e($quotation_no); ?></h6>
                                     <ul class="list list-unstyled mb-0">
-                                        <li>Date: <span class="fw-semibold"><?php echo $quotation_date; ?></span></li>
-                                        <li>Expiry date: <span class="fw-semibold"><?php echo $expiry_date; ?></span></li>
+                                        <li>Date: <span class="fw-semibold"><?php echo e($quotation_date); ?></span></li>
+                                        <li>Expiry date: <span class="fw-semibold"><?php echo e($expiry_date); ?></span></li>
                                     </ul>
                                 </div>
                             </div>
@@ -611,49 +655,49 @@ if (($action == "convert_$module" && !empty($quotation_id))) {
                                 <div class="row">
                                     <label class="col-lg-5 col-form-label">Expected Shipment Date:</label>
                                     <div class="col-lg-7 mt-2">
-                                        <?php echo $expected_shipment_date; ?>
+                                        <?php echo e($expected_shipment_date); ?>
                                     </div>
                                 </div>
                                 <div class="row">
                                     <label class="col-lg-5 col-form-label">Delivery Method:</label>
                                     <div class="col-lg-7 mt-2">
-                                        <?php if (!empty($shipment_type)) echo str_ireplace('_', '-', ucwords($shipment_type)); ?>
+                                        <?php if (!empty($shipment_type)) echo e(str_ireplace('_', '-', ucwords($shipment_type))); ?>
                                     </div>
                                 </div>
                                 <div class="row">
                                     <label class="col-lg-5 col-form-label">Job Reference No:</label>
                                     <div class="col-lg-7 mt-2">
-                                        <?php echo $job_reference_no; ?>
+                                        <?php echo e($job_reference_no); ?>
                                     </div>
                                 </div>
                                 <div class="row">
                                     <label class="col-lg-5 col-form-label">Shipper:</label>
                                     <div class="col-lg-7 mt-2">
-                                        <?php echo getTableAttr('shipper_name', tbl_shippers, $shipper_id); ?>
+                                        <?php echo e(getTableAttr('shipper_name', tbl_shippers, $shipper_id)); ?>
                                     </div>
                                 </div>
                                 <div class="row">
                                     <label class="col-lg-5 col-form-label">Origin Port:</label>
                                     <div class="col-lg-7 mt-2">
-                                        <?php echo getTableAttr('alpha3_code', tbl_geo_countries, $origin_port); ?> - <?php echo getTableAttr('country_name', tbl_geo_countries, $origin_port); ?>
+                                        <?php echo e(getTableAttr('alpha3_code', tbl_geo_countries, $origin_port)); ?> - <?php echo e(getTableAttr('country', tbl_geo_countries, $origin_port)); ?>
                                     </div>
                                 </div>
                                 <div class="row">
                                     <label class="col-lg-5 col-form-label">Origin Country:</label>
                                     <div class="col-lg-7 mt-2">
-                                        <?php echo getTableAttr('alpha3_code', tbl_geo_countries, $origin_country); ?> - <?php echo getTableAttr('country_name', tbl_geo_countries, $origin_country); ?>
+                                        <?php echo e(getTableAttr('alpha3_code', tbl_geo_countries, $origin_country)); ?> - <?php echo e(getTableAttr('country', tbl_geo_countries, $origin_country)); ?>
                                     </div>
                                 </div>
                                 <div class="row">
                                     <label class="col-lg-5 col-form-label">No of Packs:</label>
                                     <div class="col-lg-7 mt-2">
-                                        <?php echo $no_of_packs; ?>
+                                        <?php echo e($no_of_packs); ?>
                                     </div>
                                 </div>
                                 <div class="row">
                                     <label class="col-lg-5 col-form-label">Chargeable Weight:</label>
                                     <div class="col-lg-7 mt-2">
-                                        <?php echo $chargeable_weight; ?>
+                                        <?php echo e($chargeable_weight); ?>
                                     </div>
                                 </div>
                             </div>
@@ -662,49 +706,49 @@ if (($action == "convert_$module" && !empty($quotation_id))) {
                                 <div class="row">
                                     <label class="col-lg-5 col-form-label">Payment Terms:</label>
                                     <div class="col-lg-7 mt-2">
-                                        <?php echo getTableAttr('payment_term', tbl_payment_terms, $payment_term); ?>
+                                        <?php echo e(getTableAttr('payment_term', tbl_payment_terms, $payment_term)); ?>
                                     </div>
                                 </div>
                                 <div class="row">
                                     <label class="col-lg-5 col-form-label">Sales Person:</label>
                                     <div class="col-lg-7 mt-2">
-                                        <?php echo getTableAttr('warehouse_name', tbl_warehouses, $sales_person); ?>
+                                        <?php echo e(getTableAttr('warehouse_name', tbl_warehouses, $sales_person)); ?>
                                     </div>
                                 </div>
                                 <div class="row">
                                     <label class="col-lg-5 col-form-label">MAWB/BOL:</label>
                                     <div class="col-lg-7 mt-2">
-                                        <?php echo $mawb_bol; ?>
+                                        <?php echo e($mawb_bol); ?>
                                     </div>
                                 </div>
                                 <div class="row">
                                     <label class="col-lg-5 col-form-label">HWB/HBOL:</label>
                                     <div class="col-lg-7 mt-2">
-                                        <?php echo $hwb_hbol; ?>
+                                        <?php echo e($hwb_hbol); ?>
                                     </div>
                                 </div>
                                 <div class="row">
                                     <label class="col-lg-5 col-form-label">Consignee:</label>
                                     <div class="col-lg-7 mt-2">
-                                        <?php echo getTableAttr('consignee_name', tbl_consignees, $consignee_id); ?>
+                                        <?php echo e(getTableAttr('consignee_name', tbl_consignees, $consignee_id)); ?>
                                     </div>
                                 </div>
                                 <div class="row">
                                     <label class="col-lg-5 col-form-label">Destination Port:</label>
                                     <div class="col-lg-7 mt-2">
-                                        <?php echo getTableAttr('alpha3_code', tbl_geo_countries, $destination_port); ?> - <?php echo getTableAttr('country_name', tbl_geo_countries, $destination_port); ?>
+                                        <?php echo e(getTableAttr('alpha3_code', tbl_geo_countries, $destination_port)); ?> - <?php echo e(getTableAttr('country', tbl_geo_countries, $destination_port)); ?>
                                     </div>
                                 </div>
                                 <div class="row">
                                     <label class="col-lg-5 col-form-label">Gross Weight:</label>
                                     <div class="col-lg-7 mt-2">
-                                        <?php echo $gross_weight; ?>
+                                        <?php echo e($gross_weight); ?>
                                     </div>
                                 </div>
                                 <div class="row">
                                     <label class="col-lg-5 col-form-label">Volume (CBM):</label>
                                     <div class="col-lg-7 mt-2">
-                                        <?php echo $volume; ?>
+                                        <?php echo e($volume); ?>
                                     </div>
                                 </div>
                             </div>
@@ -743,7 +787,7 @@ if (($action == "convert_$module" && !empty($quotation_id))) {
 
                                     <tr>
                                         <td>
-                                            <div class="fw-bold"><?php echo getTableAttr('item_name', tbl_items, ($service_arr[$index] ?? 0)); ?></div>
+                                            <div class="fw-bold"><?php echo e(getTableAttr('item_name', tbl_items, ($service_arr[$index] ?? 0))); ?></div>
                                             <span class="text-muted">
                                                 <?php
                                                 // ----------------------------------------------
@@ -755,7 +799,7 @@ if (($action == "convert_$module" && !empty($quotation_id))) {
                                                 if (count($desc) > 0) {
                                                     foreach ($desc as $d) {
                                                         if (!empty($d)) {
-                                                            echo $d_counter++ . '. ' . $d;
+                                                            echo e($d_counter++ . '. ' . $d);
                                                             echo '<br />';
                                                         }
                                                     }
@@ -763,12 +807,12 @@ if (($action == "convert_$module" && !empty($quotation_id))) {
                                                 ?>
                                             </span>
                                         </td>
-                                        <td><?php echo ($description_arr[$index] ?? ''); ?></td>
-                                        <td class="text-center"><?php echo ($qty_arr[$index] ?? ''); ?></td>
-                                        <td class="text-end"><?php echo ($rate_arr[$index] ?? ''); ?></td>
-                                        <td class="text-end"><?php echo ($sub_total_arr[$index] ?? ''); ?></td>
-                                        <td class="text-end"><?php echo ($tax_arr[$index] ?? ''); ?>% (<?php echo ($tax_amount_arr[$index] ?? ''); ?>)</td>
-                                        <td class="text-end"><span class="fw-semibold"><?php echo ($total_arr[$index] ?? ''); ?></span></td>
+                                        <td><?php echo e($description_arr[$index] ?? ''); ?></td>
+                                        <td class="text-center"><?php echo e($qty_arr[$index] ?? ''); ?></td>
+                                        <td class="text-end"><?php echo e($rate_arr[$index] ?? ''); ?></td>
+                                        <td class="text-end"><?php echo e($sub_total_arr[$index] ?? ''); ?></td>
+                                        <td class="text-end"><?php echo e($tax_arr[$index] ?? ''); ?>% (<?php echo e($tax_amount_arr[$index] ?? ''); ?>)</td>
+                                        <td class="text-end"><span class="fw-semibold"><?php echo e($total_arr[$index] ?? ''); ?></span></td>
                                     </tr>
                                 <?php
                                 } // for
@@ -789,7 +833,7 @@ if (($action == "convert_$module" && !empty($quotation_id))) {
 
                             <div class="pt-2 mb-3">
                                 <ul class="list-unstyled text-muted">
-                                    <li class="mb-3">Customer Notes: <br /><?php echo $customer_notes; ?></li>
+                                    <li class="mb-3">Customer Notes: <br /><?php echo e($customer_notes); ?></li>
                                 </ul>
                             </div>
 
@@ -800,28 +844,28 @@ if (($action == "convert_$module" && !empty($quotation_id))) {
                                         <tbody>
                                             <tr>
                                                 <td>Grand Subtotal:</td>
-                                                <td class="text-end"><?php echo $grand_subtotal; ?></td>
+                                                <td class="text-end"><?php echo e($grand_subtotal); ?></td>
                                             </tr>
                                             <tr>
-                                                <td>Discount Type: <?php echo $grand_discount_type; ?></td>
-                                                <td class="text-end"><?php echo $grand_discount_type_value; ?></td>
+                                                <td>Discount Type: <?php echo e($grand_discount_type); ?></td>
+                                                <td class="text-end"><?php echo e($grand_discount_type_value); ?></td>
                                             </tr>
                                             <tr>
                                                 <td>Discount Amount: </td>
-                                                <td class="text-end"><?php echo $grand_discount_amount; ?></td>
+                                                <td class="text-end"><?php echo e($grand_discount_amount); ?></td>
                                             </tr>
                                             <tr>
                                                 <td>Subtotal: (Discounted): </td>
-                                                <td class="text-end"><?php echo $grand_after_discount; ?></td>
+                                                <td class="text-end"><?php echo e($grand_after_discount); ?></td>
                                             </tr>
                                             <tr>
                                                 <td>Total Tax Amount:</td>
-                                                <td class="text-end"><?php echo $grand_tax; ?></td>
+                                                <td class="text-end"><?php echo e($grand_tax); ?></td>
                                             </tr>
                                             <tr>
                                                 <td>Grand Total:</td>
                                                 <td class="text-end text-primary">
-                                                    <h5 class="fw-semibold"><?php echo $grand_total; ?></h5>
+                                                    <h5 class="fw-semibold"><?php echo e($grand_total); ?></h5>
                                                 </td>
                                             </tr>
                                         </tbody>
@@ -853,7 +897,7 @@ if (($action == "convert_$module" && !empty($quotation_id))) {
                         </div>
                         <div class="card-body">
                             <?php if (!empty($final_terms_and_conditions)) {
-                                echo $final_terms_and_conditions;
+                                echo e($final_terms_and_conditions);
                             } else {
                                 echo 'No Terms and Conditions';
                             }

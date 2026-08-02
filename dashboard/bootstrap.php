@@ -1551,7 +1551,7 @@ if (!function_exists('dashboardQueueOrganizationInviteEmail')) {
 
         $body = '<p>Hello,</p>'
             . '<p><strong>' . htmlspecialchars($inviterName, ENT_QUOTES, 'UTF-8') . '</strong> has invited you to join <strong>'
-            . htmlspecialchars($organizationName, ENT_QUOTES, 'UTF-8') . '</strong> on HAIZON.</p>'
+            . htmlspecialchars($organizationName, ENT_QUOTES, 'UTF-8') . '</strong> on FLASH ERP SYSTEM.</p>'
             . '<p><a href="' . htmlspecialchars($acceptUrl, ENT_QUOTES, 'UTF-8') . '" style="display:inline-block;padding:10px 16px;background:#0d6efd;color:#fff;text-decoration:none;border-radius:4px;">Accept Organization Invite</a></p>'
             . '<p>If the button does not work, copy this link into your browser:<br>'
             . htmlspecialchars($acceptUrl, ENT_QUOTES, 'UTF-8') . '</p>'

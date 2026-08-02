@@ -42,7 +42,7 @@ class QuotationsDataTable extends BaseDataTable
         $statusBadge = BadgeHelper::info(htmlspecialchars($status));
         return [
             htmlspecialchars($date),
-            htmlspecialchars($no),
+            '<a href="quotation_overview.php?quotation_id=' . $id . '" class="fw-semibold text-primary text-decoration-none">' . htmlspecialchars($no) . '</a>',
             htmlspecialchars($jobRef),
             htmlspecialchars($custName),
             $statusBadge,

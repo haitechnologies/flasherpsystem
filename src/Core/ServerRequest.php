@@ -20,7 +20,7 @@ final class ServerRequest
         ?array $post = null,
         ?array $files = null,
         ?array $cookies = null,
-        string $sessionPrefix = 'haizon'
+        string $sessionPrefix = 'flasherpsystem'
     ) {
         $this->server = $server ?? $_SERVER;
         $this->query = $query ?? $_GET;

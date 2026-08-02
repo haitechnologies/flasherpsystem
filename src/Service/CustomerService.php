@@ -83,6 +83,7 @@ class CustomerService
             rating: !empty($data['rating']) ? (int)$data['rating'] : null,
             currency: !empty($data['currency']) ? (int)$data['currency'] : null,
             openingBalance: !empty($data['opening_balance']) ? (float)$data['opening_balance'] : 0.00,
+            receivableAccountId: !empty($data['receivable_account_id']) ? (int)$data['receivable_account_id'] : null,
             exchangeRate: !empty($data['exchange_rate']) ? (int)$data['exchange_rate'] : 1,
             website: !empty($data['website']) ? trim((string)$data['website']) : null,
             department: !empty($data['department']) ? trim((string)$data['department']) : null,
@@ -153,6 +154,7 @@ class CustomerService
             rating: isset($data['rating']) ? (!empty($data['rating']) ? (int)$data['rating'] : null) : $customer->rating,
             currency: isset($data['currency']) ? (!empty($data['currency']) ? (int)$data['currency'] : null) : $customer->currency,
             openingBalance: isset($data['opening_balance']) ? (float)$data['opening_balance'] : $customer->openingBalance,
+            receivableAccountId: isset($data['receivable_account_id']) ? (!empty($data['receivable_account_id']) ? (int)$data['receivable_account_id'] : null) : $customer->receivableAccountId,
             exchangeRate: isset($data['exchange_rate']) ? (int)$data['exchange_rate'] : $customer->exchangeRate,
             website: isset($data['website']) ? (!empty($data['website']) ? trim((string)$data['website']) : null) : $customer->website,
             department: isset($data['department']) ? (!empty($data['department']) ? trim((string)$data['department']) : null) : $customer->department,
@@ -622,6 +624,7 @@ class CustomerService
             rating: $customer->rating,
             currency: $customer->currency,
             openingBalance: $customer->openingBalance,
+            receivableAccountId: $customer->receivableAccountId,
             exchangeRate: $customer->exchangeRate,
             website: $customer->website,
             department: $customer->department,
@@ -686,6 +689,7 @@ class CustomerService
             rating: $customer->rating,
             currency: $customer->currency,
             openingBalance: $customer->openingBalance,
+            receivableAccountId: $customer->receivableAccountId,
             exchangeRate: $customer->exchangeRate,
             website: $customer->website,
             department: $customer->department,
@@ -753,6 +757,7 @@ class CustomerService
                 rating: $customer->rating,
                 currency: $customer->currency,
                 openingBalance: $balance,
+                receivableAccountId: $customer->receivableAccountId,
                 exchangeRate: $customer->exchangeRate,
                 website: $customer->website,
                 department: $customer->department,
@@ -780,7 +785,7 @@ class CustomerService
             );
             $saved = $this->customerRepo->save($updated);
 
-            $this->createOpeningBalanceJournal($id, $balance, $orgId, $userId, $customer->displayName);
+            $this->createOpeningBalanceJournal($id, $balance, $orgId, $userId, $customer->displayName, $customer->receivableAccountId);
 
             $db->commit();
             return $saved;
@@ -790,7 +795,7 @@ class CustomerService
         }
     }
 
-    private function createOpeningBalanceJournal(int $customerId, float $balance, int $orgId, int $userId, string $customerName): void
+    private function createOpeningBalanceJournal(int $customerId, float $balance, int $orgId, int $userId, string $customerName, ?int $receivableAccountId = null): void
     {
         if ($balance == 0) {
             return;
@@ -812,7 +817,7 @@ class CustomerService
 
         $itemsData = [
             [
-                'account' => 9,
+                'account' => $receivableAccountId ?? 9,
                 'description' => "Opening Balance — {$customerName}",
                 'debit' => abs($balance),
                 'credit' => 0.0,
@@ -875,6 +880,7 @@ class CustomerService
             rating: $customer->rating,
             currency: $customer->currency,
             openingBalance: $customer->openingBalance,
+            receivableAccountId: $customer->receivableAccountId,
             exchangeRate: $customer->exchangeRate,
             website: $customer->website,
             department: $customer->department,
@@ -939,6 +945,7 @@ class CustomerService
             rating: $customer->rating,
             currency: $customer->currency,
             openingBalance: $customer->openingBalance,
+            receivableAccountId: $customer->receivableAccountId,
             exchangeRate: $customer->exchangeRate,
             website: $customer->website,
             department: $customer->department,

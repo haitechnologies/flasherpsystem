@@ -1,4 +1,13 @@
  
+
+  function getCsrfToken() {
+      if (typeof window.HAI_CSRF_TOKEN !== 'undefined' && window.HAI_CSRF_TOKEN) {
+          return window.HAI_CSRF_TOKEN;
+      }
+      var csrfInput = document.querySelector('input[name="csrf_token"]');
+      return csrfInput ? csrfInput.value : '';
+  }
+
   /*
   |--------------------------------------------------------------------------
   | 	Populate Service
@@ -17,7 +26,7 @@
       
       }
 
-      var data = "ajax_action=populate_services";
+      var data = "ajax_action=populate_services&csrf_token=" + encodeURIComponent(getCsrfToken());
       xhr.open("POST", "internal_request.php", true);
       xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
       xhr.send(data);
@@ -88,7 +97,7 @@
       
       }
 
-      var data = "ajax_action=populate_item_rate&item_id="+item_id+"&row_no="+row_no;
+      var data = "ajax_action=populate_item_rate&item_id="+item_id+"&row_no="+row_no+"&csrf_token="+encodeURIComponent(getCsrfToken());
       xhr.open("POST", "internal_request.php", true);
       xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
       xhr.send(data);
@@ -137,4 +146,277 @@
       }
     }
 
+  }
+
+  
+  /*
+  |--------------------------------------------------------------------------
+  | 	Add Shipper
+  |--------------------------------------------------------------------------
+  |
+  */
+
+  function ajax_add_shipper(
+                shipper_name, shipper_address_line1, shipper_address_line2,
+                shipper_city, shipper_zipcode, shipper_province, shipper_country,
+                shipper_email, shipper_telephone, shipper_mobile, shipper_fax){
+      var xhr;
+      
+      if (window.XMLHttpRequest) { // Mozilla, Safari, ...
+        xhr = new XMLHttpRequest();
+      
+      } else if (window.ActiveXObject) { // IE 8 and older
+        xhr = new ActiveXObject("Microsoft.XMLHTTP");
+      
+      }
+
+      var data = "ajax_action=add_shipper&shipper_name="+shipper_name+"&shipper_address_line1="+shipper_address_line1+"&shipper_address_line2="+shipper_address_line2+"&shipper_city="+shipper_city+"&shipper_zipcode="+shipper_zipcode+"&shipper_province="+shipper_province+"&shipper_country="+shipper_country+"&shipper_email="+shipper_email+"&shipper_telephone="+shipper_telephone+"&shipper_mobile="+shipper_mobile+"&shipper_fax="+shipper_fax+"&csrf_token="+encodeURIComponent(getCsrfToken());
+      xhr.open("POST", "internal_request.php", true);
+      xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+      xhr.send(data);
+
+      xhr.onreadystatechange = add_shipper_;
+
+    function add_shipper_() {
+      if (xhr.readyState == 4) {
+        if (xhr.status == 200) {
+          var response        = xhr.responseText;
+           
+           const data = JSON.parse(xhr.responseText);
+
+            let error_message = data.error_message;
+            let shipper_id    = data.shipper_id;
+            let shipper_name  = data.shipper_name;
+
+            if (error_message !== '') {
+                document.getElementById('ajax_shipper_error_message').innerHTML = error_message;
+
+            } else {
+                let dropdown = document.getElementById("shipper_id");
+
+                if (dropdown && shipper_id && shipper_name) {
+                    let option = document.createElement("option");
+                    option.value = shipper_id;
+                    option.textContent = shipper_name;
+
+                    dropdown.appendChild(option);
+
+                    dropdown.value = shipper_id;
+                } else {
+                    console.error("Dropdown not found or no shipper data");
+                }
+
+                $("#shipperModal").modal("hide");
+
+            }
+
+
+        } else {
+          console.log('There was a problem with the request.');
+
+        }
+      }
+    }
+
+  }
+
+
+  
+  /*
+  |--------------------------------------------------------------------------
+  | 	Add Consignee
+  |--------------------------------------------------------------------------
+  |
+  */
+
+  function ajax_add_consignee(
+                consignee_name, consignee_address_line1, consignee_address_line2,
+                consignee_city, consignee_zipcode, consignee_province, consignee_country,
+                consignee_email, consignee_telephone, consignee_mobile, consignee_fax){
+      var xhr;
+      
+      if (window.XMLHttpRequest) { // Mozilla, Safari, ...
+        xhr = new XMLHttpRequest();
+      
+      } else if (window.ActiveXObject) { // IE 8 and older
+        xhr = new ActiveXObject("Microsoft.XMLHTTP");
+      
+      }
+
+      var data = "ajax_action=add_consignee&consignee_name="+consignee_name+"&consignee_address_line1="+consignee_address_line1+"&consignee_address_line2="+consignee_address_line2+"&consignee_city="+consignee_city+"&consignee_zipcode="+consignee_zipcode+"&consignee_province="+consignee_province+"&consignee_country="+consignee_country+"&consignee_email="+consignee_email+"&consignee_telephone="+consignee_telephone+"&consignee_mobile="+consignee_mobile+"&consignee_fax="+consignee_fax+"&csrf_token="+encodeURIComponent(getCsrfToken());
+      xhr.open("POST", "internal_request.php", true);
+      xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+      xhr.send(data);
+
+      xhr.onreadystatechange = add_consignee_;
+
+    function add_consignee_() {
+      if (xhr.readyState == 4) {
+        if (xhr.status == 200) {
+          var response        = xhr.responseText;
+           
+           const data = JSON.parse(xhr.responseText);
+
+            let error_message = data.error_message;
+            let consignee_id    = data.consignee_id;
+            let consignee_name  = data.consignee_name;
+
+            if (error_message !== '') {
+                document.getElementById('ajax_consignee_error_message').innerHTML = error_message;
+
+            } else {
+                let dropdown = document.getElementById("consignee_id");
+
+                if (dropdown && consignee_id && consignee_name) {
+                    let option = document.createElement("option");
+                    option.value = consignee_id;
+                    option.textContent = consignee_name;
+
+                    dropdown.appendChild(option);
+
+                    dropdown.value = consignee_id;
+                } else {
+                    console.error("Dropdown not found or no consignee data");
+                }
+
+                $("#consigneeModal").modal("hide");
+
+            }
+
+
+        } else {
+          console.log('There was a problem with the request.');
+
+        }
+      }
+    }
+
+  }
+
+
+  
+  /*
+  |--------------------------------------------------------------------------
+  | 	SELECT PORT COUNTRY
+  |--------------------------------------------------------------------------
+  |
+  */
+
+  function ajax_select_port_country(port_type, port_id){
+      var xhr;
+
+      
+      if (window.XMLHttpRequest) { // Mozilla, Safari, ...
+        xhr = new XMLHttpRequest();
+      
+      } else if (window.ActiveXObject) { // IE 8 and older
+        xhr = new ActiveXObject("Microsoft.XMLHTTP");
+      
+      }
+
+      var data = "ajax_action=select_port_country&port_type="+port_type+"&port_id="+port_id+"&csrf_token="+encodeURIComponent(getCsrfToken());
+      xhr.open("POST", "internal_request.php", true);
+      xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+      xhr.send(data);
+
+      xhr.onreadystatechange = select_port_country_;
+
+    function select_port_country_() {
+      if (xhr.readyState == 4) {
+        if (xhr.status == 200) {
+          var response        = xhr.responseText;
+           
+           const data = JSON.parse(xhr.responseText);
+
+            let port_type     = data.port_type;
+            let country_id    = data.country_id;
+            let country_name  = data.country_name;
+            
+
+            if (port_type !== '') {
+                let dropdown = document.getElementById(""+port_type+"_country");
+
+                if (dropdown && country_id && country_name) {
+                    let option = document.createElement("option");
+                    option.value = country_id;
+                    option.textContent = country_name;
+
+                    dropdown.appendChild(option);
+
+                    dropdown.value = country_id;
+
+                    dropdown.style.pointerEvents = "none";
+
+                    dropdown.classList.add("bg-light");
+
+                } else {
+                    console.error("Dropdown not found or no consignee data");
+                }
+
+            }
+
+
+        } else {
+          console.log('There was a problem with the request.');
+
+        }
+      }
+    }
+
+  }
+
+
+  
+  /*
+  |--------------------------------------------------------------------------
+  | 	SELECT COUNTRY PORTS
+  |--------------------------------------------------------------------------
+  |
+  */
+  function ajax_select_country_ports(country_type) {
+      const countrySelect = document.getElementById(country_type + "_country");
+      const portSelect = document.getElementById(country_type + "_port");
+
+      if (!countrySelect) {
+          console.error("Dropdown elements not found for:", country_type);
+          return;
+      }
+
+      const country_id = countrySelect.value;
+      if (!country_id) {
+          portSelect.innerHTML = "<option value=''>Select Port</option>";
+          return;
+      }
+
+      const xhr = new XMLHttpRequest();
+      const data = "ajax_action=select_country_ports"
+                + "&country_type=" + encodeURIComponent(country_type)
+                + "&country_id=" + encodeURIComponent(country_id)
+                + "&csrf_token=" + encodeURIComponent(getCsrfToken());
+
+      xhr.open("POST", "internal_request.php", true);
+      xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+      xhr.send(data);
+
+      xhr.onreadystatechange = function () {
+          if (xhr.readyState === 4 && xhr.status === 200) {
+              try {
+                  const response = JSON.parse(xhr.responseText);
+
+                  portSelect.innerHTML = "<option value=''>Select Port</option>";
+
+                  response.forEach(function (port) {
+                      const option = document.createElement("option");
+                      option.value = port.id;
+                      option.textContent = port.port_name + 
+                                          (port.port_code ? " (" + port.port_code + ")" : "");
+                      portSelect.appendChild(option);
+                  });
+
+              } catch (e) {
+                  console.error("JSON parsing error:", e);
+                  console.log(xhr.responseText);
+              }
+          }
+      };
   }

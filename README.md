@@ -1,4 +1,4 @@
-# Haizon ERP
+# Flash ERP System
 
 > **Business directory, classifieds, and ERP platform** by Hai Technologies.
 
@@ -20,7 +20,7 @@
 
 ```bash
 git clone <repo>
-cd haizon
+cd flasherpsystem
 cp .env.example .env     # Configure DB, Stripe, email
 composer install
 php database/migrate.php # Run schema migrations

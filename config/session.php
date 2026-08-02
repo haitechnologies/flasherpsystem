@@ -1,7 +1,7 @@
 <?php
 
-if (!function_exists('haizonSessionIsProduction')) {
-    function haizonSessionIsProduction(): bool
+if (!function_exists('flasherpsystemSessionIsProduction')) {
+    function flasherpsystemSessionIsProduction(): bool
     {
         $appEnv = getenv('APP_ENV') ?: '';
         $serverName = $_SERVER['SERVER_NAME'] ?? '';
@@ -11,8 +11,8 @@ if (!function_exists('haizonSessionIsProduction')) {
     }
 }
 
-if (!function_exists('haizonSessionBasePath')) {
-    function haizonSessionBasePath(): string
+if (!function_exists('flasherpsystemSessionBasePath')) {
+    function flasherpsystemSessionBasePath(): string
     {
         $scriptName = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '');
         $scriptDir = rtrim(dirname($scriptName), '/');
@@ -26,10 +26,10 @@ if (!function_exists('haizonSessionBasePath')) {
     }
 }
 
-if (!function_exists('haizonSessionCookiePath')) {
-    function haizonSessionCookiePath(string $scope): string
+if (!function_exists('flasherpsystemSessionCookiePath')) {
+    function flasherpsystemSessionCookiePath(string $scope): string
     {
-        $basePath = haizonSessionBasePath();
+        $basePath = flasherpsystemSessionBasePath();
 
         if ($scope === 'dashboard') {
             return $basePath === '/' ? '/dashboard' : rtrim($basePath, '/') . '/dashboard';
@@ -52,7 +52,7 @@ if (!function_exists('startScopedSession')) {
             return;
         }
 
-        $isProduction = haizonSessionIsProduction();
+        $isProduction = flasherpsystemSessionIsProduction();
 
         ini_set('session.cookie_httponly', '1');
         ini_set('session.cookie_samesite', 'Strict');
@@ -60,9 +60,9 @@ if (!function_exists('startScopedSession')) {
         ini_set('session.use_only_cookies', '1');
         ini_set('session.cookie_secure', $isProduction ? '1' : '0');
 
-        $sess_prefix = strtoupper(defined('PROJECT_PREFIX') ? PROJECT_PREFIX : 'haizon');
+        $sess_prefix = strtoupper(defined('PROJECT_PREFIX') ? PROJECT_PREFIX : 'flasherpsystem');
         session_name($normalizedScope === 'dashboard' ? $sess_prefix . '_DASHBOARD_SESSID' : $sess_prefix . '_FRONTEND_SESSID');
-        session_set_cookie_params(0, haizonSessionCookiePath($normalizedScope), '', $isProduction, true);
+        session_set_cookie_params(0, flasherpsystemSessionCookiePath($normalizedScope), '', $isProduction, true);
         session_start();
     }
 }
@@ -71,21 +71,21 @@ if (!function_exists('startScopedSession')) {
 if (!function_exists('haizonSessionIsProduction')) {
     function haizonSessionIsProduction(): bool
     {
-        return haizonSessionIsProduction();
+        return flasherpsystemSessionIsProduction();
     }
 }
 
 if (!function_exists('haizonSessionBasePath')) {
     function haizonSessionBasePath(): string
     {
-        return haizonSessionBasePath();
+        return flasherpsystemSessionBasePath();
     }
 }
 
 if (!function_exists('haizonSessionCookiePath')) {
     function haizonSessionCookiePath(string $scope): string
     {
-        return haizonSessionCookiePath($scope);
+        return flasherpsystemSessionCookiePath($scope);
     }
 }
 

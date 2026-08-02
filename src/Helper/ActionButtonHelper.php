@@ -85,12 +85,14 @@ class ActionButtonHelper
      * @param string $module Module name
      * @return string HTML action button
      */
-    public static function deleteButton($id, $module)
+    public static function deleteButton($id, $module, $confirmMessage = '')
     {
+        $confirmAttr = $confirmMessage !== '' ? ' data-confirm="' . htmlspecialchars($confirmMessage) . '" ' : '';
         return '<a href="#" ' .
             'data-action="delete_record" ' .
             'data-module="' . htmlspecialchars($module) . '" ' .
             'data-id="' . (int)$id . '" ' .
+            $confirmAttr .
             'title="Delete" ' .
             'class="action-btn action-delete"><i class="ph-trash"></i></a>';
     }

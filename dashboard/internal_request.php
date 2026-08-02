@@ -65,6 +65,18 @@ if (isset($_REQUEST['ajax_action']) && !empty($_REQUEST['ajax_action'])) {
 	$ajax_action = e_s__($_REQUEST['ajax_action']);
 }
 
+$csrf_write_actions = ['add_shipper', 'add_consignee'];
+if (in_array($ajax_action, $csrf_write_actions)) {
+	if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+		echo json_encode(['success' => false, 'error' => 'Invalid request method.']);
+		exit;
+	}
+	if (!validate_csrf_token($_POST['csrf_token'] ?? '')) {
+		echo json_encode(['success' => false, 'error' => 'Invalid security token.']);
+		exit;
+	}
+}
+
 
 /*
 |--------------------------------------------------------------------------|
@@ -185,6 +197,247 @@ switch ($ajax_action) {
 
 		echo json_encode($arr);
 
+		break;
+
+
+	/*
+	|--------------------------------------------------------------------------
+	| 	Add Shipper
+	|--------------------------------------------------------------------------
+	|
+	*/
+	case 'add_shipper':
+
+		$shipper_name 			= '';
+		$shipper_address_line1 	= '';
+		$shipper_address_line2 	= '';
+		$shipper_city 			= '';
+		$shipper_zipcode 		= '';
+		$shipper_province 		= '';
+		$shipper_country 		= '';
+		$shipper_email 			= '';
+		$shipper_telephone 		= '';
+		$shipper_mobile 		= '';
+		$shipper_fax 			= '';
+
+
+		if (isset($_POST['shipper_name']) && !empty($_POST['shipper_name'])) {
+			$shipper_name 	= e_s__($_POST['shipper_name']);
+		}
+		if (isset($_POST['shipper_address_line1']) && !empty($_POST['shipper_address_line1'])) {
+			$shipper_address_line1 	= e_s__($_POST['shipper_address_line1']);
+		}
+		if (isset($_POST['shipper_address_line2']) && !empty($_POST['shipper_address_line2'])) {
+			$shipper_address_line2 	= e_s__($_POST['shipper_address_line2']);
+		}
+		if (isset($_POST['shipper_city']) && !empty($_POST['shipper_city'])) {
+			$shipper_city 	= e_s__($_POST['shipper_city']);
+		}
+		if (isset($_POST['shipper_zipcode']) && !empty($_POST['shipper_zipcode'])) {
+			$shipper_zipcode 	= e_s__($_POST['shipper_zipcode']);
+		}
+		if (isset($_POST['shipper_province']) && !empty($_POST['shipper_province'])) {
+			$shipper_province 	= e_s__($_POST['shipper_province']);
+		}
+		if (isset($_POST['shipper_country']) && !empty($_POST['shipper_country'])) {
+			$shipper_country 	= e_s__($_POST['shipper_country']);
+		}
+		if (isset($_POST['shipper_email']) && !empty($_POST['shipper_email'])) {
+			$shipper_email 	= e_s__($_POST['shipper_email']);
+		}
+		if (isset($_POST['shipper_telephone']) && !empty($_POST['shipper_telephone'])) {
+			$shipper_telephone 	= e_s__($_POST['shipper_telephone']);
+		}
+		if (isset($_POST['shipper_mobile']) && !empty($_POST['shipper_mobile'])) {
+			$shipper_mobile 	= e_s__($_POST['shipper_mobile']);
+		}
+		if (isset($_POST['shipper_fax']) && !empty($_POST['shipper_fax'])) {
+			$shipper_fax 	= e_s__($_POST['shipper_fax']);
+		}
+
+		$id 	= '';
+
+		$response = [
+			'shipper_id'     => '',
+			'shipper_name'   => '',
+			'error_message'  => ''
+		];
+
+		if (checkDuplicateRow(tbl_shippers, 'shipper_name', $shipper_name) && $shipper_name != getTableAttr('shipper_name', tbl_shippers, $id)) {
+			$response['error_message'] = 'Duplicate Shipper name. Please enter different.';
+		
+		} else if (!empty($shipper_name) && !empty($shipper_address_line1)) {
+
+				$shipper_country	= (($shipper_country == '') ? 0 : $shipper_country);
+
+				$result = $mysqli->query("INSERT INTO `" . tbl_shippers . "` (shipper_name, address_line1, address_line2, city, zipcode, province, country, email, telephone, mobile, fax) VALUES ('" . $shipper_name . "', '" . $shipper_address_line1 . "', '" . $shipper_address_line2 . "', '" . $shipper_city . "', '" . $shipper_zipcode . "', '" . $shipper_province . "', '" . $shipper_country . "', '" . $shipper_email . "', '" . $shipper_telephone . "', '" . $shipper_mobile . "', '" . $shipper_fax . "')");
+
+					$id = $mysqli->insert_id;
+
+					$response['shipper_id']   = $id;
+					$response['shipper_name'] = $shipper_name;
+		}
+
+		echo json_encode($response);
+
+		break;
+
+
+	/*
+	|--------------------------------------------------------------------------
+	| 	Add Consignee
+	|--------------------------------------------------------------------------
+	|
+	*/
+	case 'add_consignee':
+
+		$consignee_name 			= '';
+		$consignee_address_line1 	= '';
+		$consignee_address_line2 	= '';
+		$consignee_city 			= '';
+		$consignee_zipcode 		= '';
+		$consignee_province 		= '';
+		$consignee_country 		= '';
+		$consignee_email 			= '';
+		$consignee_telephone 		= '';
+		$consignee_mobile 		= '';
+		$consignee_fax 			= '';
+
+
+		if (isset($_POST['consignee_name']) && !empty($_POST['consignee_name'])) {
+			$consignee_name 	= e_s__($_POST['consignee_name']);
+		}
+		if (isset($_POST['consignee_address_line1']) && !empty($_POST['consignee_address_line1'])) {
+			$consignee_address_line1 	= e_s__($_POST['consignee_address_line1']);
+		}
+		if (isset($_POST['consignee_address_line2']) && !empty($_POST['consignee_address_line2'])) {
+			$consignee_address_line2 	= e_s__($_POST['consignee_address_line2']);
+		}
+		if (isset($_POST['consignee_city']) && !empty($_POST['consignee_city'])) {
+			$consignee_city 	= e_s__($_POST['consignee_city']);
+		}
+		if (isset($_POST['consignee_zipcode']) && !empty($_POST['consignee_zipcode'])) {
+			$consignee_zipcode 	= e_s__($_POST['consignee_zipcode']);
+		}
+		if (isset($_POST['consignee_province']) && !empty($_POST['consignee_province'])) {
+			$consignee_province 	= e_s__($_POST['consignee_province']);
+		}
+		if (isset($_POST['consignee_country']) && !empty($_POST['consignee_country'])) {
+			$consignee_country 	= e_s__($_POST['consignee_country']);
+		}
+		if (isset($_POST['consignee_email']) && !empty($_POST['consignee_email'])) {
+			$consignee_email 	= e_s__($_POST['consignee_email']);
+		}
+		if (isset($_POST['consignee_telephone']) && !empty($_POST['consignee_telephone'])) {
+			$consignee_telephone 	= e_s__($_POST['consignee_telephone']);
+		}
+		if (isset($_POST['consignee_mobile']) && !empty($_POST['consignee_mobile'])) {
+			$consignee_mobile 	= e_s__($_POST['consignee_mobile']);
+		}
+		if (isset($_POST['consignee_fax']) && !empty($_POST['consignee_fax'])) {
+			$consignee_fax 	= e_s__($_POST['consignee_fax']);
+		}
+
+		$id 	= '';
+
+		$response = [
+			'consignee_id'     => '',
+			'consignee_name'   => '',
+			'error_message'  => ''
+		];
+
+		if (checkDuplicateRow(tbl_consignees, 'consignee_name', $consignee_name) && $consignee_name != getTableAttr('consignee_name', tbl_consignees, $id)) {
+			$response['error_message'] = 'Duplicate consignee name. Please enter different.';
+		
+		} else if (!empty($consignee_name) && !empty($consignee_address_line1)) {
+
+				$consignee_country	= (($consignee_country == '') ? 0 : $consignee_country);
+
+				$result = $mysqli->query("INSERT INTO `" . tbl_consignees . "` (consignee_name, address_line1, address_line2, city, zipcode, province, country, email, telephone, mobile, fax) VALUES ('" . $consignee_name . "', '" . $consignee_address_line1 . "', '" . $consignee_address_line2 . "', '" . $consignee_city . "', '" . $consignee_zipcode . "', '" . $consignee_province . "', '" . $consignee_country . "', '" . $consignee_email . "', '" . $consignee_telephone . "', '" . $consignee_mobile . "', '" . $consignee_fax . "')");
+
+					$id = $mysqli->insert_id;
+
+					$response['consignee_id']   = $id;
+					$response['consignee_name'] = $consignee_name;
+		}
+
+		echo json_encode($response);
+
+		break;
+
+
+	/*
+	|--------------------------------------------------------------------------
+	| 	SELECT PORT COUNTRY
+	|--------------------------------------------------------------------------
+	|
+	*/
+	case 'select_port_country':
+
+		$port_type 			= '';
+		$port_id 			= '';
+
+
+		if (isset($_POST['port_type']) && !empty($_POST['port_type'])) {
+			$port_type 	= e_s__($_POST['port_type']);
+		}
+		if (isset($_POST['port_id']) && !empty($_POST['port_id'])) {
+			$port_id 	= e_s__($_POST['port_id']);
+		}
+
+		$response = [
+			'country_id'     => '',
+			'country_name'   => '',
+			'port_type'  	 => ''
+		];
+
+		if (!empty($port_type) && !empty($port_id)) {
+
+				$country_id 	= getTableAttr('country_id', tbl_ports, $port_id);
+				$country_name 	= getTableAttr('country_name', tbl_geo_countries, $country_id);
+
+				$response['port_type'] 		= $port_type;
+				$response['country_id']   	= $country_id;
+				$response['country_name'] 	= $country_name;
+		}
+
+		echo json_encode($response);
+
+		break;
+
+
+	/*
+	|--------------------------------------------------------------------------
+	| SELECT COUNTRY PORTS
+	|--------------------------------------------------------------------------
+	*/
+	case 'select_country_ports':
+
+		$country_type = isset($_POST['country_type']) ? e_s__($_POST['country_type']) : '';
+		$country_id   = isset($_POST['country_id']) ? (int)e_s__($_POST['country_id']) : 0;
+
+		$response = [];
+
+		if (!empty($country_type) && !empty($country_id)) {
+			$query = "SELECT id, port_name, port_code 
+                  FROM `" . tbl_ports . "` 
+                  WHERE publish = 1 AND country_id = $country_id 
+                  ORDER BY port_name ASC";
+
+			$result = $mysqli->query($query);
+
+			if ($result && $result->num_rows > 0) {
+				while ($row = $result->fetch_assoc()) {
+					$response[] = [
+						'id'        => s__($row['id']),
+						'port_name' => s__($row['port_name']),
+						'port_code' => s__($row['port_code'])
+					];
+				}
+			}
+		}
+
+		echo json_encode($response);
 		break;
 
 

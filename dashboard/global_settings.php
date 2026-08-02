@@ -659,7 +659,7 @@ $login_logo			= s__(getTableAttrv('setting_value', DB::SYSTEM_SETTINGS, 'setting
 								<div class="settings-group">
 									<div class="form-section">
 										<label class="form-label"><i class="ph-text"></i> Software Name</label>
-										<input type="text" class="form-control" name="software_name" id="software_name" value="<?php echo $software_name; ?>" placeholder="e.g., HAIZON">
+										<input type="text" class="form-control" name="software_name" id="software_name" value="<?php echo $software_name; ?>" placeholder="e.g., FLASH ERP SYSTEM">
 										<div class="form-text">Name displayed throughout the application</div>
 									</div>
 

@@ -15,7 +15,7 @@ if (isset($GLOBALS['frontendLogger'])) {
 $is_local = (in_array($_SERVER['HTTP_HOST'], ['localhost', '127.0.0.1']) || strpos($_SERVER['HTTP_HOST'], 'localhost:') === 0 || strpos($_SERVER['HTTP_HOST'], '127.0.0.1:') === 0);
 
 if ($is_local) {
-	$base_path = '/haizon/dashboard/';
+	$base_path = '/flasherpsystem/dashboard/';
 } else {
     $base_path = '/dashboard/';
 }

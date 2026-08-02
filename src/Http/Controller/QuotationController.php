@@ -69,11 +69,15 @@ class QuotationController extends BaseController
             return Response::redirect('listing_quotations.php');
         } catch (ValidationException $e) {
             $error = current($e->getErrors());
-            flash_error($error);
-            return Response::redirect("quotations.php?id=$id&action=edit_quotations");
+            $_SESSION['__quotations_old_input'] = $_POST;
+            return Response::redirect("quotations.php?id=$id&action=edit_quotations&error_message=" . urlencode($error));
         } catch (\Throwable $e) {
-            flash_error($e->getMessage());
-            return Response::redirect("quotations.php?id=$id&action=edit_quotations");
+            log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
+                'module' => 'quotations', 'module_slug' => 'quotations',
+                'stack_trace' => $e->getTraceAsString(), 'error_code' => (string)$e->getCode(),
+            ]));
+            $_SESSION['__quotations_old_input'] = $_POST;
+            return Response::redirect("quotations.php?id=$id&action=edit_quotations&error_message=" . urlencode($e->getMessage()));
         }
     }
 
@@ -93,11 +97,15 @@ class QuotationController extends BaseController
             return Response::redirect('listing_quotations.php');
         } catch (ValidationException $e) {
             $error = current($e->getErrors());
-            flash_error($error);
-            return Response::redirect("quotations.php");
+            $_SESSION['__quotations_old_input'] = $_POST;
+            return Response::redirect("quotations.php?error_message=" . urlencode($error));
         } catch (\Throwable $e) {
-            flash_error($e->getMessage());
-            return Response::redirect("quotations.php");
+            log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
+                'module' => 'quotations', 'module_slug' => 'quotations',
+                'stack_trace' => $e->getTraceAsString(), 'error_code' => (string)$e->getCode(),
+            ]));
+            $_SESSION['__quotations_old_input'] = $_POST;
+            return Response::redirect("quotations.php?error_message=" . urlencode($e->getMessage()));
         }
     }
 
@@ -115,10 +123,13 @@ class QuotationController extends BaseController
             'sales_person' => $request->getString('sales_person'),
             'job_reference_no' => $request->getString('job_reference_no'),
             'master_awb_no' => $request->getString('master_awb_no'),
+            'hwb_hbol' => $request->getString('hwb_hbol'),
             'shipper' => $request->getString('shipper'),
             'consignee' => $request->getString('consignee'),
             'origin' => $request->getString('origin'),
+            'origin_country' => $request->getString('origin_country'),
             'destination' => $request->getString('destination'),
+            'destination_country' => $request->getString('destination_country'),
             'no_of_packs' => $request->getString('no_of_packs'),
             'gross_weight' => $request->getString('gross_weight'),
             'chargeable_weight' => $request->getString('chargeable_weight'),
@@ -132,7 +143,7 @@ class QuotationController extends BaseController
             'customer_notes' => $request->getString('customer_notes'),
             'grand_tax' => $request->getString('grand_tax'),
             'grand_total' => $request->getString('grand_total'),
-            'publish' => $request->get('publish') ? true : false,
+            'publish' => $request->has('publish') ? (bool) $request->get('publish') : true,
             'quotation_status' => $request->getString('quotation_status', 'draft'),
         ];
     }
@@ -174,11 +185,6 @@ class QuotationController extends BaseController
         $session_user_id = $this->userId;
         $session_role_id = $this->roleId;
         $error_message = $request->getString('error_message');
-        if (empty($error_message)) {
-            foreach (\App\Core\FlashMessage::all() as $fm) {
-                if ($fm['type'] === 'danger') { $error_message = $fm['message']; break; }
-            }
-        }
         $action = $request->getString('action');
 
         // Default values
@@ -195,10 +201,13 @@ class QuotationController extends BaseController
         $sales_person = '0';
         $job_reference_no = '';
         $master_awb_no = '';
+        $hwb_hbol = '';
         $shipper = '0';
         $consignee = '0';
         $origin = '0';
+        $origin_country = '0';
         $destination = '0';
+        $destination_country = '0';
         $no_of_packs = '0';
         $gross_weight = '0';
         $chargeable_weight = '0';
@@ -253,10 +262,13 @@ class QuotationController extends BaseController
                     $sales_person = (string)$quotation->salesPerson;
                     $job_reference_no = (string)$quotation->jobReferenceNo;
                     $master_awb_no = (string)$quotation->masterAwbNo;
+                    $hwb_hbol = (string)$quotation->hwbHbol;
                     $shipper = (string)$quotation->shipper;
                     $consignee = (string)$quotation->consignee;
                     $origin = (string)$quotation->origin;
+                    $origin_country = (string)$quotation->originCountry;
                     $destination = (string)$quotation->destination;
+                    $destination_country = (string)$quotation->destinationCountry;
                     $no_of_packs = (string)$quotation->noOfPacks;
                     $gross_weight = (string)$quotation->grossWeight;
                     $chargeable_weight = (string)$quotation->chargeableWeight;
@@ -273,8 +285,8 @@ class QuotationController extends BaseController
                     $is_active = $quotation->isActive ? 1 : 0;
 
                     $quotation_date = \App\Helper\DateHelper::toDbDate($quotation_date);
-                    $expiry_date = ($expiry_date === '1970-01-01') ? '' : DateHelper::toDisplayDate($expiry_date);
-                    $expected_shipment_date = ($expected_shipment_date === '1970-01-01') ? '' : DateHelper::toDisplayDate($expected_shipment_date);
+                    $expiry_date = ($expiry_date === '1970-01-01') ? '' : $expiry_date;
+                    $expected_shipment_date = ($expected_shipment_date === '1970-01-01') ? '' : $expected_shipment_date;
 
                     $quotationItems = $this->quotationService->getQuotationItems($id, $this->orgId);
                     $total_rows = count($quotationItems);
@@ -291,6 +303,10 @@ class QuotationController extends BaseController
                         $total_arr[] = $item->total;
                     }
                 } catch (\Throwable $e) {
+                    log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
+                        'module' => 'quotations', 'module_slug' => 'quotations',
+                        'stack_trace' => $e->getTraceAsString(), 'error_code' => (string)$e->getCode(),
+                    ]));
                     $error_message = $e->getMessage();
                 }
             }
@@ -298,6 +314,48 @@ class QuotationController extends BaseController
 
         if ($total_rows == 0) {
             $total_rows = 1;
+        }
+
+        if (session_status() === PHP_SESSION_NONE) {
+            @session_start();
+        }
+        if (isset($_SESSION['__quotations_old_input'])) {
+            $old = $_SESSION['__quotations_old_input'];
+            unset($_SESSION['__quotations_old_input']);
+
+            foreach ([
+                'customer_id', 'lead_id', 'quotation_date', 'expiry_date',
+                'warehouse_id', 'expected_shipment_date', 'payment_term',
+                'shipment_type', 'sales_person', 'job_reference_no',
+                'master_awb_no', 'hwb_hbol', 'shipper', 'consignee',
+                'origin', 'origin_country', 'destination', 'destination_country',
+                'no_of_packs', 'gross_weight', 'chargeable_weight', 'volume',
+                'terms_and_conditions', 'grand_subtotal', 'grand_discount_type',
+                'grand_discount_type_value', 'grand_discount_amount',
+                'grand_after_discount', 'customer_notes', 'grand_tax',
+                'grand_total', 'quotation_status',
+            ] as $key) {
+                if (isset($old[$key])) {
+                    $$key = (string)$old[$key];
+                }
+            }
+
+            if (isset($old['publish'])) {
+                $is_active = $old['publish'] ? 1 : 0;
+            }
+
+            if (isset($old['service']) && is_array($old['service'])) {
+                $item_id_arr = $old['item_id'] ?? [];
+                $service_arr = $old['service'];
+                $description_arr = $old['description'] ?? [];
+                $qty_arr = $old['qty'] ?? [];
+                $rate_arr = $old['rate'] ?? [];
+                $sub_total_arr = $old['sub_total'] ?? [];
+                $tax_arr = $old['tax'] ?? [];
+                $tax_amount_arr = $old['tax_amount'] ?? [];
+                $total_arr = $old['total'] ?? [];
+                $total_rows = max(1, count($service_arr));
+            }
         }
 
         // Fetch dropdown data
@@ -331,6 +389,26 @@ class QuotationController extends BaseController
         } catch (\Throwable $e) {
             $itemsList = [];
         }
+        try {
+            $paymentTermsList = $this->db->fetchAll("SELECT id, name FROM `" . DB::PAYMENT_TERMS . "` WHERE is_active=1 ORDER BY name");
+        } catch (\Throwable $e) {
+            $paymentTermsList = [];
+        }
+        try {
+            $countriesList = $this->db->fetchAll("SELECT id, country, abbr FROM `" . DB::GEO_COUNTRIES . "` WHERE is_active=1 ORDER BY country");
+        } catch (\Throwable $e) {
+            $countriesList = [];
+        }
+        try {
+            $portsList = $this->db->fetchAll("SELECT id, port_name, port_code, country_id FROM `" . DB::PORTS . "` WHERE is_active=1 ORDER BY port_name");
+        } catch (\Throwable $e) {
+            $portsList = [];
+        }
+        try {
+            $servicesList = $this->db->fetchAll("SELECT id, item_name AS service_name, unit_price AS service_rate FROM `" . DB::ITEMS . "` WHERE is_active=1 AND item_type='services' ORDER BY item_name");
+        } catch (\Throwable $e) {
+            $servicesList = [];
+        }
 
         return Response::html($this->view->render('quotations/form.php', [
             'id' => $id,
@@ -352,10 +430,14 @@ class QuotationController extends BaseController
             'sales_person' => $sales_person,
             'job_reference_no' => $job_reference_no,
             'master_awb_no' => $master_awb_no,
+            'hwb_hbol' => $hwb_hbol,
             'shipper' => $shipper,
             'consignee' => $consignee,
             'origin' => $origin,
+            'origin_country' => $origin_country,
             'destination' => $destination,
+            'destination_country' => $destination_country,
+            'payment_term' => $payment_term,
             'no_of_packs' => $no_of_packs,
             'gross_weight' => $gross_weight,
             'chargeable_weight' => $chargeable_weight,
@@ -386,6 +468,10 @@ class QuotationController extends BaseController
             'shippersList' => $shippersList,
             'consigneesList' => $consigneesList,
             'itemsList' => $itemsList,
+            'paymentTermsList' => $paymentTermsList,
+            'countriesList' => $countriesList,
+            'portsList' => $portsList,
+            'servicesList' => $servicesList,
             'canCreate' => $this->canCreate(),
             'canEdit' => $this->canEdit(),
         ]));

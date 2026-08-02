@@ -20,5 +20,3 @@ logs/
 *.min.js
 *.lock
 
-# Database export (use @database reference instead)
-database_export.sql

@@ -1,4 +1,4 @@
-# HAIZON - Crontab Configuration
+# FLASH ERP SYSTEM - Crontab Configuration
 # Generated: 2026-02-18
 # Installation: crontab -e, then paste this content
 # â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• 
@@ -9,14 +9,14 @@ PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 # Project paths (ADJUST THESE FOR YOUR ENVIRONMENT)
 PHP=/usr/bin/php
-PROJECT_ROOT=/var/www/haizon
-CRON_DIR=/var/www/haizon/dashboard/cron
-LOG_DIR=/var/log/haizon
+PROJECT_ROOT=/var/www/flasherpsystem
+CRON_DIR=/var/www/flasherpsystem/dashboard/cron
+LOG_DIR=/var/log/flasherpsystem
 
 # For Windows/XAMPP, use:
 # PHP=G:\xampp\php\php.exe
-# PROJECT_ROOT=G:\xampp\htdocs\haizon
-# CRON_DIR=G:\xampp\htdocs\haizon\dashboard\cron
+# PROJECT_ROOT=G:\xampp\htdocs\flasherpsystem
+# CRON_DIR=G:\xampp\htdocs\flasherpsystem\dashboard\cron
 
 # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # Email Marketing Jobs
@@ -67,10 +67,10 @@ LOG_DIR=/var/log/haizon
 # â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 # Check cron logs for errors (daily at 9:00 AM)
-# 0 9 * * * grep ERROR ${LOG_DIR}/cron.log | mail -s "HAIZON Cron Errors" admin@haizon.com
+# 0 9 * * * grep ERROR ${LOG_DIR}/cron.log | mail -s "FLASH ERP SYSTEM Cron Errors" admin@flasherpsystem.com
 
 # Verify backups exist (daily at 9:30 AM)
-# 30 9 * * * [ -f ${PROJECT_ROOT}/dashboard/backups/backup_$(date +\%Y-\%m-\%d)*.sql.gz ] || echo "Backup missing" | mail -s "HAIZON Backup Alert" admin@haizon.com
+# 30 9 * * * [ -f ${PROJECT_ROOT}/dashboard/backups/backup_$(date +\%Y-\%m-\%d)*.sql.gz ] || echo "Backup missing" | mail -s "FLASH ERP SYSTEM Backup Alert" admin@flasherpsystem.com
 
 # â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # Notes

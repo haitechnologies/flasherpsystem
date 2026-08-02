@@ -278,6 +278,7 @@ class Registry
 
         // Lead/CRM filtered listings
         $this->register('listing_lead_quotations', LeadQuotationsDataTable::class);
+        $this->register('listing_quotations', QuotationsDataTable::class);
 
         // HR & Payroll listings
         $this->register('listing_gratuity_settlements', GratuitySettlementsDataTable::class);

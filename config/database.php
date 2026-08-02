@@ -3,12 +3,12 @@
 // Load environment variables from .env file
 // Check multiple locations for .env file (in order of priority):
 // 1. Parent directory: G:\xampp\.env (recommended for security)
-// 2. Project root: G:\xampp\htdocs\haizon\.env (current location, less secure)
+// 2. Project root: G:\xampp\htdocs\flasherpsystem\.env (current location, less secure)
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
 $envCandidates = [
-	dirname(__DIR__, 1), // e.g., G:\xampp\htdocs\haizon (project root – checked first)
+	dirname(__DIR__, 1), // e.g., G:\xampp\htdocs\flasherpsystem (project root – checked first)
 	dirname(__DIR__, 2), // e.g., G:\xampp\htdocs
 	dirname(__DIR__, 3), // e.g., G:\xampp (last resort)
 ];
@@ -52,7 +52,7 @@ if (!function_exists('isRemote')) {
             }
             return true;
         }
-		if (preg_match('/haizon.local/', $_SERVER['HTTP_HOST'] ?? '') || 
+		if (preg_match('/flasherpsystem.local/', $_SERVER['HTTP_HOST'] ?? '') || 
             preg_match('/localhost/', $_SERVER['HTTP_HOST'] ?? '') || 
             preg_match('/127.0.0.1/', $_SERVER['HTTP_HOST'] ?? '')) {
             return false;

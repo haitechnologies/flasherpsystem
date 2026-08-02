@@ -26,7 +26,7 @@
  */
 function output_seo_meta_tags($seo_data = []) {
     // Defaults
-    $app_name_clean = defined('APP_NAME') ? APP_NAME : 'HAIZON';
+    $app_name_clean = defined('APP_NAME') ? APP_NAME : 'FLASH ERP SYSTEM';
     $app_name_lower = strtolower($app_name_clean);
     $defaults = [
         'title' => '',
@@ -113,7 +113,7 @@ function extract_seo_data($record, $overrides = []) {
         'keywords' => $record['meta_keywords'] ?? $record['seo_keywords'] ?? '',
         'image' => $record['og_image'] ?? $record['featured_image'] ?? asset_url('images/default-og-image.jpg'),
         'url' => $record['canonical_url'] ?? current_url(),
-        'author' => $record['created_by_name'] ?? (defined('APP_NAME') ? APP_NAME : 'HAIZON'),
+        'author' => $record['created_by_name'] ?? (defined('APP_NAME') ? APP_NAME : 'FLASH ERP SYSTEM'),
     ];
     
     // Apply overrides (for dynamic content)
@@ -127,7 +127,7 @@ function extract_seo_data($record, $overrides = []) {
  * Usage: echo generate_json_ld_organization();
  */
 function generate_json_ld_organization() {
-    $name = defined('APP_NAME') ? APP_NAME : 'HAIZON';
+    $name = defined('APP_NAME') ? APP_NAME : 'FLASH ERP SYSTEM';
     $domain = defined('APP_DOMAIN') ? APP_DOMAIN : 'flasherpsystem.com';
     $name_lower = strtolower($name);
     
@@ -197,11 +197,11 @@ function generate_json_ld_article($article) {
         "image" => ($article['image'] ?? null) ? [$article['image']] : [],
         "author" => [
             "@type" => "Person",
-            "name" => $article['author'] ?? (defined('APP_NAME') ? APP_NAME : 'HAIZON'),
+            "name" => $article['author'] ?? (defined('APP_NAME') ? APP_NAME : 'FLASH ERP SYSTEM'),
         ],
         "publisher" => [
             "@type" => "Organization",
-            "name" => (defined('APP_NAME') ? APP_NAME : 'HAIZON'),
+            "name" => (defined('APP_NAME') ? APP_NAME : 'FLASH ERP SYSTEM'),
             "logo" => [
                 "@type" => "ImageObject",
                 "url" => "https://" . (defined('APP_DOMAIN') ? APP_DOMAIN : 'flasherpsystem.com') . "/assets/images/logo.png",

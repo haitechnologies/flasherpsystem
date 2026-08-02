@@ -93,16 +93,16 @@ class QuotationRepository
         $sql = "INSERT INTO `{DB::QUOTATIONS}` (
                     organization_id, quotation_no, customer_id, quotation_status, quotation_date, expiry_date,
                     lead_id, warehouse_id, expected_shipment_date, payment_term, shipment_type,
-                    sales_person, job_reference_no, master_awb_no, shipper, consignee, origin,
-                    destination, no_of_packs, gross_weight, chargeable_weight, volume,
+                    sales_person, job_reference_no, mawb_bol, hwb_hbol, shipper_id, consignee_id, origin_port,
+                    origin_country, destination_port, destination_country, no_of_packs, gross_weight, chargeable_weight, volume,
                     terms_and_conditions, grand_subtotal, grand_discount_type, grand_discount_type_value,
                     grand_discount_amount, grand_after_discount, customer_notes, grand_tax, grand_total,
                     publish, is_active, created_at, updated_at, updated_by, created_by, pdf
                 ) VALUES (
                     :organization_id, :quotation_no, :customer_id, :quotation_status, :quotation_date, :expiry_date,
                     :lead_id, :warehouse_id, :expected_shipment_date, :payment_term, :shipment_type,
-                    :sales_person, :job_reference_no, :master_awb_no, :shipper, :consignee, :origin,
-                    :destination, :no_of_packs, :gross_weight, :chargeable_weight, :volume,
+                    :sales_person, :job_reference_no, :mawb_bol, :hwb_hbol, :shipper_id, :consignee_id, :origin_port,
+                    :origin_country, :destination_port, :destination_country, :no_of_packs, :gross_weight, :chargeable_weight, :volume,
                     :terms_and_conditions, :grand_subtotal, :grand_discount_type, :grand_discount_type_value,
                     :grand_discount_amount, :grand_after_discount, :customer_notes, :grand_tax, :grand_total,
                     :publish, :is_active, NOW(), NOW(), :updated_by, :created_by, :pdf
@@ -139,11 +139,14 @@ class QuotationRepository
                     shipment_type = :shipment_type,
                     sales_person = :sales_person,
                     job_reference_no = :job_reference_no,
-                    master_awb_no = :master_awb_no,
-                    shipper = :shipper,
-                    consignee = :consignee,
-                    origin = :origin,
-                    destination = :destination,
+                    mawb_bol = :mawb_bol,
+                    hwb_hbol = :hwb_hbol,
+                    shipper_id = :shipper_id,
+                    consignee_id = :consignee_id,
+                    origin_port = :origin_port,
+                    origin_country = :origin_country,
+                    destination_port = :destination_port,
+                    destination_country = :destination_country,
                     no_of_packs = :no_of_packs,
                     gross_weight = :gross_weight,
                     chargeable_weight = :chargeable_weight,
@@ -267,6 +270,7 @@ class QuotationRepository
     public function delete(int $id, int $orgId): bool
     {
         $this->deleteItemsByQuotation($id, $orgId);
+        $this->db->execute("DELETE FROM `{DB::DIMENSION_ITEMS}` WHERE module_type = 'quotations' AND record_id = :id", ['id' => $id]);
         $sql = "DELETE FROM `{DB::QUOTATIONS}` WHERE id = :id AND organization_id = :org_id";
         $stmt = $this->db->execute($sql, ['id' => $id, 'org_id' => $orgId]);
         return $stmt->rowCount() > 0;
@@ -345,11 +349,14 @@ class QuotationRepository
             shipmentType: $row['shipment_type'] !== null ? (string)$row['shipment_type'] : null,
             salesPerson: (int)($row['sales_person'] ?? 0),
             jobReferenceNo: $row['job_reference_no'] !== null ? (string)$row['job_reference_no'] : null,
-            masterAwbNo: $row['master_awb_no'] !== null ? (string)$row['master_awb_no'] : null,
-            shipper: (int)($row['shipper'] ?? 0),
-            consignee: (int)($row['consignee'] ?? 0),
-            origin: (int)($row['origin'] ?? 0),
-            destination: (int)($row['destination'] ?? 0),
+            masterAwbNo: $row['mawb_bol'] !== null ? (string)$row['mawb_bol'] : null,
+            hwbHbol: $row['hwb_hbol'] !== null ? (string)$row['hwb_hbol'] : null,
+            shipper: (int)($row['shipper_id'] ?? 0),
+            consignee: (int)($row['consignee_id'] ?? 0),
+            origin: (int)($row['origin_port'] ?? 0),
+            originCountry: (int)($row['origin_country'] ?? 0),
+            destination: (int)($row['destination_port'] ?? 0),
+            destinationCountry: (int)($row['destination_country'] ?? 0),
             noOfPacks: (int)($row['no_of_packs'] ?? 0),
             grossWeight: (float)($row['gross_weight'] ?? 0.0),
             chargeableWeight: (float)($row['chargeable_weight'] ?? 0.0),

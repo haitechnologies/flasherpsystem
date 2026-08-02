@@ -136,6 +136,7 @@ class CustomerController extends BaseController
             'instagram' => $request->getString('instagram'),
             'photo' => $request->getString('photo'),
             'opening_balance' => $request->getString('opening_balance'),
+            'receivable_account_id' => $request->getString('receivable_account_id'),
             'credit_limit' => $request->getString('credit_limit'),
             'discount_type' => $request->getString('discount_type'),
             'discount_type_value' => $request->getString('discount_type_value'),
@@ -209,6 +210,7 @@ class CustomerController extends BaseController
         $facebook = '';
         $instagram = '';
         $opening_balance = '0.00';
+        $receivable_account_id = '';
         $is_active = 1;
 
         if ($id > 0) {
@@ -254,6 +256,7 @@ class CustomerController extends BaseController
                 $facebook = (string)$customer->facebook;
                 $instagram = (string)$customer->instagram;
                 $opening_balance = number_format((float)($customer->openingBalance ?? 0), 2, '.', '');
+                $receivable_account_id = $customer->receivableAccountId !== null ? (string)$customer->receivableAccountId : '';
                 $is_active = $customer->isActive ? 1 : 0;
             } catch (NotFoundException $e) {
                 $error_message = $e->getMessage();
@@ -291,6 +294,11 @@ class CustomerController extends BaseController
         } catch (\Throwable $e) {
             $currencyList = [];
         }
+        try {
+            $arAccountsList = $this->db->fetchAll("SELECT id, account_name, account_code FROM `" . DB::ACCOUNTS . "` WHERE is_active=1 AND account_type='Assets' ORDER BY account_name");
+        } catch (\Throwable $e) {
+            $arAccountsList = [];
+        }
 
         return Response::html($this->view->render('customers/form.php', [
             'id' => $id,
@@ -327,6 +335,8 @@ class CustomerController extends BaseController
             'license_number' => $license_number,
             'license_expiry' => $license_expiry,
             'opening_balance' => $opening_balance,
+            'receivable_account_id' => $receivable_account_id,
+            'arAccountsList' => $arAccountsList,
             'currencyList' => $currencyList,
             'currency' => $currency,
             'exchange_rate' => $exchange_rate,

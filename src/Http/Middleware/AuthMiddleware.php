@@ -11,7 +11,7 @@ class AuthMiddleware implements MiddlewareInterface
 {
     private string $sessionKey;
 
-    public function __construct(string $sessionKey = 'haizon')
+    public function __construct(string $sessionKey = 'flasherpsystem')
     {
         $this->sessionKey = $sessionKey;
     }

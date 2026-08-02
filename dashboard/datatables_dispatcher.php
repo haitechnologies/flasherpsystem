@@ -133,7 +133,7 @@ function emit_json_and_exit(array $payload, int $statusCode = 200): void {
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../config/globals.php';
 
-$project_pre = $GLOBALS['project_pre'] ?? 'haizon';
+    $project_pre = $GLOBALS['project_pre'] ?? 'flasherpsystem';
 
 // Get request data
 $requestData = $_POST;
@@ -265,7 +265,7 @@ try {
         emit_json_and_exit(['error' => 'Database connection failed', 'success' => false], 500);
     }
 
-    $project_pre = $GLOBALS['project_pre'] ?? 'haizon';
+$project_pre = $GLOBALS['project_pre'] ?? 'flasherpsystem';
     $sessionDashboardUserId = (int)(Session::userId() ?? 0);
 
     /*

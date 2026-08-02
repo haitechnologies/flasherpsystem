@@ -218,7 +218,7 @@ class Roles
     {
         if ($project_prefix === null) {
             global $project_pre;
-            $project_prefix = $project_pre ?? 'haizon';
+            $project_prefix = $project_pre ?? 'flasherpsystem';
         }
 
         $roleId = $_SESSION[$project_prefix]['DASHBOARD']['role_id'] ?? null;
@@ -246,7 +246,7 @@ class Roles
     public static function requireRole(int|array $required_roles, ?string $message = null, bool $log = true): void
     {
         global $project_pre;
-        $project_prefix = $project_pre ?? 'haizon';
+        $project_prefix = $project_pre ?? 'flasherpsystem';
 
         // Get current user's role
         $current_role_id = $_SESSION[$project_prefix]['DASHBOARD']['role_id'] ?? null;
@@ -324,7 +324,7 @@ class Roles
     public static function requireFullAccess(?string $message = null): void
     {
         global $project_pre;
-        $project_prefix = $project_pre ?? 'haizon';
+        $project_prefix = $project_pre ?? 'flasherpsystem';
 
         $current_role_id = $_SESSION[$project_prefix]['DASHBOARD']['role_id'] ?? null;
 
@@ -343,7 +343,7 @@ class Roles
     public static function currentUserHasRole(int|array $roles): bool
     {
         global $project_pre;
-        $project_prefix = $project_pre ?? 'haizon';
+        $project_prefix = $project_pre ?? 'flasherpsystem';
 
         $current_role_id = $_SESSION[$project_prefix]['DASHBOARD']['role_id'] ?? null;
 
@@ -369,7 +369,7 @@ class Roles
             include($forbidden_page);
         } else {
             global $project_pre;
-            $project_prefix = $project_pre ?? 'haizon';
+            $project_prefix = $project_pre ?? 'flasherpsystem';
 
             http_response_code(403);
 

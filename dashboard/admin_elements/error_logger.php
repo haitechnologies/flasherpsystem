@@ -446,7 +446,7 @@ class ErrorLogger {
 
         $sessionRoleId = null;
         $sessionUserId = null;
-        $projectKey = isset($GLOBALS['project_pre']) ? (string)$GLOBALS['project_pre'] : 'flashlogistics';
+        $projectKey = isset($GLOBALS['project_pre']) ? (string)$GLOBALS['project_pre'] : 'flasherpsystem';
         if (isset($_SESSION[$projectKey]['DASHBOARD']['role_id'])) {
             $sessionRoleId = (int)$_SESSION[$projectKey]['DASHBOARD']['role_id'];
         }

@@ -24,7 +24,7 @@ if (isRemote()) {
     $db_password = $_ENV['REMOTE_DB_PASSWORD'];
 } else {
     $db_hostname = $_ENV['DB_HOSTNAME'] ?? 'localhost';
-    $db_database = $_ENV['DB_DATABASE'] ?? 'haizon';
+    $db_database = $_ENV['DB_DATABASE'] ?? 'flasherpsystem';
     $db_username = $_ENV['DB_USERNAME'] ?? 'root';
     $db_password = $_ENV['DB_PASSWORD'] ?? 'hai@30';
 }

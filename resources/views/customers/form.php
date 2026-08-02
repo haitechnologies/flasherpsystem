@@ -33,6 +33,8 @@ declare(strict_types=1);
  * @var string $license_number
  * @var string $license_expiry
  * @var string $opening_balance
+ * @var string $receivable_account_id
+ * @var array $arAccountsList
  * @var array $currencyList
  * @var string $currency
  * @var string $exchange_rate
@@ -258,6 +260,19 @@ include 'admin_elements/admin_header.php';
                         <div class="card">
                             <div class="card-body">
                                 <input type="hidden" name="payment_term" id="payment_term" value="0">
+                                <div class="row mb-2">
+                                    <label class="col-lg-4 col-form-label">Accounts Receivable Account:</label>
+                                    <div class="col-lg-8">
+                                        <select class="form-select" name="receivable_account_id" id="receivable_account_id">
+                                            <option value=""></option>
+                                            <?php foreach ($arAccountsList as $acc): ?>
+                                                <option value="<?php echo $acc['id']; ?>" <?php echo (string)$acc['id'] === $receivable_account_id ? 'selected' : ''; ?>>
+                                                    <?php echo $acc['account_code'] . ' - ' . $acc['account_name']; ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </div>
+                                </div>
                                 <div class="row mb-2">
                                     <label class="col-lg-4 col-form-label">Opening Balance:</label>
                                     <div class="col-lg-8">

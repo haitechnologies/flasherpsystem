@@ -2734,7 +2734,7 @@ function getEmailQueueStats() {
  */
 if (!function_exists('csrf_token')) {
     function csrf_token() {
-        $project_pre = $GLOBALS['project_pre'] ?? 'haizon';
+        $project_pre = $GLOBALS['project_pre'] ?? 'flasherpsystem';
         
         if (!isset($_SESSION[$project_pre]['DASHBOARD']['csrf_token'])) {
             $_SESSION[$project_pre]['DASHBOARD']['csrf_token'] = bin2hex(random_bytes(32));
@@ -2751,7 +2751,7 @@ if (!function_exists('csrf_token')) {
      */
     if (!function_exists('csrf_token_frontend')) {
       function csrf_token_frontend() {
-        $project_pre = $GLOBALS['project_pre'] ?? 'haizon';
+        $project_pre = $GLOBALS['project_pre'] ?? 'flasherpsystem';
         
         if (!isset($_SESSION[$project_pre]['FRONTEND']['csrf_token'])) {
           $_SESSION[$project_pre]['FRONTEND']['csrf_token'] = bin2hex(random_bytes(32));
@@ -2805,7 +2805,7 @@ if (!function_exists('csrf_field')) {
  */
 if (!function_exists('validate_csrf_token')) {
     function validate_csrf_token($token = '') {
-        $project_pre = $GLOBALS['project_pre'] ?? 'haizon';
+        $project_pre = $GLOBALS['project_pre'] ?? 'flasherpsystem';
         
         // Check if token is provided
         if (empty($token)) {
@@ -2841,7 +2841,7 @@ if (!function_exists('validate_csrf_token')) {
 /*
     if (!function_exists('validate_csrf_token_frontend')) {
       function validate_csrf_token_frontend($token = '') {
-        $project_pre = $GLOBALS['project_pre'] ?? 'haizon';
+        $project_pre = $GLOBALS['project_pre'] ?? 'flasherpsystem';
         
         // Check if token is provided
         if (empty($token)) {

@@ -1,3 +1,20 @@
+## 2026-08-02 (Project Rename: haizon → flasherpsystem)
+
+### Changed
+- **Project rename**: All branding, code references, paths, and identifiers renamed from `haizon` → `flasherpsystem`.
+- **Local database**: `haizon` DB renamed to `flasherpsystem` (dumped, imported, verified via checksums, old DB dropped).
+- **`.env`**: `DB_DATABASE=flasherpsystem`, `PROJECT_PREFIX="flasherpsystem"`, `REMOTE_DB_DATABASE=u904789561_flasherpsystem`, `REMOTE_DB_USERNAME=u904789561_flasherpsystem`.
+- **Session prefix**: `flashlogistics` → `flasherpsystem` — all existing sessions invalidated, users must re-login. `config/session.php` primary functions renamed `haizonSession*` → `flasherpsystemSession*` with recursion-free backward-compat aliases.
+- **Code fallbacks**: 20+ files updated (`config/constants.php`, `config/globals.php`, `src/Core/Session.php`, `src/Core/ServerRequest.php`, `src/Core/DeletionManager.php`, `src/Security/Roles.php`, `src/Http/Middleware/*`, `dashboard/datatables_dispatcher.php`, `dashboard/admin_elements/error_logger.php`, `dashboard/api/BaseAPI.php`, `config/cli_database.php`, `tests/test_invoice_psr.php`).
+- **Branding**: "HAIZON" → "FLASH ERP SYSTEM" (`config/seo_helpers.php`, `config/error_alerting.php`, `src/Service/SMTPMailer.php`, `dashboard/bootstrap.php`, `dashboard/global_settings.php`, cron templates); EHLO fallback `haizon.local` → `flasherpsystem.local`.
+- **Paths**: Local Apache base path `/haizon/dashboard/` → `/flasherpsystem/dashboard/` (`dashboard/404.php`, `dashboard/.htaccess`). Live cron paths `/var/www/haizon`, `/var/log/haizon` → `/var/www/flasherpsystem`, `/var/log/flasherpsystem`.
+- **Git remote**: `live` → `https://github.com/haitechnologies/flasherpsystem.git` (requires GitHub repo rename first).
+- **composer.json** name → `haitechnologies/flasherpsystem`; `composer.lock` content-hash regenerated via `composer update --lock`.
+- **Tests**: `@haizon.com` fixtures → `@flasherpsystem.com`; suite runner headers updated.
+- **Local folder**: `G:\xampp\htdocs\haizon` copied to `G:\xampp\htdocs\flasherpsystem` (old folder deletion deferred — locked by session).
+- `APP_NAME` ("Flash Logistics") intentionally unchanged. Legacy `hai_` table prefixes and `.htaccess` `haipulse` redirect rules intentionally left as-is.
+- **Plan reference**: `RENAME_HAIZON_TO_FLASHEPRSYSTEM.md`.
+
 ## 2026-08-01 (Error Log Fixes — Live Debug)
 
 ### Fixed

@@ -12,13 +12,13 @@ foreach ($uae->query("SELECT {$colList} FROM uaehs_geo_countries ORDER BY id LIM
     echo "  " . implode(', ', $parts) . "\n";
 }
 
-echo "\n=== haizon geo_countries ===\n";
-$ha = new PDO('mysql:host=localhost;dbname=haizon;charset=utf8mb4', 'root', 'hai@30');
+echo "\n=== flasherpsystem geo_countries ===\n";
+$ha = new PDO('mysql:host=localhost;dbname=flasherpsystem;charset=utf8mb4', 'root', 'hai@30');
 foreach ($ha->query("SELECT id, country FROM erp_geo_countries ORDER BY id LIMIT 20") as $r) {
     echo "  id={$r['id']} country={$r['country']}\n";
 }
 
-echo "\n=== Matching uaehs country names to haizon ===\n";
+echo "\n=== Matching uaehs country names to flasherpsystem ===\n";
 $uaeNames = $uae->query("SELECT id, name FROM uaehs_geo_countries ORDER BY id");
 $haCountries = [];
 foreach ($ha->query("SELECT id, country FROM erp_geo_countries") as $r) {

@@ -8,7 +8,7 @@ final class Session
 {
     private static function dashboard(): array
     {
-        $pre = defined('PROJECT_PREFIX') ? PROJECT_PREFIX : 'haizon';
+        $pre = defined('PROJECT_PREFIX') ? PROJECT_PREFIX : 'flasherpsystem';
         return $_SESSION[$pre]['DASHBOARD'] ?? [];
     }
 

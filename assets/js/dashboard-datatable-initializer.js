@@ -93,15 +93,19 @@
 
                 var id = jq(this).data('id');
                 var module = jq(this).data('module');
+                var confirmMsg = jq(this).data('confirm') || 'Are you sure?';
 
-                if (!id || !module || !window.confirm('Are you sure?')) {
+                if (!id || !module || !window.confirm(confirmMsg)) {
                     return;
                 }
+
+                var csrfToken = window.HAI_CSRF_TOKEN || jq('input[name="csrf_token"]').first().val() || '';
 
                 var form = document.createElement('form');
                 form.method = 'POST';
                 form.innerHTML = '<input type="hidden" name="action" value="delete_' + module + '">' +
-                    '<input type="hidden" name="id" value="' + id + '">';
+                    '<input type="hidden" name="id" value="' + id + '">' +
+                    '<input type="hidden" name="csrf_token" value="' + csrfToken + '">';
                 document.body.appendChild(form);
                 form.submit();
             });

@@ -473,7 +473,7 @@ $adminHeaderQuickAccessSections = [
 		'icon' => 'ph-currency-circle-dollar',
 		'dashboard' => 'dashboard_accounting.php',
 		'links' => [
-			['href' => 'listing_items.php', 'label' => 'Items', 'icon' => 'ph-cube', 'perm' => 'items'],
+            ['href' => 'listing_items.php', 'label' => 'Items', 'icon' => 'ph-cube', 'perm' => 'items'],
 			['href' => 'listing_quotations.php', 'label' => 'Quotations', 'icon' => 'ph-file-text', 'perm' => 'quotations'],
 			['href' => 'listing_sale_orders.php', 'label' => 'Sale Orders', 'icon' => 'ph-shopping-cart', 'perm' => 'sale_orders'],
 			['href' => 'listing_invoices.php', 'label' => 'Invoices', 'icon' => 'ph-receipt', 'perm' => 'invoices'],

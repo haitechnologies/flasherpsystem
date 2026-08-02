@@ -13,7 +13,7 @@ use RuntimeException;
 /**
  * Standard Dependency Injection Container (PSR-11)
  *
- * Manages service instantiation and lifecycle in the Haizon application.
+ * Manages service instantiation and lifecycle in the Flash ERP System application.
  * Supports auto-wiring for classes whose constructor parameters are all
  * resolvable from the container.
  */

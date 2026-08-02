@@ -158,7 +158,7 @@ class SMTPMailer
 
         $this->activeProvider = $provider;
         $this->from_address = trim((string)($provider['email'] ?? ''));
-        $this->from_name = trim((string)($headers['from_name'] ?? $provider['provider_name'] ?? (defined('APP_NAME') ? APP_NAME : 'HAIZON')));
+        $this->from_name = trim((string)($headers['from_name'] ?? $provider['provider_name'] ?? (defined('APP_NAME') ? APP_NAME : 'FLASH ERP SYSTEM')));
         $this->smtp_host = trim((string)($provider['smtp_host'] ?? ''));
         $this->smtp_port = (int)($provider['smtp_port'] ?? 0);
         $this->smtp_encryption = strtolower(trim((string)($provider['email_encryption'] ?? 'tls')));
@@ -189,7 +189,7 @@ class SMTPMailer
     {
         $mail_headers = "Date: " . date('r') . "\r\n";
         $mail_headers .= "MIME-Version: 1.0\r\n";
-        $app_name_slug = defined('APP_NAME') ? str_replace(' ', '-', APP_NAME) : 'HAIZON';
+        $app_name_slug = defined('APP_NAME') ? str_replace(' ', '-', APP_NAME) : 'FLASH-ERP-SYSTEM';
         $mail_headers .= "X-Mailer: {$app_name_slug}-SMTP-Mailer/2.0\r\n";
         $mail_headers .= "Content-Type: text/html; charset=UTF-8\r\n";
         if (!empty($headers['Message-ID'])) {
@@ -286,7 +286,7 @@ class SMTPMailer
                 return false;
             }
 
-            $ehlo_domain = defined('APP_DOMAIN') ? APP_DOMAIN : 'haizon.local';
+            $ehlo_domain = defined('APP_DOMAIN') ? APP_DOMAIN : 'flasherpsystem.local';
             fwrite($socket, "EHLO {$ehlo_domain}\r\n");
             $code = $this->readSMTPResponse($socket);
             if (strpos($code, '2') === false) {
@@ -317,7 +317,7 @@ class SMTPMailer
                     return false;
                 }
 
-                $ehlo_domain = defined('APP_DOMAIN') ? APP_DOMAIN : 'haizon.local';
+                $ehlo_domain = defined('APP_DOMAIN') ? APP_DOMAIN : 'flasherpsystem.local';
                 fwrite($socket, "EHLO {$ehlo_domain}\r\n");
                 $code = $this->readSMTPResponse($socket);
                 if (strpos($code, '2') === false) {
@@ -478,7 +478,7 @@ class SMTPMailer
                 return ['success' => false, 'message' => "Invalid SMTP greeting: $code"];
             }
 
-            $ehlo_domain = defined('APP_DOMAIN') ? APP_DOMAIN : 'haizon.local';
+            $ehlo_domain = defined('APP_DOMAIN') ? APP_DOMAIN : 'flasherpsystem.local';
             fwrite($socket, "EHLO {$ehlo_domain}\r\n");
             $code = $this->readSMTPResponse($socket);
             if (strpos($code, '2') !== 0) {
@@ -498,7 +498,7 @@ class SMTPMailer
                 stream_context_set_option($socket, 'ssl', 'verify_peer_name', false);
                 stream_socket_enable_crypto($socket, true, STREAM_CRYPTO_METHOD_TLS_CLIENT);
 
-                $ehlo_domain = defined('APP_DOMAIN') ? APP_DOMAIN : 'haizon.local';
+                $ehlo_domain = defined('APP_DOMAIN') ? APP_DOMAIN : 'flasherpsystem.local';
                 fwrite($socket, "EHLO {$ehlo_domain}\r\n");
                 $code = $this->readSMTPResponse($socket);
                 if (strpos($code, '2') !== 0) {

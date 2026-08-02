@@ -11,6 +11,8 @@ $quotations_ordering = $_SESSION['quotations_ordering'];
 
 $status_map = [
     'draft'    => "q.quotation_status='draft'",
+    'pending'  => "q.quotation_status='pending'",
+    'approved' => "q.quotation_status='approved'",
     'sent'     => "q.quotation_status='sent'",
     'accepted' => "q.quotation_status='accepted'",
     'declined' => "q.quotation_status='declined'",
@@ -19,6 +21,12 @@ $status_map = [
 ];
 
 $current_id = (int)($_GET['quotation_id'] ?? 0);
+
+$activeOrganizationId = isset($activeOrganizationId) ? $activeOrganizationId : dashboardRequireActiveOrganization();
+
+$search_query = isset($status_map[$quotations_ordering])
+    ? " AND " . $status_map[$quotations_ordering]
+    : " AND q.id >= 1";
 
 ?>
 
@@ -31,6 +39,8 @@ $current_id = (int)($_GET['quotation_id'] ?? 0);
                 $ordering_options = [
                     'all'      => 'All Quotations',
                     'draft'    => 'Draft',
+                    'pending'  => 'Pending Approval',
+                    'approved' => 'Approved',
                     'sent'     => 'Sent',
                     'accepted' => 'Accepted',
                     'declined' => 'Declined',
@@ -56,22 +66,18 @@ $current_id = (int)($_GET['quotation_id'] ?? 0);
             <table class="table table-hover">
                 <tbody>
                     <?php
-                    $base_select = "SELECT q.id, q.quotation_no, q.customer_id, q.quotation_status,
-                                           q.quotation_date, q.grand_total
-                                    FROM `" . DB::QUOTATIONS . "` q
-                                    WHERE q.id > 0 AND q.customer_id != ''";
-
-                    $where_status = '';
-                    if (isset($status_map[$quotations_ordering])) {
-                        $where_status = " AND " . $status_map[$quotations_ordering];
-                    }
-
                     $result_side = $mysqli->query(
-                        $base_select . $where_status . " ORDER BY q.id DESC LIMIT 25"
+                        "SELECT q.id, q.quotation_no, q.customer_id, q.quotation_status,
+                                q.quotation_date, q.grand_total
+                         FROM `" . DB::QUOTATIONS . "` q
+                         WHERE q.id > 0 AND q.customer_id != '' AND (q.lead_id = 0 OR q.lead_id IS NULL) AND q.organization_id = $activeOrganizationId {$search_query}
+                         ORDER BY q.id DESC
+                         LIMIT 25"
                     );
 
                     $result_count = $mysqli->query(
-                        "SELECT COUNT(*) as total FROM (" . $base_select . $where_status . ") t"
+                        "SELECT COUNT(q.id) as total FROM `" . DB::QUOTATIONS . "` q
+                         WHERE q.id > 0 AND (q.lead_id = 0 OR q.lead_id IS NULL) AND q.organization_id = $activeOrganizationId {$search_query}"
                     );
                     $count_row = $result_count->fetch_array();
                     $total_quotations = $count_row['total'] ?? 0;
@@ -80,27 +86,28 @@ $current_id = (int)($_GET['quotation_id'] ?? 0);
                         $isSelected = ($row['id'] == $current_id) ? 'table-primary shadow-sm' : '';
                         $display_name = getTableAttr('display_name', DB::CUSTOMERS, $row['customer_id']);
                         $formatted_date = dd_($row['quotation_date']);
-                        $formatted_amount = BASE_CURRENCY['code'] . number_format($row['grand_total'], 2);
-                        $formatted_status = strtoupper($row['quotation_status']);
+                        $formatted_amount = BASE_CURRENCY['code'] . number_format($row['grand_total'] ?? 0, 2);
+                        $formatted_status = strtoupper($row['quotation_status'] ?? '');
+
                         $status_class = match($row['quotation_status']) {
-                            'sent' => 'text-info',
-                            'draft' => 'text-secondary',
                             'accepted' => 'text-success',
                             'declined' => 'text-danger',
-                            'expired' => 'text-warning',
-                            'invoiced' => 'text-success',
-                            default => 'text-secondary'
+                            'draft' => 'text-secondary',
+                            'pending' => 'text-warning',
+                            'expired' => 'text-muted',
+                            default => 'text-info'
                         };
+                        $status_text = '<span class="' . $status_class . '">' . $formatted_status . '</span>';
                     ?>
                         <tr id="<?php echo $row['id']; ?>" class="<?php echo $isSelected; ?>">
                             <td>
                                 <a href="quotation_overview.php?quotation_id=<?php echo $row['id']; ?>" class="text-black text-decoration-none d-block">
                                     <div class="row">
-                                        <div class="col-lg-8"><?php echo $display_name; ?></div>
-                                        <div class="col-lg-4 text-end"><?php echo $formatted_amount; ?></div>
+                                        <div class="col-lg-7"><?php echo $display_name; ?></div>
+                                        <div class="col-lg-5 text-end"><?php echo $formatted_amount; ?></div>
                                     </div>
                                     <div class="small text-muted"><?php echo $row['quotation_no'] . ' - ' . $formatted_date; ?></div>
-                                    <div class="small text-muted"><span class="<?php echo $status_class; ?>"><?php echo $formatted_status; ?></span></div>
+                                    <div class="small text-muted"><?php echo $status_text; ?></div>
                                 </a>
                             </td>
                         </tr>

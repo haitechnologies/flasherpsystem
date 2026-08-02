@@ -15,7 +15,7 @@
  * Windows Task Scheduler:
  *   Action: Start a program
  *   Program: C:\xampp\php\php.exe
- *   Arguments: G:\xampp\htdocs\haizon\cron\sync_attendance.php
+ *   Arguments: G:\xampp\htdocs\flasherpsystem\cron\sync_attendance.php
  */
 
 declare(strict_types=1);

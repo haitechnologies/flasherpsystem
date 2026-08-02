@@ -292,7 +292,7 @@ class FrontendErrorLogger
         $url = strtolower((string)$requestedUrl);
         $agent = strtolower((string)$userAgent);
 
-        $isSyntheticAgent = (strpos($agent, 'haizon-manualtester') !== false || strpos($agent, 'curl/') !== false);
+        $isSyntheticAgent = (strpos($agent, 'flasherpsystem-manualtester') !== false || strpos($agent, 'curl/') !== false);
         if (!$isSyntheticAgent) {
             return false;
         }

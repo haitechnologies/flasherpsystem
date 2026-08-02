@@ -16,7 +16,7 @@ if (function_exists('handle_fatal_error')) {
 // ─────────────────────────────────────────────────────────────────────
 
 // Compatibility endpoint for a legacy shipping route.
-// Canonical page for this module in haizon is listing_shipping_customers.php.
+// Canonical page for this module in flasherpsystem is listing_shipping_customers.php.
 header('Location: listing_shipping_customers.php');
 exit;
 

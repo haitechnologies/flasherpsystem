@@ -814,7 +814,7 @@ include 'admin_elements/admin_header.php';
                     </div>
                 </div>
 
-                <!-- Row 10: Additional Details (haizon extras) -->
+                <!-- Row 10: Additional Details (flasherpsystem extras) -->
                 <div class="col-xl-12 mt-3">
                     <div class="card">
                         <div class="card-header d-flex align-items-center">

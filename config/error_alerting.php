@@ -39,7 +39,7 @@ function send_critical_error_alert($errorType, $message, $context = []) {
     }
     
     // Prepare email content
-    $subject = "[CRITICAL] HAIZON - $errorType Alert";
+    $subject = "[CRITICAL] FLASH ERP SYSTEM - $errorType Alert";
     
     $body = "<!DOCTYPE html>
 <html>
@@ -58,7 +58,7 @@ function send_critical_error_alert($errorType, $message, $context = []) {
     <div class='container'>
         <div class='header'>
             <h2 style='margin: 0;'>ðŸš¨ Critical Error Alert</h2>
-            <p style='margin: 5px 0 0 0;'>HAIZON Platform Monitoring</p>
+            <p style='margin: 5px 0 0 0;'>FLASH ERP SYSTEM Platform Monitoring</p>
         </div>
         
         <div class='section'>
@@ -111,7 +111,7 @@ function send_critical_error_alert($errorType, $message, $context = []) {
     
     <div style='text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd;'>
         <p style='color: #999; font-size: 12px;'>
-            This is an automated alert from HAIZON Platform Monitoring System.<br>
+            This is an automated alert from FLASH ERP SYSTEM Platform Monitoring System.<br>
             Do not reply to this email.
         </p>
     </div>

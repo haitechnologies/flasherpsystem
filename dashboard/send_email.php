@@ -86,9 +86,7 @@ $type           = $config['type']; // 'customer' or 'vendor'
 $tbl_name       = $tbl_prefix . $current_module;
 
 // 3. Dynamic Data Extraction
-$doc_status = s__($row[$pfx . '_status'] ?? '');
-$doc_date   = s__($row[$pfx . '_date']   ?? '');
-
+$doc_no     = getTableAttr($pfx . '_no', $tbl_name, $id) ?: $id;
 
 // 1. Determine Identity Keys based on Module Type ('customer' or 'vendor')
 $contact_id_col = ($type === 'vendor') ? 'vendor_id' : 'customer_id';
@@ -104,9 +102,26 @@ $display_name = getTableAttr('display_name', $contact_table, $contact_id);
 $send_to      = getTableAttr('email', $contact_table, $contact_id);
 
 // 4. Enhanced Subject Line (Optional: include the name for better context)
-$subject = "$module_caption - $id is awaiting your approval";
+$subject = "$module_caption $doc_no is awaiting your approval";
 
 
+
+$description_default = '';
+if (empty($action)) {
+    $doc_query = $mysqli->query("SELECT * FROM `$tbl_name` WHERE id=$id AND organization_id=$activeOrganizationId");
+    if ($doc_row = $doc_query->fetch_assoc()) {
+        $content = [];
+        if (!empty($doc_row['subject'] ?? '')) {
+            $content[] = $doc_row['subject'];
+        }
+        if (!empty($doc_row['customer_notes'] ?? '')) {
+            $content[] = $doc_row['customer_notes'];
+        } elseif (!empty($doc_row['notes'] ?? '')) {
+            $content[] = $doc_row['notes'];
+        }
+        $description_default = implode("\n\n", $content);
+    }
+}
 
 /*
 |--------------------------------------------------------------------------
@@ -125,11 +140,10 @@ if ($action == "send_email") {
 } else {
 
     $from           = '';
-    $send_to        = '';
     $cc             = '';
     $bcc            = '';
     // $subject        = '';
-    $description    = '';
+    $description    = $description_default;
 }
 
 
@@ -143,7 +157,7 @@ if ($action == "send_email") {
 if ($action == 'send_email' && !empty($id)) {
 
 
-    $result = $mysqli->query("SELECT * FROM `$tbl_name` WHERE id=$id");
+    $result = $mysqli->query("SELECT * FROM `$tbl_name` WHERE id=$id AND organization_id=$activeOrganizationId");
     $row = $result->fetch_array();
 
     $customer_id            = s__($row['customer_id']);
@@ -169,8 +183,14 @@ if ($action == 'send_email' && !empty($id)) {
                     " . $module_caption . " Date <br />
                     $doc_date_display<br /><br />
 
-                    VIEW " . strtoupper($module_caption) . "<br /><br />
+                    VIEW " . strtoupper($module_caption) . "<br /><br />";
 
+    if (!empty($description)) {
+        $email_body .= "
+                    " . nl2br(htmlspecialchars($description)) . "<br /><br />";
+    }
+
+    $email_body .= "
                     Regards,<br />
                     <br />
                     ";
@@ -244,12 +264,12 @@ if ($action == 'send_email' && !empty($id)) {
     <div class="page-header page-header-light shadow carriers-page-header">
         <div class="page-header-content border-top py-2 px-3 carriers-page-header-content">
             <div class="my-1">
-                <h5 class="mb-0"><?php if (($action == "edit_$module" || $action == "update_$module" || $action == "change_password") && !empty($id)) { ?>Edit<?php } else { ?>New<?php } ?> <?php echo $module_caption; ?></h5>
+                <h5 class="mb-0"><?php if (!empty($id)) { ?>Send <?php echo $module_caption; ?> #<?php echo $doc_no; } else { ?>New <?php echo $module_caption; } ?></h5>
             </div>
 
             <div class="my-1">
                 <?php if (empty($id) || (isset($module_id) && granted('create', $module_id)) || (isset($module_id) && granted('edit', $module_id)) || $file === 'profile.php' || $file === 'change_password.php') { ?>
-                    <button type="submit" form="frmsend_email" class="btn btn-primary btn-sm me-2">Save</button>
+                    <button type="submit" form="frmsend_email" class="btn btn-primary btn-sm me-2">Send</button>
                 <?php } ?>
                 <a href="listing_<?php echo $module; ?>.php" class="btn btn-light btn-sm">Cancel</a>
             </div>

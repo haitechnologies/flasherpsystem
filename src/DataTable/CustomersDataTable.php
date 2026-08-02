@@ -157,7 +157,7 @@ class CustomersDataTable extends BaseDataTable
         }
 
         if ($this->isGranted('delete', $module)) {
-            $actions .= ActionButtonHelper::deleteButton($id, $module);
+            $actions .= ActionButtonHelper::deleteButton($id, $module, 'Are you sure you want to delete this customer?');
         }
 
         return $actions;

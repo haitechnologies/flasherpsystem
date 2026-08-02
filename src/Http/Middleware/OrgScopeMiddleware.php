@@ -15,7 +15,7 @@ class OrgScopeMiddleware implements MiddlewareInterface
         if (function_exists('dashboardRequireActiveOrganization')) {
             $orgId = dashboardRequireActiveOrganization();
         } else {
-            $projectPre = defined('PROJECT_PREFIX') ? PROJECT_PREFIX : 'haizon';
+            $projectPre = defined('PROJECT_PREFIX') ? PROJECT_PREFIX : 'flasherpsystem';
             $orgId = (int)($_SESSION[$projectPre]['DASHBOARD']['organization_id'] ?? 0);
         }
         $container = Container::getInstance();

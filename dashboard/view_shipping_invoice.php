@@ -16,7 +16,7 @@ if (function_exists('handle_fatal_error')) {
 // ─────────────────────────────────────────────────────────────────────
 
 // Compatibility endpoint for a legacy shipping route.
-// Route old view page requests into the shipping invoice editor in haizon.
+// Route old view page requests into the shipping invoice editor in flasherpsystem.
 $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
 if ($id > 0) {

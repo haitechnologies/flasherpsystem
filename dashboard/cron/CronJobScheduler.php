@@ -249,14 +249,14 @@ class CronJobScheduler {
      */
     public function generateCrontab() {
         echo "# â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• \n";
-        echo "# HAIZON - Cron Jobs Configuration\n";
+        echo "# FLASH ERP SYSTEM - Cron Jobs Configuration\n";
         echo "# Generated: " . date('Y-m-d H:i:s') . "\n";
         echo "# â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• \n";
         echo "\n";
         echo "# Set PHP path (adjust as needed)\n";
         echo "PHP=/usr/bin/php\n";
-        echo "CRON_DIR=/var/www/haizon/dashboard/cron\n";
-        echo "LOG_DIR=/var/log/haizon\n";
+        echo "CRON_DIR=/var/www/flasherpsystem/dashboard/cron\n";
+        echo "LOG_DIR=/var/log/flasherpsystem\n";
         echo "\n";
         
         $categories = [

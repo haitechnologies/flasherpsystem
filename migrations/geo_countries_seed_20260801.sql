@@ -1,6 +1,6 @@
 -- ============================================================================
 -- Migration: Geo Countries Standalone Seed (2026-08-01)
--- Run: mysql --force -u user -p haizon < this_file.sql
+-- Run: mysql --force -u user -p flasherpsystem < this_file.sql
 --      (--force skips non-fatal ALTER errors if columns/indexes already exist)
 -- Idempotent -- safe to re-run (INSERT IGNORE + ON DUPLICATE KEY)
 -- No cross-database dependencies

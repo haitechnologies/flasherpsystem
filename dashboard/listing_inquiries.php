@@ -1056,6 +1056,7 @@ document.addEventListener('DOMContentLoaded', function() {
 // ========================================
 // Single Delete Handler (Trash Icon)
 // ========================================
+$(document).off('click.haiDatatableDelete', '[data-action="delete_record"]');
 $(document).on('click', '[data-action="delete_record"]', function(e) {
 	e.preventDefault();
 	var id = $(this).data('id');

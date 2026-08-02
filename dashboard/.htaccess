@@ -36,7 +36,7 @@ php_value error_log "error_log.txt"
     # Set environment variable for base path detection
     # Local environment (XAMPP)
     RewriteCond %{HTTP_HOST} ^(localhost|127\.0\.0\.1)(:[0-9]+)?$ [NC]
-    RewriteRule .* - [E=BASE_PATH:/haizon/dashboard]
+    RewriteRule .* - [E=BASE_PATH:/flasherpsystem/dashboard]
 
     # Live environment
     RewriteCond %{HTTP_HOST} ^(www\.)?flasherpsystem\.com$ [NC]
@@ -54,7 +54,7 @@ php_value error_log "error_log.txt"
     RewriteCond %{HTTP_HOST} ^(localhost|127\.0\.0\.1)(:[0-9]+)?$ [NC]
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteRule ^(.*)$ /haizon/dashboard/404.php [L]
+    RewriteRule ^(.*)$ /flasherpsystem/dashboard/404.php [L]
 
     # Handle 404 for live
     RewriteCond %{HTTP_HOST} ^(www\.)?flasherpsystem\.com$ [NC]

@@ -115,7 +115,7 @@ function is_synthetic_entry($entry) {
     }
 
     $syntheticMarkers = [
-        'haizon-manualtester',
+        'flasherpsystem-manualtester',
         'curl/',
         '/this-page-does-not-exist-404-test',
     ];

@@ -81,12 +81,12 @@ class QuotationService
             // Date parsing
             $quotationDate = (string)($data['quotation_date'] ?? date('Y-m-d'));
             if (strpos($quotationDate, '-') === false) {
-                $quotationDate = \App\Helper\DateHelper::toDisplayDate($quotationDate) ?: $quotationDate;
+                $quotationDate = \App\Helper\DateHelper::toDbDate($quotationDate) ?: $quotationDate;
             }
             $expiryDate = (string)($data['expiry_date'] ?? '');
             if (!empty($expiryDate)) {
                 if (strpos($expiryDate, '-') === false) {
-                    $expiryDate = \App\Helper\DateHelper::toDisplayDate($expiryDate) ?: $expiryDate;
+                    $expiryDate = \App\Helper\DateHelper::toDbDate($expiryDate) ?: $expiryDate;
                 }
             } else {
                 $expiryDate = '1970-01-01';
@@ -95,11 +95,43 @@ class QuotationService
             $expectedShipmentDate = (string)($data['expected_shipment_date'] ?? '');
             if (!empty($expectedShipmentDate)) {
                 if (strpos($expectedShipmentDate, '-') === false) {
-                    $expectedShipmentDate = \App\Helper\DateHelper::toDisplayDate($expectedShipmentDate) ?: $expectedShipmentDate;
+                    $expectedShipmentDate = \App\Helper\DateHelper::toDbDate($expectedShipmentDate) ?: $expectedShipmentDate;
                 }
             } else {
                 $expectedShipmentDate = '1970-01-01';
             }
+
+            $grandSubtotal = 0.0;
+            $grandTax = 0.0;
+            foreach ($itemsData as $i => $itemData) {
+                if (empty($itemData['service'])) {
+                    continue;
+                }
+                $qty = (float)($itemData['qty'] ?? 1);
+                $rate = (float)($itemData['rate'] ?? 0);
+                $taxPct = (float)($itemData['tax'] ?? 0);
+                $subTotal = $qty * $rate;
+                $taxAmount = $subTotal * $taxPct / 100.0;
+                $itemsData[$i]['sub_total'] = $subTotal;
+                $itemsData[$i]['tax_amount'] = $taxAmount;
+                $itemsData[$i]['total'] = $subTotal + $taxAmount;
+                $grandSubtotal += $subTotal;
+                $grandTax += $taxAmount;
+            }
+            $discountType = (string)($data['grand_discount_type'] ?? '0.00');
+            $discountTypeValue = (float)($data['grand_discount_type_value'] ?? 0);
+            $grandDiscountAmount = 0.0;
+            if (($discountType === 'percentage' || $discountType === 'percent') && $discountTypeValue > 0) {
+                $grandDiscountAmount = $grandSubtotal * $discountTypeValue / 100.0;
+            } elseif ($discountType === 'fixed' && $discountTypeValue > 0) {
+                $grandDiscountAmount = $discountTypeValue;
+            }
+            $grandAfterDiscount = $grandSubtotal - $grandDiscountAmount;
+            $data['grand_subtotal'] = round($grandSubtotal, 2);
+            $data['grand_discount_amount'] = round($grandDiscountAmount, 2);
+            $data['grand_after_discount'] = round(max(0, $grandAfterDiscount), 2);
+            $data['grand_tax'] = round($grandTax, 2);
+            $data['grand_total'] = round(max(0, $grandAfterDiscount) + $grandTax, 2);
 
             $grandSubtotal = (float)($data['grand_subtotal'] ?? 0.0);
             $grandTotal = (float)($data['grand_total'] ?? 0.0);
@@ -120,10 +152,13 @@ class QuotationService
                 salesPerson: !empty($data['sales_person']) ? (int)$data['sales_person'] : 0,
                 jobReferenceNo: !empty($data['job_reference_no']) ? trim((string)$data['job_reference_no']) : null,
                 masterAwbNo: !empty($data['master_awb_no']) ? trim((string)$data['master_awb_no']) : null,
+                hwbHbol: !empty($data['hwb_hbol']) ? trim((string)$data['hwb_hbol']) : null,
                 shipper: !empty($data['shipper']) ? (int)$data['shipper'] : 0,
                 consignee: !empty($data['consignee']) ? (int)$data['consignee'] : 0,
                 origin: !empty($data['origin']) ? (int)$data['origin'] : 0,
+                originCountry: !empty($data['origin_country']) ? (int)$data['origin_country'] : 0,
                 destination: !empty($data['destination']) ? (int)$data['destination'] : 0,
+                destinationCountry: !empty($data['destination_country']) ? (int)$data['destination_country'] : 0,
                 noOfPacks: !empty($data['no_of_packs']) ? (int)$data['no_of_packs'] : 0,
                 grossWeight: !empty($data['gross_weight']) ? (float)$data['gross_weight'] : 0.0,
                 chargeableWeight: !empty($data['chargeable_weight']) ? (float)$data['chargeable_weight'] : 0.0,
@@ -192,20 +227,24 @@ class QuotationService
      */
     public function updateQuotation(int $id, array $data, array $itemsData, int $orgId, int $userId): Quotation
     {
-        $quotation = $this->getQuotation($id, $orgId);
-        $this->validateQuotationData($data, $orgId);
+            $quotation = $this->getQuotation($id, $orgId);
+            $this->validateQuotationData($data, $orgId);
 
-        $this->db->beginTransaction();
+            if (empty($itemsData)) {
+                throw new ValidationException(['items' => "No items added. Please add at least one item."]);
+            }
+
+            $this->db->beginTransaction();
         try {
             // Date parsing
             $quotationDate = isset($data['quotation_date']) ? (string)$data['quotation_date'] : $quotation->quotationDate;
             if (strpos($quotationDate, '-') === false) {
-                $quotationDate = \App\Helper\DateHelper::toDisplayDate($quotationDate) ?: $quotationDate;
+                $quotationDate = \App\Helper\DateHelper::toDbDate($quotationDate) ?: $quotationDate;
             }
             $expiryDate = isset($data['expiry_date']) ? (string)$data['expiry_date'] : $quotation->expiryDate;
             if (!empty($expiryDate)) {
                 if (strpos($expiryDate, '-') === false) {
-                    $expiryDate = \App\Helper\DateHelper::toDisplayDate($expiryDate) ?: $expiryDate;
+                    $expiryDate = \App\Helper\DateHelper::toDbDate($expiryDate) ?: $expiryDate;
                 }
             } else {
                 $expiryDate = '1970-01-01';
@@ -214,11 +253,43 @@ class QuotationService
             $expectedShipmentDate = isset($data['expected_shipment_date']) ? (string)$data['expected_shipment_date'] : $quotation->expectedShipmentDate;
             if (!empty($expectedShipmentDate)) {
                 if (strpos($expectedShipmentDate, '-') === false) {
-                    $expectedShipmentDate = \App\Helper\DateHelper::toDisplayDate($expectedShipmentDate) ?: $expectedShipmentDate;
+                    $expectedShipmentDate = \App\Helper\DateHelper::toDbDate($expectedShipmentDate) ?: $expectedShipmentDate;
                 }
             } else {
                 $expectedShipmentDate = '1970-01-01';
             }
+
+            $grandSubtotal = 0.0;
+            $grandTax = 0.0;
+            foreach ($itemsData as $i => $itemData) {
+                if (empty($itemData['service'])) {
+                    continue;
+                }
+                $qty = (float)($itemData['qty'] ?? 1);
+                $rate = (float)($itemData['rate'] ?? 0);
+                $taxPct = (float)($itemData['tax'] ?? 0);
+                $subTotal = $qty * $rate;
+                $taxAmount = $subTotal * $taxPct / 100.0;
+                $itemsData[$i]['sub_total'] = $subTotal;
+                $itemsData[$i]['tax_amount'] = $taxAmount;
+                $itemsData[$i]['total'] = $subTotal + $taxAmount;
+                $grandSubtotal += $subTotal;
+                $grandTax += $taxAmount;
+            }
+            $discountType = (string)($data['grand_discount_type'] ?? '0.00');
+            $discountTypeValue = (float)($data['grand_discount_type_value'] ?? 0);
+            $grandDiscountAmount = 0.0;
+            if (($discountType === 'percentage' || $discountType === 'percent') && $discountTypeValue > 0) {
+                $grandDiscountAmount = $grandSubtotal * $discountTypeValue / 100.0;
+            } elseif ($discountType === 'fixed' && $discountTypeValue > 0) {
+                $grandDiscountAmount = $discountTypeValue;
+            }
+            $grandAfterDiscount = $grandSubtotal - $grandDiscountAmount;
+            $data['grand_subtotal'] = round($grandSubtotal, 2);
+            $data['grand_discount_amount'] = round($grandDiscountAmount, 2);
+            $data['grand_after_discount'] = round(max(0, $grandAfterDiscount), 2);
+            $data['grand_tax'] = round($grandTax, 2);
+            $data['grand_total'] = round(max(0, $grandAfterDiscount) + $grandTax, 2);
 
             $grandSubtotal = isset($data['grand_subtotal']) ? (float)$data['grand_subtotal'] : $quotation->grandSubtotal;
             $grandTotal = isset($data['grand_total']) ? (float)$data['grand_total'] : $quotation->grandTotal;
@@ -239,10 +310,13 @@ class QuotationService
                 salesPerson: isset($data['sales_person']) ? (int)$data['sales_person'] : $quotation->salesPerson,
                 jobReferenceNo: isset($data['job_reference_no']) ? (!empty($data['job_reference_no']) ? trim((string)$data['job_reference_no']) : null) : $quotation->jobReferenceNo,
                 masterAwbNo: isset($data['master_awb_no']) ? (!empty($data['master_awb_no']) ? trim((string)$data['master_awb_no']) : null) : $quotation->masterAwbNo,
+                hwbHbol: isset($data['hwb_hbol']) ? (!empty($data['hwb_hbol']) ? trim((string)$data['hwb_hbol']) : null) : $quotation->hwbHbol,
                 shipper: isset($data['shipper']) ? (int)$data['shipper'] : $quotation->shipper,
                 consignee: isset($data['consignee']) ? (int)$data['consignee'] : $quotation->consignee,
                 origin: isset($data['origin']) ? (int)$data['origin'] : $quotation->origin,
+                originCountry: isset($data['origin_country']) ? (int)$data['origin_country'] : $quotation->originCountry,
                 destination: isset($data['destination']) ? (int)$data['destination'] : $quotation->destination,
+                destinationCountry: isset($data['destination_country']) ? (int)$data['destination_country'] : $quotation->destinationCountry,
                 noOfPacks: isset($data['no_of_packs']) ? (int)$data['no_of_packs'] : $quotation->noOfPacks,
                 grossWeight: isset($data['gross_weight']) ? (float)$data['gross_weight'] : $quotation->grossWeight,
                 chargeableWeight: isset($data['chargeable_weight']) ? (float)$data['chargeable_weight'] : $quotation->chargeableWeight,
@@ -257,7 +331,7 @@ class QuotationService
                 grandTax: isset($data['grand_tax']) ? (float)$data['grand_tax'] : $quotation->grandTax,
                 grandTotal: $grandTotal,
                 publish: isset($data['publish']) ? (bool)$data['publish'] : $quotation->publish,
-                isActive: isset($data['is_active']) ? (bool)$data['is_active'] : $quotation->publish,
+                isActive: isset($data['is_active']) ? (bool)$data['is_active'] : $quotation->isActive,
                 createdAt: $quotation->createdAt,
                 createdBy: $quotation->createdBy,
                 updatedBy: $userId,
@@ -277,6 +351,9 @@ class QuotationService
                 }
                 $itemId = !empty($itemData['id']) ? (int)$itemData['id'] : null;
                 if ($itemId !== null) {
+                    if (!in_array($itemId, $existingIds, true)) {
+                        throw new ValidationException(['items' => "Invalid item reference."]);
+                    }
                     $incomingIds[] = $itemId;
                 }
 
@@ -369,7 +446,7 @@ class QuotationService
                 customerId: $quotation->customerId,
                 quotationStatus: 'draft',
                 quotationDate: date('Y-m-d'),
-                expiryDate: date('Y-m-d'),
+                expiryDate: $quotation->expiryDate,
                 leadId: $quotation->leadId,
                 warehouseId: $quotation->warehouseId,
                 expectedShipmentDate: $quotation->expectedShipmentDate,
@@ -378,10 +455,13 @@ class QuotationService
                 salesPerson: $quotation->salesPerson,
                 jobReferenceNo: $quotation->jobReferenceNo,
                 masterAwbNo: $quotation->masterAwbNo,
+                hwbHbol: $quotation->hwbHbol,
                 shipper: $quotation->shipper,
                 consignee: $quotation->consignee,
                 origin: $quotation->origin,
+                originCountry: $quotation->originCountry,
                 destination: $quotation->destination,
+                destinationCountry: $quotation->destinationCountry,
                 noOfPacks: $quotation->noOfPacks,
                 grossWeight: $quotation->grossWeight,
                 chargeableWeight: $quotation->chargeableWeight,
@@ -396,7 +476,7 @@ class QuotationService
                 grandTax: $quotation->grandTax,
                 grandTotal: $quotation->grandTotal,
                 publish: $quotation->publish,
-                isActive: $quotation->publish,
+                isActive: $quotation->isActive,
                 createdBy: $userId
             );
 
@@ -442,7 +522,7 @@ class QuotationService
      */
     public function updateStatus(int $id, string $status, int $orgId): bool
     {
-        $allowedStatuses = ['draft', 'sent', 'accepted', 'rejected', 'expired', 'confirmed'];
+        $allowedStatuses = ['draft', 'sent', 'accepted', 'rejected', 'expired', 'confirmed', 'declined', 'pending', 'approved', 'invoiced', 'not_confirmed', 'on_hold', 'cancelled'];
         if (!in_array($status, $allowedStatuses, true)) {
             throw new ValidationException(['status' => "Invalid status: {$status}"]);
         }
@@ -467,6 +547,9 @@ class QuotationService
         if ((empty($data['customer_id']) || $data['customer_id'] === 'Please select' || $data['customer_id'] === '0')
             && (empty($data['lead_id']) || $data['lead_id'] === '0')) {
             throw new ValidationException(['customer_id' => "Please select Customer or Lead."]);
+        }
+        if (empty($data['warehouse_id']) || $data['warehouse_id'] === '0' || $data['warehouse_id'] === 'Please select') {
+            throw new ValidationException(['warehouse_id' => "Please select Warehouse."]);
         }
         if (empty($data['quotation_date'])) {
             throw new ValidationException(['quotation_date' => "Please select Quotation Date."]);

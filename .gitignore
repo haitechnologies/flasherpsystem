@@ -76,19 +76,9 @@ _tmp_check_modules.php
 __tmp_port.php
 
 # ============================================================
-# DOCUMENTATION & PLANNING (not for production)
+# DOCUMENTATION, PLANNING & SCRATCH FILES (not for production)
 # ============================================================
 docs/
-/SENSITIVE_DATA_CLEANUP_PLAN.md
-/accounts_role_scoping_plan.md
-/CLIENT_MIGRATION_EMAIL.md
-/CRM-FLOW-QUESTIONS.md
-CHANGELOG.md
-!HR_CHANGELOG.md
-!ACCOUNTING_CHANGELOG.md
-CHANGE_SUMMARY_EMAIL.md
-CONTRIBUTING.md
-ZKTeco-attendance-integration-plan.md
 BACKUP_STRATEGY_GUIDE.html
 ZERO_RESULT_RECOVERY_PLAN.html
 PRODUCTION_LAUNCH_CHECKLIST.html
@@ -99,14 +89,17 @@ ROBOTS_SITEMAPS.txt
 Muje Parh Lo.txt
 @source.lnk
 *.lnk
-DEPLOYMENT_HOSTINGER.md
-DEPLOYMENT_*.md
 deploy-exclude.txt
+
+# ----- All markdown files are ignored by default -----
 *.md
 
-# keep README.md and CHANGELOG.md
-!README.md
-!CHANGELOG.md
+# ----- Only these root-level .md files are allowed -----
+!/README.md
+!/CHANGELOG.md
+!/HR_CHANGELOG.md
+!/ACCOUNTING_CHANGELOG.md
+!/OPERATIONS_CHANGELOG.md
 
 # ============================================================
 # TESTS (not for production)
@@ -134,8 +127,8 @@ logs/
 # ============================================================
 *.sql
 !migrations/*.sql
-haizon_raw.sql
-haizon_live.sql
+flasherpsystem_raw.sql
+flasherpsystem_live.sql
 
 # ============================================================
 # DASHBOARD DEV/AUDIT FILES

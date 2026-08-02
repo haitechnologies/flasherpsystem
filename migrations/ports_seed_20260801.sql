@@ -1,7 +1,7 @@
 -- ============================================================================
 -- Migration: Worldwide Ports Seed from UN/LOCODE (2026-08-01)
 -- Source: https://github.com/datasets/un-locode
--- Run: mysql -u user -p haizon < this_file.sql
+-- Run: mysql -u user -p flasherpsystem < this_file.sql
 -- Idempotent -- safe to re-run (INSERT IGNORE)
 -- NOTE: Run after geo_countries_seed_20260801.sql
 -- ============================================================================

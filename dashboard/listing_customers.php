@@ -89,23 +89,6 @@ $listingConfig = [
     'before_table' => '<div class="row mb-2 mt-2"><div class="col-lg-12">' . $customerStatusHtml . '</div></div>',
     'extra_js' => "
         var customerStatus = new URLSearchParams(window.location.search).get('customer_status') || '';
-
-        // Override the ajax data to pass customer_status filter
-        var origInit = window.HAIDatatableInitializer;
-        // The filter is handled by the dispatcher automatically based on URL params
-
-        $(document).on('click', 'a[data-action=\"delete_record\"]', function(e) {
-            e.preventDefault();
-            const id = $(this).data('id');
-            const module = $(this).data('module');
-            if (confirm('Are you sure you want to delete this customer?')) {
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.innerHTML = '<input type=\"hidden\" name=\"action\" value=\"delete_' + module + '\"><input type=\"hidden\" name=\"id\" value=\"' + id + '\">';
-                document.body.appendChild(form);
-                form.submit();
-            }
-        });
     ",
 ];
 
