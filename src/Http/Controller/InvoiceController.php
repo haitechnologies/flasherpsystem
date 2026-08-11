@@ -62,16 +62,23 @@ class InvoiceController extends BaseController
         try {
             $this->invoiceService->updateInvoice($id, $invoiceData, $itemsData, $this->orgId, $this->userId);
 
+            updateCustomerLogs((int)($invoiceData['customer_id'] ?? 0), 'invoice', 'edit', $id);
+            flash_success('The Invoice has been updated successfully.');
             if ($request->get('save_and_send') == 1) {
                 return Response::redirect("send_email.php?current_module=invoices&id=$id");
             }
-            flash_success('The Invoice has been updated successfully.');
             return Response::redirect('listing_invoices.php');
         } catch (ValidationException $e) {
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("invoices.php?id=$id&action=edit_invoices");
         } catch (\Throwable $e) {
+            log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
+                'module' => 'invoices',
+                'module_slug' => 'invoices',
+                'stack_trace' => $e->getTraceAsString(),
+                'error_code' => (string)$e->getCode(),
+            ]));
             flash_error($e->getMessage());
             return Response::redirect("invoices.php?id=$id&action=edit_invoices");
         }
@@ -86,16 +93,23 @@ class InvoiceController extends BaseController
             $newInvoice = $this->invoiceService->createInvoice($invoiceData, $itemsData, $this->orgId, $this->userId);
             $id = $newInvoice->id;
 
+            updateCustomerLogs((int)($invoiceData['customer_id'] ?? 0), 'invoice', 'add', $id);
+            flash_success('The Invoice has been saved successfully.');
             if ($request->get('save_and_send') == 1) {
                 return Response::redirect("send_email.php?current_module=invoices&id=$id");
             }
-            flash_success('The Invoice has been saved successfully.');
             return Response::redirect('listing_invoices.php');
         } catch (ValidationException $e) {
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("invoices.php");
         } catch (\Throwable $e) {
+            log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
+                'module' => 'invoices',
+                'module_slug' => 'invoices',
+                'stack_trace' => $e->getTraceAsString(),
+                'error_code' => (string)$e->getCode(),
+            ]));
             flash_error($e->getMessage());
             return Response::redirect("invoices.php");
         }
@@ -115,14 +129,19 @@ class InvoiceController extends BaseController
             'sales_person' => $request->getString('sales_person'),
             'job_reference_no' => $request->getString('job_reference_no'),
             'master_awb_no' => $request->getString('master_awb_no'),
+            'hwb_hbol' => $request->getString('hwb_hbol'),
+            'lead_id' => $request->getString('lead_id'),
             'shipper' => $request->getString('shipper'),
             'consignee' => $request->getString('consignee'),
             'origin' => $request->getString('origin'),
+            'origin_country' => $request->getString('origin_country'),
             'destination' => $request->getString('destination'),
+            'destination_country' => $request->getString('destination_country'),
             'no_of_packs' => $request->getString('no_of_packs'),
             'gross_weight' => $request->getString('gross_weight'),
             'chargeable_weight' => $request->getString('chargeable_weight'),
             'volume' => $request->getString('volume'),
+            'cbm' => $request->getString('cbm'),
             'terms_and_conditions' => $request->getString('terms_and_conditions'),
             'grand_subtotal' => $request->getString('grand_subtotal'),
             'grand_discount_type' => $request->getString('grand_discount_type'),
@@ -133,6 +152,7 @@ class InvoiceController extends BaseController
             'grand_tax' => $request->getString('grand_tax'),
             'grand_total' => $request->getString('grand_total'),
             'publish' => $request->get('publish') ? true : false,
+            'is_active' => $request->get('publish') ? true : false,
             'invoice_status' => $request->getString('invoice_status', 'draft'),
         ];
     }
@@ -157,6 +177,9 @@ class InvoiceController extends BaseController
                 'qty' => $request->getArrayItem('qty', $i, '1'),
                 'rate' => $request->getArrayItem('rate', $i, '0'),
                 'sub_total' => $request->getArrayItem('sub_total', $i, '0'),
+                'discount_type' => $request->getArrayItem('discount_type', $i, ''),
+                'discount_type_value' => $request->getArrayItem('discount_type_value', $i, '0'),
+                'discount_amount' => $request->getArrayItem('discount_amount', $i, '0'),
                 'tax' => $request->getArrayItem('tax', $i, '0'),
                 'tax_amount' => $request->getArrayItem('tax_amount', $i, '0'),
                 'total' => $request->getArrayItem('total', $i, '0'),
@@ -195,14 +218,19 @@ class InvoiceController extends BaseController
         $sales_person = '0';
         $job_reference_no = '';
         $master_awb_no = '';
+        $hwb_hbol = '';
+        $lead_id = '0';
         $shipper = '0';
         $consignee = '0';
         $origin = '0';
+        $origin_country = '0';
         $destination = '0';
+        $destination_country = '0';
         $no_of_packs = '0';
         $gross_weight = '0';
         $chargeable_weight = '0';
         $volume = '0';
+        $cbm = '0';
         $terms_and_conditions = '';
         $grand_subtotal = '0.00';
         $grand_discount_type = '';
@@ -223,6 +251,9 @@ class InvoiceController extends BaseController
         $tax_arr = [];
         $tax_amount_arr = [];
         $total_arr = [];
+        $discount_type_arr = [];
+        $discount_type_value_arr = [];
+        $discount_amount_arr = [];
         $total_rows = 1;
 
         if ($id > 0) {
@@ -253,14 +284,19 @@ class InvoiceController extends BaseController
                     $sales_person = (string)$invoice->salesPerson;
                     $job_reference_no = (string)$invoice->jobReferenceNo;
                     $master_awb_no = (string)$invoice->masterAwbNo;
+                    $hwb_hbol = (string)$invoice->hwbHbol;
+                    $lead_id = (string)$invoice->leadId;
                     $shipper = (string)$invoice->shipper;
                     $consignee = (string)$invoice->consignee;
                     $origin = (string)$invoice->origin;
+                    $origin_country = (string)$invoice->originCountry;
                     $destination = (string)$invoice->destination;
+                    $destination_country = (string)$invoice->destinationCountry;
                     $no_of_packs = (string)$invoice->noOfPacks;
                     $gross_weight = (string)$invoice->grossWeight;
                     $chargeable_weight = (string)$invoice->chargeableWeight;
                     $volume = (string)$invoice->volume;
+                    $cbm = (string)$invoice->volume;
                     $customer_notes = (string)$invoice->customerNotes;
                     $terms_and_conditions = (string)$invoice->termsAndConditions;
                     $grand_subtotal = (string)$invoice->grandSubtotal;
@@ -272,7 +308,7 @@ class InvoiceController extends BaseController
                     $grand_total = (string)$invoice->grandTotal;
                     $is_active = $invoice->isActive ? 1 : 0;
 
-                    $invoice_date = \App\Helper\DateHelper::toDbDate($invoice_date);
+                    $invoice_date = DateHelper::toDisplayDate($invoice_date);
                     $expiry_date = ($expiry_date === '1970-01-01') ? '' : DateHelper::toDisplayDate($expiry_date);
                     $expected_shipment_date = ($expected_shipment_date === '1970-01-01') ? '' : DateHelper::toDisplayDate($expected_shipment_date);
 
@@ -289,8 +325,17 @@ class InvoiceController extends BaseController
                         $tax_arr[] = $item->tax;
                         $tax_amount_arr[] = $item->taxAmount;
                         $total_arr[] = $item->total;
+                        $discount_type_arr[] = $item->discountType;
+                        $discount_type_value_arr[] = $item->discountTypeValue;
+                        $discount_amount_arr[] = $item->discountAmount;
                     }
                 } catch (\Throwable $e) {
+                    log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
+                        'module' => 'invoices',
+                        'module_slug' => 'invoices',
+                        'stack_trace' => $e->getTraceAsString(),
+                        'error_code' => (string)$e->getCode(),
+                    ]));
                     $error_message = $e->getMessage();
                 }
             }
@@ -302,29 +347,94 @@ class InvoiceController extends BaseController
 
         // Fetch dropdown data
         try {
-            $customersList = $this->db->fetchAll("SELECT id, display_name FROM `" . DB::CUSTOMERS . "` WHERE is_active=1 AND approved=1 ORDER BY id DESC");
+            $customersList = $this->db->fetchAll("SELECT id, display_name FROM `" . DB::CUSTOMERS . "` WHERE is_active=1 AND approved=1 AND organization_id = :org_id ORDER BY id DESC", ['org_id' => $this->orgId]);
         } catch (\Throwable $e) {
             $customersList = [];
+            if (function_exists('log_error')) {
+                log_error('invoices form dropdown load failed: ' . $e->getMessage(), 'WARNING', __FILE__, __LINE__, function_exists('backend_runtime_log_context') ? backend_runtime_log_context(['module' => 'invoices', 'module_slug' => 'invoices', 'error_code' => (string)$e->getCode()]) : ['module' => 'invoices', 'module_slug' => 'invoices', 'error_code' => (string)$e->getCode()]);
+            }
         }
         try {
             $orgList = $this->db->fetchAll("SELECT id, warehouse_name FROM `" . DB::ORGANIZATIONS . "` WHERE is_active=1");
         } catch (\Throwable $e) {
             $orgList = [];
+            if (function_exists('log_error')) {
+                log_error('invoices form dropdown load failed: ' . $e->getMessage(), 'WARNING', __FILE__, __LINE__, function_exists('backend_runtime_log_context') ? backend_runtime_log_context(['module' => 'invoices', 'module_slug' => 'invoices', 'error_code' => (string)$e->getCode()]) : ['module' => 'invoices', 'module_slug' => 'invoices', 'error_code' => (string)$e->getCode()]);
+            }
         }
         try {
-            $shippersList = $this->db->fetchAll("SELECT id, shipper_name FROM `" . DB::SHIPPERS . "` WHERE is_active=1");
+            $shippersList = $this->db->fetchAll("SELECT id, shipper_name FROM `" . DB::SHIPPERS . "` WHERE is_active=1 AND organization_id = :org_id", ['org_id' => $this->orgId]);
         } catch (\Throwable $e) {
             $shippersList = [];
+            if (function_exists('log_error')) {
+                log_error('invoices form dropdown load failed: ' . $e->getMessage(), 'WARNING', __FILE__, __LINE__, function_exists('backend_runtime_log_context') ? backend_runtime_log_context(['module' => 'invoices', 'module_slug' => 'invoices', 'error_code' => (string)$e->getCode()]) : ['module' => 'invoices', 'module_slug' => 'invoices', 'error_code' => (string)$e->getCode()]);
+            }
         }
         try {
-            $consigneesList = $this->db->fetchAll("SELECT id, consignee_name FROM `" . DB::CONSIGNEES . "` WHERE is_active=1");
+            $consigneesList = $this->db->fetchAll("SELECT id, consignee_name FROM `" . DB::CONSIGNEES . "` WHERE is_active=1 AND organization_id = :org_id", ['org_id' => $this->orgId]);
         } catch (\Throwable $e) {
             $consigneesList = [];
+            if (function_exists('log_error')) {
+                log_error('invoices form dropdown load failed: ' . $e->getMessage(), 'WARNING', __FILE__, __LINE__, function_exists('backend_runtime_log_context') ? backend_runtime_log_context(['module' => 'invoices', 'module_slug' => 'invoices', 'error_code' => (string)$e->getCode()]) : ['module' => 'invoices', 'module_slug' => 'invoices', 'error_code' => (string)$e->getCode()]);
+            }
         }
         try {
-            $itemsList = $this->db->fetchAll("SELECT id, item_name FROM `" . DB::ITEMS . "` WHERE is_active=1 AND item_type='services' ORDER BY item_name");
+            $itemsList = $this->db->fetchAll("SELECT id, item_name FROM `" . DB::ITEMS . "` WHERE is_active=1 AND item_type='services' AND organization_id = :org_id ORDER BY item_name", ['org_id' => $this->orgId]);
         } catch (\Throwable $e) {
             $itemsList = [];
+            if (function_exists('log_error')) {
+                log_error('invoices form dropdown load failed: ' . $e->getMessage(), 'WARNING', __FILE__, __LINE__, function_exists('backend_runtime_log_context') ? backend_runtime_log_context(['module' => 'invoices', 'module_slug' => 'invoices', 'error_code' => (string)$e->getCode()]) : ['module' => 'invoices', 'module_slug' => 'invoices', 'error_code' => (string)$e->getCode()]);
+            }
+        }
+        try {
+            $countriesList = $this->db->fetchAll("SELECT id, country, abbr FROM `" . DB::GEO_COUNTRIES . "` WHERE is_active=1 ORDER BY country");
+        } catch (\Throwable $e) {
+            $countriesList = [];
+            if (function_exists('log_error')) {
+                log_error('invoices form dropdown load failed: ' . $e->getMessage(), 'WARNING', __FILE__, __LINE__, function_exists('backend_runtime_log_context') ? backend_runtime_log_context(['module' => 'invoices', 'module_slug' => 'invoices', 'error_code' => (string)$e->getCode()]) : ['module' => 'invoices', 'module_slug' => 'invoices', 'error_code' => (string)$e->getCode()]);
+            }
+        }
+        try {
+            $paymentTermsList = $this->db->fetchAll("SELECT id, payment_term FROM `" . DB::PAYMENT_TERMS . "` WHERE is_active=1 AND organization_id = :org_id ORDER BY id ASC", ['org_id' => $this->orgId]);
+        } catch (\Throwable $e) {
+            $paymentTermsList = [];
+            if (function_exists('log_error')) {
+                log_error('invoices form dropdown load failed: ' . $e->getMessage(), 'WARNING', __FILE__, __LINE__, function_exists('backend_runtime_log_context') ? backend_runtime_log_context(['module' => 'invoices', 'module_slug' => 'invoices', 'error_code' => (string)$e->getCode()]) : ['module' => 'invoices', 'module_slug' => 'invoices', 'error_code' => (string)$e->getCode()]);
+            }
+        }
+        try {
+            $leadsList = $this->db->fetchAll("SELECT id, display_name FROM `" . DB::LEADS . "` WHERE is_active=1 AND organization_id = :org_id ORDER BY display_name", ['org_id' => $this->orgId]);
+        } catch (\Throwable $e) {
+            $leadsList = [];
+            if (function_exists('log_error')) {
+                log_error('invoices form dropdown load failed: ' . $e->getMessage(), 'WARNING', __FILE__, __LINE__, function_exists('backend_runtime_log_context') ? backend_runtime_log_context(['module' => 'invoices', 'module_slug' => 'invoices', 'error_code' => (string)$e->getCode()]) : ['module' => 'invoices', 'module_slug' => 'invoices', 'error_code' => (string)$e->getCode()]);
+            }
+        }
+        try {
+            $portsList = $this->db->fetchAll("SELECT id, port_name, port_code, country_id FROM `" . DB::PORTS . "` WHERE is_active=1 ORDER BY port_name LIMIT 50");
+            foreach ([$origin, $destination] as $selectedPortId) {
+                if (!is_numeric($selectedPortId) || (int)$selectedPortId <= 0) {
+                    continue;
+                }
+                $found = false;
+                foreach ($portsList as $portRow) {
+                    if ((string)$portRow['id'] === (string)$selectedPortId) {
+                        $found = true;
+                        break;
+                    }
+                }
+                if (!$found) {
+                    $selectedPort = $this->db->fetchOne("SELECT id, port_name, port_code, country_id FROM `" . DB::PORTS . "` WHERE id = :id AND is_active = 1", ['id' => (int)$selectedPortId]);
+                    if ($selectedPort) {
+                        $portsList[] = $selectedPort;
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            $portsList = [];
+            if (function_exists('log_error')) {
+                log_error('invoices form dropdown load failed: ' . $e->getMessage(), 'WARNING', __FILE__, __LINE__, function_exists('backend_runtime_log_context') ? backend_runtime_log_context(['module' => 'invoices', 'module_slug' => 'invoices', 'error_code' => (string)$e->getCode()]) : ['module' => 'invoices', 'module_slug' => 'invoices', 'error_code' => (string)$e->getCode()]);
+            }
         }
 
         return Response::html($this->view->render('invoices/form.php', [
@@ -342,19 +452,25 @@ class InvoiceController extends BaseController
             'expiry_date' => $expiry_date,
             'reference_no' => $reference_no,
             'warehouse_id' => $warehouse_id,
+            'payment_term' => $payment_term,
             'expected_shipment_date' => $expected_shipment_date,
             'shipment_type' => $shipment_type,
             'sales_person' => $sales_person,
             'job_reference_no' => $job_reference_no,
             'master_awb_no' => $master_awb_no,
+            'hwb_hbol' => $hwb_hbol,
+            'lead_id' => $lead_id,
             'shipper' => $shipper,
             'consignee' => $consignee,
             'origin' => $origin,
+            'origin_country' => $origin_country,
             'destination' => $destination,
+            'destination_country' => $destination_country,
             'no_of_packs' => $no_of_packs,
             'gross_weight' => $gross_weight,
             'chargeable_weight' => $chargeable_weight,
             'volume' => $volume,
+            'cbm' => $cbm,
             'terms_and_conditions' => $terms_and_conditions,
             'grand_subtotal' => $grand_subtotal,
             'grand_discount_type' => $grand_discount_type,
@@ -375,11 +491,18 @@ class InvoiceController extends BaseController
             'tax_arr' => $tax_arr,
             'tax_amount_arr' => $tax_amount_arr,
             'total_arr' => $total_arr,
+            'discount_type_arr' => $discount_type_arr,
+            'discount_type_value_arr' => $discount_type_value_arr,
+            'discount_amount_arr' => $discount_amount_arr,
             'customersList' => $customersList,
             'orgList' => $orgList,
             'shippersList' => $shippersList,
             'consigneesList' => $consigneesList,
             'itemsList' => $itemsList,
+            'countriesList' => $countriesList,
+            'paymentTermsList' => $paymentTermsList,
+            'leadsList' => $leadsList,
+            'portsList' => $portsList,
             'canCreate' => $this->canCreate(),
             'canEdit' => $this->canEdit(),
         ]));

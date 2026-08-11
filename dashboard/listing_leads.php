@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Core\DB;
+use App\Core\Session;
 
 include('admin_elements/admin_header.php');
 

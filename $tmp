@@ -1,5 +1,0 @@
-<?php
-$pdo = new PDO('mysql:host=localhost;dbname=flasherpsystem;charset=utf8mb4', 'root', 'hai@30');
-$sql = "ALTER TABLE erp_jobs MODIFY COLUMN commodity_type VARCHAR(255) DEFAULT NULL";
-$stmt = $pdo->exec($sql);
-echo "Altered: " . ($stmt !== false ? 'OK' : 'FAILED');

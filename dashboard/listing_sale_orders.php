@@ -12,6 +12,7 @@ $module_caption = 'Sale Order';
 $tbl_name = DB::SALE_ORDERS;
 $error_message = '';
 $success_message = '';
+$page = (int)($_GET['page'] ?? 1);
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\SMTP;

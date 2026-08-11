@@ -96,40 +96,40 @@ if (isset($_POST['tags'])) {
 */
 if ($action == "update_$module" || $action == "add_$module") {
 
-    $lead_owner                 = e_s__($_POST['lead_owner']);
+    $lead_owner                 = e_s__($_POST['lead_owner'] ?? '');
 
-    $lead_status                = e_s__($_POST['lead_status']);
-    $lead_source                = e_s__($_POST['lead_source']);
-    $assigned_to                = e_s__($_POST['assigned_to']);
+    $lead_status                = e_s__($_POST['lead_status'] ?? '');
+    $lead_source                = e_s__($_POST['lead_source'] ?? '');
+    $assigned_to                = e_s__($_POST['assigned_to'] ?? '');
 
-    $salutation                 = e_s__($_POST['salutation']);
-    $first_name                 = e_s__($_POST['first_name']);
-    $last_name                  = e_s__($_POST['last_name']);
-    // $company_name               = e_s__($_POST['company_name']);
-    $display_name               = e_s__($_POST['display_name']);
-    $address                    = e_s__($_POST['address']);
-    $email                      = e_s__($_POST['email']);
-    $phone                      = e_s__($_POST['phone']);
-    $mobile                     = e_s__($_POST['mobile']);
-    $trn                        = e_s__($_POST['trn']);
-    $contacted_date             = e_s__($_POST['contacted_date']);
-    $description                = e_s__($_POST['description']);
+    $salutation                 = e_s__($_POST['salutation'] ?? '');
+    $first_name                 = e_s__($_POST['first_name'] ?? '');
+    $last_name                  = e_s__($_POST['last_name'] ?? '');
+    // $company_name               = e_s__($_POST['company_name'] ?? '');
+    $display_name               = e_s__($_POST['display_name'] ?? '');
+    $address                    = e_s__($_POST['address'] ?? '');
+    $email                      = e_s__($_POST['email'] ?? '');
+    $phone                      = e_s__($_POST['phone'] ?? '');
+    $mobile                     = e_s__($_POST['mobile'] ?? '');
+    $trn                        = e_s__($_POST['trn'] ?? '');
+    $contacted_date             = e_s__($_POST['contacted_date'] ?? '');
+    $description                = e_s__($_POST['description'] ?? '');
 
-    $street1                    = e_s__($_POST['street1']);
-    $street2                    = e_s__($_POST['street2']);
-    $city                       = e_s__($_POST['city']);
-    $state                      = e_s__($_POST['state']);
-    $pobox                      = e_s__($_POST['pobox']);
-    $country                    = e_s__($_POST['country']);
+    $street1                    = e_s__($_POST['street1'] ?? '');
+    $street2                    = e_s__($_POST['street2'] ?? '');
+    $city                       = e_s__($_POST['city'] ?? '');
+    $state                      = e_s__($_POST['state'] ?? '');
+    $pobox                      = e_s__($_POST['pobox'] ?? '');
+    $country                    = e_s__($_POST['country'] ?? '');
 
-    $service                    = e_s__($_POST['service']);
+    $service                    = e_s__($_POST['service'] ?? '');
 
-    $website                    = e_s__($_POST['website']);
-    $department                 = e_s__($_POST['department']);
-    $designation                = e_s__($_POST['designation']);
-    $x                          = e_s__($_POST['x']);
-    $facebook                   = e_s__($_POST['facebook']);
-    $instagram                  = e_s__($_POST['instagram']);
+    $website                    = e_s__($_POST['website'] ?? '');
+    $department                 = e_s__($_POST['department'] ?? '');
+    $designation                = e_s__($_POST['designation'] ?? '');
+    $x                          = e_s__($_POST['x'] ?? '');
+    $facebook                   = e_s__($_POST['facebook'] ?? '');
+    $instagram                  = e_s__($_POST['instagram'] ?? '');
 } else {
 
     $lead_owner                 = '';
@@ -733,7 +733,7 @@ if (!empty($id)) {
                                             }
 
                                             while ($rows_states = $result_states->fetch_array()) {
-                                                $state_name        = s__($rows_states['state_name']);
+                                                $state_name        = s__($rows_states['state']);
                                                 // -------------------------------------------------------------------------------------------------
                                             ?>
                                                 <option value="<?php echo $rows_states['id']; ?>" <?php if ($action == "edit_$module" && $rows_states['id'] == $state) { ?>selected <?php } else if ($rows_states['id'] == $state) { ?>selected <?php } ?>>

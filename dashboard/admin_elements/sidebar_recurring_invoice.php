@@ -10,7 +10,7 @@ $current_id = (int)($_GET["recurring_invoice_id"] ?? 0);
 <div class="sidebar-content">
     <div class="sidebar-section sidebar-section-body d-flex align-items-center pb-2 border-bottom border-1">
         <div>
-            <select class="form-select border-0 fw-bold" name="recurring_invoices_ordering" id="recurring_invoices_ordering" onchange="window.location.href='recurring_invoice_overview.php?recurring_invoice_id=<?php echo $recurring_invoice_id; ?>&recurring_invoices_ordering='+this.value;">
+            <select class="form-select border-0 fw-bold" name="recurring_invoices_ordering" id="recurring_invoices_ordering" onchange="window.location.href='recurring_invoice_overview.php?recurring_invoice_id=<?php echo $current_id; ?>&recurring_invoices_ordering='+this.value;">
                 <option value="all" <?php if ($recurring_invoices_ordering === "all") echo "selected"; ?>>All</option>
 <?php
 $statusLabels = ['draft' => 'Draft', 'locked' => 'Locked', 'pending' => 'Pending', 'approved' => 'Approved', 'sent' => 'Sent', 'accepted' => 'Accepted', 'declined' => 'Declined', 'expired' => 'Expired', 'void' => 'Void'];
@@ -38,7 +38,7 @@ $total = $c[0] ?? 0;
 while ($row = $r->fetch_array()) {
     $sel = $row["id"] == $current_id ? "table-primary shadow-sm" : "";
     $name = getTableAttr("display_name", DB::CUSTOMERS, $row["customer_id"]);
-    $date = dd_($row["invoice_date"]);
+    $date = ddm_($row["invoice_date"]);
     $amt = number_format($row["grand_total"], 2);
     $st = strtoupper($row["invoice_status"]);
 ?>

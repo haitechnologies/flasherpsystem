@@ -12,6 +12,7 @@ $module_caption = 'Payment Made';
 $tbl_name = DB::PAYMENTS_MADE;
 $error_message = '';
 $success_message = '';
+$page = (int)($_GET['page'] ?? 1);
 
 include('admin_elements/permissions.php');
 
@@ -23,26 +24,47 @@ if (isset($_REQUEST['vendor_id']) && !empty($_REQUEST['vendor_id'])) {
     $vendor_id = '';
 }
 
-if (($action == "delete_payments_made" && !empty($id)) && granted('delete', $module_id)) {
-    if (Session::roleId() == '1') {
-        $result = $mysqli->query("DELETE FROM `$tbl_name` WHERE id=$id");
+if (!empty($action) && $action == "delete_$module") {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !validate_csrf_token($_POST['csrf_token'] ?? '')) {
+        $error_message = 'Invalid security token. Payment could not be deleted.';
+        log_error('Invalid CSRF token on listing_payments_made delete');
+        $action = '';
+    }
+}
 
-        $journal_id = getTableAttrV('id', DB::JOURNALS, " reference_type='payment_made' AND reference_id=$id ");
-        if (!empty($journal_id)) {
-            $mysqli->query("DELETE FROM `" . DB::JOURNAL_ITEMS . "` WHERE journal_id=$journal_id ");
-            $mysqli->query("DELETE FROM `" . DB::JOURNALS . "` WHERE reference_type='payment_made' AND reference_id=$id ");
+if (($action == "delete_$module" && !empty($id)) && granted('delete', $module_id)) {
+    $paymentId = (int)$id;
+    $uid = (int)Session::userId();
+
+    $items_table = DB::PAYMENT_MADE_ITEMS;
+    $journal_items_table = DB::JOURNAL_ITEMS;
+    $journal_table = DB::JOURNALS;
+
+    if (Session::roleId() == '1') {
+        $mysqli->query("DELETE FROM `$items_table` WHERE payment_id=$paymentId");
+        $deleted = 0;
+        $result = $mysqli->query("DELETE FROM `$tbl_name` WHERE id=$paymentId AND organization_id=$activeOrganizationId");
+        $deleted = $mysqli->affected_rows;
+
+        $journal_ids = $mysqli->query("SELECT id FROM `$journal_table` WHERE (reference_type='payment_made' OR reference_type='payment_made_void') AND reference_id=$paymentId");
+        if ($journal_ids && $journal_ids->num_rows > 0) {
+            $mysqli->query("DELETE FROM `$journal_items_table` WHERE journal_id IN (SELECT id FROM `$journal_table` WHERE (reference_type='payment_made' OR reference_type='payment_made_void') AND reference_id=$paymentId)");
+            $mysqli->query("DELETE FROM `$journal_table` WHERE (reference_type='payment_made' OR reference_type='payment_made_void') AND reference_id=$paymentId");
         }
     } else {
-        $result = $mysqli->query("DELETE FROM `$tbl_name` WHERE id=$id AND created_by='" . Session::userId() . "'");
+        $mysqli->query("DELETE FROM `$items_table` WHERE payment_id=$paymentId");
+        $deleted = 0;
+        $result = $mysqli->query("DELETE FROM `$tbl_name` WHERE id=$paymentId AND organization_id=$activeOrganizationId AND created_by='$uid'");
+        $deleted = $mysqli->affected_rows;
 
-        $journal_id = getTableAttrV('id', DB::JOURNALS, " reference_type='payment_made' AND reference_id=$id ");
-        if (!empty($journal_id)) {
-            $mysqli->query("DELETE FROM `" . DB::JOURNAL_ITEMS . "` WHERE journal_id=$journal_id ");
-            $mysqli->query("DELETE FROM `" . DB::JOURNALS . "` WHERE reference_type='payment_made' AND reference_id=$id AND created_by='" . Session::userId() . "' ");
+        $journal_ids = $mysqli->query("SELECT id FROM `$journal_table` WHERE (reference_type='payment_made' OR reference_type='payment_made_void') AND reference_id=$paymentId AND created_by='$uid'");
+        if ($journal_ids && $journal_ids->num_rows > 0) {
+            $mysqli->query("DELETE FROM `$journal_items_table` WHERE journal_id IN (SELECT id FROM `$journal_table` WHERE (reference_type='payment_made' OR reference_type='payment_made_void') AND reference_id=$paymentId AND created_by='$uid')");
+            $mysqli->query("DELETE FROM `$journal_table` WHERE (reference_type='payment_made' OR reference_type='payment_made_void') AND reference_id=$paymentId AND created_by='$uid'");
         }
     }
 
-    if ($result) {
+    if ($deleted > 0) {
         $success_message = "$module_caption Deleted Successfully.";
         flash_success($success_message);
         header("Location:listing_payments_made.php?page=$page");

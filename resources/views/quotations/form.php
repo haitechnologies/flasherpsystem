@@ -31,6 +31,7 @@ global $mysqli;
  * @var string $gross_weight
  * @var string $chargeable_weight
  * @var string $volume
+ * @var string $cbm
  * @var string $terms_and_conditions
  * @var string $grand_subtotal
  * @var string $grand_discount_type
@@ -105,6 +106,12 @@ global $mysqli;
 
             <?php include 'admin_elements/breadcrumb.php'; ?>
 
+            <div class="alert alert-info alert-dismissible fade show" role="alert">
+                <i class="ph-info me-2"></i>
+                <strong>How this works:</strong> Quotations are price estimates sent to customers. They are non-binding and do not affect accounting until converted to a Sale Order or Invoice.
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+
             <form class="steps-basic clearfix" method="post" id="frm<?php echo $module; ?>" name="frm<?php echo $module; ?>" action="<?php echo $module; ?>.php" enctype="multipart/form-data">
                 <?php echo csrf_field(); ?>
                 <input type="hidden" name="quotation_status" id="quotation_status" value="<?php echo $quotation_status; ?>" />
@@ -144,7 +151,7 @@ global $mysqli;
                                                 <option value="0">Please select</option>
                                                 <?php foreach ($leadsList as $row): ?>
                                                     <option value="<?php echo $row['id']; ?>" <?php echo (string)$row['id'] === $lead_id ? 'selected' : ''; ?>>
-                                                        <?php echo htmlspecialchars($row['lead_name']); ?>
+                                                        <?php echo htmlspecialchars($row['display_name']); ?>
                                                     </option>
                                                 <?php endforeach; ?>
                                             </select>
@@ -195,7 +202,7 @@ global $mysqli;
                                                 <option value="0">Please select</option>
                                                 <?php foreach ($paymentTermsList as $row): ?>
                                                     <option value="<?php echo $row['id']; ?>" <?php echo (string)$row['id'] === $payment_term ? 'selected' : ''; ?>>
-                                                        <?php echo htmlspecialchars($row['title'] ?? $row['name'] ?? ''); ?>
+                                                        <?php echo htmlspecialchars($row['payment_term'] ?? $row['title'] ?? $row['name'] ?? ''); ?>
                                                     </option>
                                                 <?php endforeach; ?>
                                             </select>
@@ -242,9 +249,8 @@ global $mysqli;
                                         <label class="col-lg-3 col-form-label"><span class="text-danger">Warehouse:*</span></label>
                                         <div class="col-lg-9">
                                             <select name="warehouse_id" id="warehouse_id" class="form-select">
-                                                <option value="0">Please select</option>
                                                 <?php foreach ($orgList as $row): ?>
-                                                    <option value="<?php echo $row['id']; ?>" <?php echo (string)$row['id'] === $warehouse_id ? 'selected' : ''; ?>>
+                                                    <option value="<?php echo $row['id']; ?>" <?php echo ($warehouse_id !== '0' && (string)$row['id'] === $warehouse_id) || ($warehouse_id === '0' && trim($row['warehouse_name']) === 'Flash Logistics FZCO') ? 'selected' : ''; ?>>
                                                         <?php echo htmlspecialchars($row['warehouse_name']); ?>
                                                     </option>
                                                 <?php endforeach; ?>
@@ -304,7 +310,7 @@ global $mysqli;
                                     <div class="row mb-2">
                                         <label class="col-lg-3 col-form-label">Origin Port:</label>
                                         <div class="col-lg-3">
-                                            <select name="origin" id="origin_port" class="form-select" onchange="ajax_select_port_country('origin', this.value); ajax_select_country_ports('origin');">
+                                            <select name="origin" id="origin_port" class="form-select select2-port-ajax">
                                                 <option value="0">Please select</option>
                                                 <?php foreach ($portsList as $row): ?>
                                                     <option value="<?php echo $row['id']; ?>" <?php echo (string)$row['id'] === $origin ? 'selected' : ''; ?>>
@@ -315,7 +321,7 @@ global $mysqli;
                                         </div>
                                         <label class="col-lg-2 col-form-label text-end">Country:</label>
                                         <div class="col-lg-4">
-                                            <select name="origin_country" id="origin_country" class="form-select" onchange="ajax_select_country_ports('origin');">
+                                            <select name="origin_country" id="origin_country" class="form-select" onchange="onCountryChange('origin_port','origin_country');">
                                                 <option value="0">Please select</option>
                                                 <?php foreach ($countriesList as $row): ?>
                                                     <option value="<?php echo $row['id']; ?>" <?php echo (string)$row['id'] === $origin_country ? 'selected' : ''; ?>>
@@ -329,7 +335,7 @@ global $mysqli;
                                     <div class="row mb-2">
                                         <label class="col-lg-3 col-form-label">Destination Port:</label>
                                         <div class="col-lg-3">
-                                            <select name="destination" id="destination_port" class="form-select" onchange="ajax_select_port_country('destination', this.value); ajax_select_country_ports('destination');">
+                                            <select name="destination" id="destination_port" class="form-select select2-port-ajax">
                                                 <option value="0">Please select</option>
                                                 <?php foreach ($portsList as $row): ?>
                                                     <option value="<?php echo $row['id']; ?>" <?php echo (string)$row['id'] === $destination ? 'selected' : ''; ?>>
@@ -340,7 +346,7 @@ global $mysqli;
                                         </div>
                                         <label class="col-lg-2 col-form-label text-end">Country:</label>
                                         <div class="col-lg-4">
-                                            <select name="destination_country" id="destination_country" class="form-select" onchange="ajax_select_country_ports('destination');">
+                                            <select name="destination_country" id="destination_country" class="form-select" onchange="onCountryChange('destination_port','destination_country');">
                                                 <option value="0">Please select</option>
                                                 <?php foreach ($countriesList as $row): ?>
                                                     <option value="<?php echo $row['id']; ?>" <?php echo (string)$row['id'] === $destination_country ? 'selected' : ''; ?>>
@@ -380,7 +386,7 @@ global $mysqli;
                                         </div>
                                         <label class="col-lg-1 col-form-label text-end">CBM:</label>
                                         <div class="col-lg-5">
-                                            <input readonly type="number" step="any" class="form-control bg-light bg-opacity-75" name="cbm" id="cbm" value="">
+                                            <input readonly type="number" step="any" class="form-control bg-light bg-opacity-75" name="cbm" id="cbm" value="<?php echo $cbm; ?>">
                                         </div>
                                     </div>
 
@@ -439,7 +445,7 @@ global $mysqli;
                                     </div>
 
                                     <div class="col-lg-1">
-                                        <input type="number" step="1" name="rate[]" id="rate<?php echo $itemRow; ?>" min="0" class="form-control text-center" value="<?php echo !empty($rate_arr[$index]) ? $rate_arr[$index] : '0'; ?>">
+                                        <input type="number" step="any" name="rate[]" id="rate<?php echo $itemRow; ?>" min="0" class="form-control text-center" onkeyup="calculateItemAmount('<?php echo $itemRow; ?>');" onchange="calculateItemAmount('<?php echo $itemRow; ?>');" value="<?php echo !empty($rate_arr[$index]) ? $rate_arr[$index] : '0'; ?>">
                                     </div>
 
                                     <div class="col-lg-1">
@@ -580,6 +586,8 @@ global $mysqli;
                 </div>
 
             </form>
+
+            <?php include('admin_elements/copyright.php'); ?>
         </div>
     </div>
 </div>
@@ -959,7 +967,7 @@ global $mysqli;
         new_row += '<div class="col-lg-2"><select class="form-select" name="service[]" id="service' + total_rows + '" onchange="ajax_populate_item_rate(this.value, ' + total_rows + ');"><option value="0">Please select</option></select></div>';
         new_row += '<div class="col-lg-3"><textarea name="description[]" id="description' + total_rows + '" rows="2" class="form-control" placeholder="Add a description to your item"></textarea></div>';
         new_row += '<div class="col-lg-1"><input type="number" step="1" name="qty[]" id="qty' + total_rows + '" min="1" class="form-control text-center" onkeyup="calculateItemAmount(\'' + total_rows + '\');" onchange="calculateItemAmount(\'' + total_rows + '\');" placeholder="1"></div>';
-        new_row += '<div class="col-lg-1"><input type="number" step="1" name="rate[]" id="rate' + total_rows + '" min="0" class="form-control text-center" placeholder="0"></div>';
+        new_row += '<div class="col-lg-1"><input type="number" step="any" name="rate[]" id="rate' + total_rows + '" min="0" class="form-control text-center" onkeyup="calculateItemAmount(\'' + total_rows + '\');" onchange="calculateItemAmount(\'' + total_rows + '\');" placeholder="0"></div>';
         new_row += '<div class="col-lg-1"><input readonly type="number" name="sub_total[]" id="sub_total' + total_rows + '" min="0" class="form-control bg-light bg-opacity-75 text-end" value="0"></div>';
         new_row += '<div class="col-lg-1"><select name="tax[]" id="tax' + total_rows + '" class="form-select" onchange="calculateItemAmount(' + total_rows + ', this.value);">';
         for (var t = 0; t <= 100; t++) { new_row += '<option value="' + t + '">' + t + '%</option>'; }
@@ -983,6 +991,7 @@ global $mysqli;
         document.getElementById('tax_amount' + row_no).value = '';
         document.getElementById('total' + row_no).value = '';
         document.getElementById('row_' + row_no).style.display = 'none';
+        calculateGrand();
     }
 
     function calculateGrand() {
@@ -1042,24 +1051,64 @@ global $mysqli;
         document.getElementById('grand_after_discount').value = '';
     }
 
-    $(document).ready(function() {
-        $('#quotation_date').datepicker({
-            dateFormat: 'yy-mm-dd',
-            changeMonth: true,
-            changeYear: true
-        });
-        $('#expiry_date').datepicker({
-            dateFormat: 'yy-mm-dd',
-            changeMonth: true,
-            changeYear: true
-        });
-        $('#expected_shipment_date').datepicker({
-            dateFormat: 'yy-mm-dd',
-            changeMonth: true,
-            changeYear: true
+    function onCountryChange(portSelectId, countrySelectId) {
+        const $port = $('#' + portSelectId);
+        if ($port.length && $port.hasClass('select2-hidden-accessible')) {
+            $port.val('').trigger('change');
+        }
+    }
+
+    function initPortSelect2(portSelectId, countrySelectId) {
+        const $port = $('#' + portSelectId);
+        const $country = $('#' + countrySelectId);
+        if (!$port.length || typeof $port.select2 !== 'function') {
+            return;
+        }
+        $port.select2({
+            placeholder: 'Please select a port',
+            minimumInputLength: 0,
+            ajax: {
+                url: 'internal_request.php',
+                dataType: 'json',
+                delay: 250,
+                data: function (params) {
+                    const countryId = $country.length ? ($country.val() || '0') : '0';
+                    return {
+                        ajax_action: 'select2_ports',
+                        q: params.term || '',
+                        country_id: countryId
+                    };
+                },
+                processResults: function (data) {
+                    return { results: data.results || [] };
+                }
+            }
         });
 
+        const portKey = portSelectId.replace('_port', '');
+        $port.on('select2:select', function () {
+            ajax_select_port_country(portKey, $port.val());
+        });
+        $port.on('select2:unselect', function () {
+            const $countrySel = $('#' + portKey + '_country');
+            if ($countrySel.length) {
+                $countrySel.prop('disabled', false)
+                    .removeClass('bg-light')
+                    .css('pointerEvents', '')
+                    .val('0');
+                const hidden = document.getElementById(portKey + '_country_hidden');
+                if (hidden) {
+                    hidden.remove();
+                }
+            }
+        });
+    }
+
+    $(document).ready(function() {
         document.addEventListener('DOMContentLoaded', toggleQuotationPartySelectors);
+
+        initPortSelect2('origin_port', 'origin_country');
+        initPortSelect2('destination_port', 'destination_country');
 
         $(document).on('click', '.submit-form', function(e) {
             e.preventDefault();

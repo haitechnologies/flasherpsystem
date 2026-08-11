@@ -1,12 +1,13 @@
 <?php
 
 use App\Core\DB;
+use App\Core\Session;
 use App\Service\JournalService;
 include('admin_elements/admin_header.php');
 
-$module = 'invoices';
+$module = 'recurring_invoices';
 $module_caption = 'Recurring Invoice';
-$tbl_name = $tbl_prefix . $module;
+$tbl_name = DB::INVOICES;
 $error_message = '';
 $success_message = '';
 
@@ -28,14 +29,24 @@ include('admin_elements/permissions.php');
 $invoice_id = '';
 if (isset($_REQUEST['invoice_id']))        $invoice_id     = e_s__($_REQUEST['invoice_id']);
 if (isset($_POST['invoice_id']))           $invoice_id     = e_s__($_POST['invoice_id']);
+if (empty($invoice_id) && isset($_REQUEST['recurring_invoice_id'])) $invoice_id = e_s__($_REQUEST['recurring_invoice_id']);
 if (empty($invoice_id) && isset($_REQUEST['id'])) $invoice_id = e_s__($_REQUEST['id']);
 
 // CHECK IF EXISTS
-$rs_valid     = $mysqli->query("SELECT id FROM `" . tbl_invoices . "` WHERE id='" . $invoice_id . "' AND recurring=1");
+$rs_valid     = $mysqli->query("SELECT id FROM `" . DB::INVOICES . "` WHERE id='" . $invoice_id . "' AND recurring=1");
 if ($rs_valid->num_rows == 0) {
     flash_error('Invalid Recurring Invoice in the database.');
     header("Location:listing_recurring_invoices.php");
     exit;
+}
+
+// CSRF GATE (state-change actions must be POST + valid token)
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && !empty($action)) {
+    if (!validate_csrf_token($_POST['csrf_token'] ?? '')) {
+        flash_error('Invalid CSRF token.');
+        header("Location:recurring_invoice_overview.php?invoice_id=$invoice_id");
+        exit;
+    }
 }
 
 /*
@@ -60,6 +71,84 @@ if (($action == "update_$module" && !empty($invoice_id) && isset($recurring_stat
         exit;
     } else {
         $error_message = "Sorry! $module Status Could Not Be Updated.";
+    }
+}
+
+/*
+|--------------------------------------------------------------------------
+| CLONE RECURRING INVOICE PROFILE
+|--------------------------------------------------------------------------
+|
+*/
+if ($action == "clone_recurring_invoices" && !empty($invoice_id)) {
+    $src = $mysqli->query("SELECT * FROM `" . DB::INVOICES . "` WHERE id=$invoice_id AND recurring=1");
+    if ($src && $src->num_rows > 0) {
+        $src_row = $src->fetch_array();
+
+        $ym = date('ym');
+        $last_no = $mysqli->query("SELECT invoice_no FROM `" . DB::INVOICES . "` WHERE invoice_no LIKE 'FL-IN" . $ym . "%' ORDER BY id DESC LIMIT 1");
+        $serial = 1;
+        if ($last_no && $last_no->num_rows > 0) {
+            $last = $last_no->fetch_array()['invoice_no'];
+            $serial = ((int)substr($last, -4)) + 1;
+        }
+        $new_invoice_no = 'FL-IN' . $ym . '-' . str_pad((string)$serial, 4, '0', STR_PAD_LEFT);
+
+        $cols = "organization_id, recurring, invoice_no, customer_id, invoice_status, invoice_date, expiry_date,
+                 reference_no, warehouse_id, expected_shipment_date, payment_term, shipment_type, sales_person,
+                 job_reference_no, master_awb_no, shipper, consignee, origin, destination, no_of_packs,
+                 gross_weight, chargeable_weight, volume, customer_notes, terms_and_conditions, grand_subtotal,
+                 grand_discount_type, grand_discount_type_value, grand_discount_amount, grand_after_discount,
+                 grand_tax, grand_total, profile_name, frequency, start_date, end_date, publish, is_active,
+                 created_by, created_at";
+
+        $vals = [
+            (int)$src_row['organization_id'], 1, "'" . $new_invoice_no . "'", (int)$src_row['customer_id'],
+            "'draft'", "'" . $src_row['invoice_date'] . "'",
+            $src_row['expiry_date'] !== null ? "'" . $src_row['expiry_date'] . "'" : 'NULL',
+            $src_row['reference_no'] !== null ? "'" . $src_row['reference_no'] . "'" : 'NULL',
+            $src_row['warehouse_id'] !== null ? (int)$src_row['warehouse_id'] : 'NULL',
+            $src_row['expected_shipment_date'] !== null ? "'" . $src_row['expected_shipment_date'] . "'" : 'NULL',
+            (int)$src_row['payment_term'], $src_row['shipment_type'] !== null ? "'" . $src_row['shipment_type'] . "'" : 'NULL',
+            $src_row['sales_person'] !== null ? (int)$src_row['sales_person'] : 'NULL',
+            $src_row['job_reference_no'] !== null ? "'" . $src_row['job_reference_no'] . "'" : 'NULL',
+            $src_row['master_awb_no'] !== null ? "'" . $src_row['master_awb_no'] . "'" : 'NULL',
+            $src_row['shipper'] !== null ? "'" . $src_row['shipper'] . "'" : 'NULL',
+            $src_row['consignee'] !== null ? "'" . $src_row['consignee'] . "'" : 'NULL',
+            $src_row['origin'] !== null ? "'" . $src_row['origin'] . "'" : 'NULL',
+            $src_row['destination'] !== null ? "'" . $src_row['destination'] . "'" : 'NULL',
+            (int)$src_row['no_of_packs'], (float)$src_row['gross_weight'], (float)$src_row['chargeable_weight'],
+            (float)$src_row['volume'],
+            $src_row['customer_notes'] !== null ? "'" . $src_row['customer_notes'] . "'" : 'NULL',
+            $src_row['terms_and_conditions'] !== null ? "'" . $src_row['terms_and_conditions'] . "'" : 'NULL',
+            (float)$src_row['grand_subtotal'], "'" . $src_row['grand_discount_type'] . "'",
+            (float)$src_row['grand_discount_type_value'], (float)$src_row['grand_discount_amount'],
+            (float)$src_row['grand_after_discount'], (float)$src_row['grand_tax'], (float)$src_row['grand_total'],
+            "'" . $src_row['profile_name'] . "'", "'" . $src_row['frequency'] . "'",
+            "'" . $src_row['start_date'] . "'", "'" . $src_row['end_date'] . "'",
+            (int)$src_row['publish'], 1, (int)Session::userId(), "'" . date('Y-m-d H:i:s') . "'",
+        ];
+
+        $mysqli->query("INSERT INTO `" . DB::INVOICES . "` ($cols) VALUES (" . implode(', ', $vals) . ")");
+        $new_id = $mysqli->insert_id;
+
+        if ($new_id > 0) {
+            $items = $mysqli->query("SELECT service, description, qty, rate, sub_total, tax, tax_amount, total FROM `" . DB::INVOICE_ITEMS . "` WHERE invoice_id=$invoice_id");
+            if ($items) {
+                while ($item = $items->fetch_array()) {
+                    $mysqli->query("INSERT INTO `" . DB::INVOICE_ITEMS . "`
+                        (organization_id, invoice_id, service, description, qty, rate, sub_total, tax, tax_amount, total, created_at)
+                        VALUES (" . (int)$src_row['organization_id'] . ", $new_id, " .
+                        (int)$item['service'] . ", '" . $item['description'] . "', " . (float)$item['qty'] . ", " .
+                        (float)$item['rate'] . ", " . (float)$item['sub_total'] . ", " . (float)$item['tax'] . ", " .
+                        (float)$item['tax_amount'] . ", " . (float)$item['total'] . ", '" . date('Y-m-d H:i:s') . "')");
+                }
+            }
+            flash_success("Recurring Invoice Profile cloned successfully as $new_invoice_no.");
+            header("Location:recurring_invoice_overview.php?recurring_invoice_id=$new_id");
+            exit;
+        }
+        $error_message = "Sorry! Recurring Invoice Profile could not be cloned.";
     }
 }
 
@@ -90,7 +179,7 @@ if (!empty($invoice_id)) {
     
     $reference_no           = s__($row['reference_no']);
     $expected_shipment_date = s__($row['expected_shipment_date']);
-    $payment_term           = getTableAttr('payment_term', tbl_customers, $customer_id);
+    $payment_term           = getTableAttr('payment_term', DB::CUSTOMERS, $customer_id);
     
     $shipment_type          = s__($row['shipment_type']);
     $sales_person           = s__($row['sales_person']);
@@ -131,7 +220,7 @@ if (!empty($invoice_id)) {
     $publish                    = s__($row['is_active']);
     
     // --- Customer Information
-    $rs = $mysqli->query("SELECT * FROM `" . tbl_customers . "` WHERE id=$customer_id");
+    $rs = $mysqli->query("SELECT * FROM `" . DB::CUSTOMERS . "` WHERE id=$customer_id");
     $row_customer = $rs->fetch_array();
     $salutation             = isset($row_customer['salutation']) ? s__($row_customer['salutation']) : '';
     $first_name             = isset($row_customer['first_name']) ? s__($row_customer['first_name']) : '';
@@ -142,7 +231,7 @@ if (!empty($invoice_id)) {
     $mobile                 = isset($row_customer['mobile']) ? s__($row_customer['mobile']) : '';
     $trn                    = isset($row_customer['trn']) ? s__($row_customer['trn']) : '';
     
-    $display_name           = getTableAttr('display_name', tbl_customers, $customer_id);
+    $display_name           = getTableAttr('display_name', DB::CUSTOMERS, $customer_id);
     
     // --- Warehouse/From Address Information
     $warehouse_name         = '';
@@ -152,7 +241,7 @@ if (!empty($invoice_id)) {
     $warehouse_trn          = '';
     
     if (!empty($warehouse_id)) {
-        $rs_warehouse = $mysqli->query("SELECT * FROM `" . tbl_warehouses . "` WHERE id=$warehouse_id");
+        $rs_warehouse = $mysqli->query("SELECT * FROM `" . DB::WAREHOUSES . "` WHERE id=$warehouse_id");
         if ($rs_warehouse && $rs_warehouse->num_rows > 0) {
             $row_warehouse = $rs_warehouse->fetch_array();
             $warehouse_name     = isset($row_warehouse['warehouse_name']) ? s__($row_warehouse['warehouse_name']) : '';
@@ -183,18 +272,18 @@ if (!empty($invoice_id)) {
         $billing_city           = isset($row_addr['city']) ? s__($row_addr['city']) : '';
         $billing_state          = isset($row_addr['state']) ? s__($row_addr['state']) : '';
         $billing_zipcode        = isset($row_addr['zipcode']) ? s__($row_addr['zipcode']) : '';
-        $billing_country        = isset($row_addr['country']) ? getTableAttr('country_name', tbl_geo_countries, $row_addr['country']) : '';
+        $billing_country        = isset($row_addr['country']) ? getTableAttr('country_name', DB::GEO_COUNTRIES, $row_addr['country']) : '';
         $billing_phone          = isset($row_addr['phone']) ? s__($row_addr['phone']) : '';
         $billing_fax            = isset($row_addr['fax']) ? s__($row_addr['fax']) : '';
     }
     
     // Process dates like invoice_overview.php
-    $invoice_date         = processDateYtoD($invoice_date);
-    $expiry_date            = ($expiry_date == '1970-01-01') ? '' : processDateDtoY($expiry_date);
-    $expected_shipment_date = ($expected_shipment_date == '1970-01-01') ? '' : processDateDtoY($expected_shipment_date);
+    $invoice_date         = ddm_($invoice_date);
+            $expiry_date            = ($expiry_date == '1970-01-01' || empty($expiry_date)) ? '' : ddm_($expiry_date);
+            $expected_shipment_date = ($expected_shipment_date == '1970-01-01' || empty($expected_shipment_date)) ? '' : ddm_($expected_shipment_date);
     
     // --- Invoice Items
-    $result_invoice_items = $mysqli->query("SELECT * FROM `" . tbl_invoice_items . "` WHERE invoice_id=$invoice_id");
+    $result_invoice_items = $mysqli->query("SELECT * FROM `" . DB::INVOICE_ITEMS . "` WHERE invoice_id=$invoice_id");
     
     $invoice_item_id_arr    = array();
     $service_arr            = array();
@@ -280,11 +369,11 @@ if (!empty($invoice_id)) {
                                     </div>
                                     <div class="col-md-3">
                                         <label class="text-muted small mb-1">Start Date</label>
-                                        <div class="fw-semibold"><?php echo processDateYtoD($start_date); ?></div>
+                                        <div class="fw-semibold"><?php echo ddm_($start_date); ?></div>
                                     </div>
                                     <div class="col-md-3">
                                         <label class="text-muted small mb-1">End Date</label>
-                                        <div class="fw-semibold"><?php echo !empty($end_date) ? processDateYtoD($end_date) : '<span class="badge bg-warning">Ongoing</span>'; ?></div>
+                                        <div class="fw-semibold"><?php echo !empty($end_date) ? ddm_($end_date) : '<span class="badge bg-warning">Ongoing</span>'; ?></div>
                                     </div>
                                 </div>
                                 
@@ -327,7 +416,7 @@ if (!empty($invoice_id)) {
                                         <?php
                                         $warehouse_information = '';
                                         $warehouse_information .= (!empty($warehouse_name) ? $warehouse_name . '<br />' : '');
-                                        $warehouse_information .= (!empty($warehouse_country) ? getTableAttr('country_name', tbl_geo_countries, $warehouse_country) . '<br />' : '');
+                                        $warehouse_information .= (!empty($warehouse_country) ? getTableAttr('country_name', DB::GEO_COUNTRIES, $warehouse_country) . '<br />' : '');
                                         $warehouse_information .= (!empty($warehouse_phone) ? $warehouse_phone . '<br />' : '');
                                         $warehouse_information .= (!empty($warehouse_email) ? $warehouse_email . '<br />' : '');
                                         $warehouse_information .= (!empty($warehouse_trn) ? $warehouse_trn : '');
@@ -338,8 +427,8 @@ if (!empty($invoice_id)) {
                                         <ul class="list list-unstyled mb-0">
                                             <li>Template Invoice No: <span class="fw-semibold"><?php echo $invoice_no; ?></span></li>
                                             <li>Frequency: <span class="fw-semibold"><?php echo ucfirst($frequency); ?></span></li>
-                                            <li>Start Date: <span class="fw-semibold"><?php echo processDateYtoD($start_date); ?></span></li>
-                                            <li>End Date: <span class="fw-semibold"><?php echo (!empty($end_date) ? processDateYtoD($end_date) : '<span class="badge bg-warning">Ongoing</span>'); ?></span></li>
+                                            <li>Start Date: <span class="fw-semibold"><?php echo ddm_($start_date); ?></span></li>
+                                            <li>End Date: <span class="fw-semibold"><?php echo (!empty($end_date) ? ddm_($end_date) : '<span class="badge bg-warning">Ongoing</span>'); ?></span></li>
                                         </ul>
                                     </div>
                                 </div>
@@ -369,13 +458,13 @@ if (!empty($invoice_id)) {
                                     <div class="row">
                                         <label class="col-lg-5 col-form-label">Shipper:</label>
                                         <div class="col-lg-7 mt-2">
-                                            <?php echo getTableAttr('shipper_name', tbl_shippers, $shipper); ?>
+                                            <?php echo getTableAttr('shipper_name', DB::SHIPPERS, $shipper); ?>
                                         </div>
                                     </div>
                                     <div class="row">
                                         <label class="col-lg-5 col-form-label">Origin:</label>
                                         <div class="col-lg-7 mt-2">
-                                            <?php echo getTableAttr('alpha3_code', tbl_geo_countries, $origin); ?> - <?php echo getTableAttr('country_name', tbl_geo_countries, $origin); ?>
+                                            <?php echo getTableAttr('alpha3_code', DB::GEO_COUNTRIES, $origin); ?> - <?php echo getTableAttr('country_name', DB::GEO_COUNTRIES, $origin); ?>
                                         </div>
                                     </div>
                                     <div class="row">
@@ -396,13 +485,13 @@ if (!empty($invoice_id)) {
                                     <div class="row">
                                         <label class="col-lg-5 col-form-label">Payment Terms:</label>
                                         <div class="col-lg-7 mt-2">
-                                            <?php echo !empty($payment_term) ? getTableAttr('payment_term', tbl_payment_terms, $payment_term) : '-'; ?>
+                                            <?php echo !empty($payment_term) ? getTableAttr('payment_term', DB::PAYMENT_TERMS, $payment_term) : '-'; ?>
                                         </div>
                                     </div>
                                     <div class="row">
                                         <label class="col-lg-5 col-form-label">Sales Person:</label>
                                         <div class="col-lg-7 mt-2">
-                                            <?php echo getTableAttr('warehouse_name', tbl_warehouses, $sales_person); ?>
+                                            <?php echo getTableAttr('warehouse_name', DB::WAREHOUSES, $sales_person); ?>
                                         </div>
                                     </div>
                                     <div class="row">
@@ -414,13 +503,13 @@ if (!empty($invoice_id)) {
                                     <div class="row">
                                         <label class="col-lg-5 col-form-label">Consignee:</label>
                                         <div class="col-lg-7 mt-2">
-                                            <?php echo getTableAttr('consignee_name', tbl_consignees, $consignee); ?>
+                                            <?php echo getTableAttr('consignee_name', DB::CONSIGNEES, $consignee); ?>
                                         </div>
                                     </div>
                                     <div class="row">
                                         <label class="col-lg-5 col-form-label">Destination:</label>
                                         <div class="col-lg-7 mt-2">
-                                            <?php echo getTableAttr('alpha3_code', tbl_geo_countries, $destination); ?> - <?php echo getTableAttr('country_name', tbl_geo_countries, $destination); ?>
+                                            <?php echo getTableAttr('alpha3_code', DB::GEO_COUNTRIES, $destination); ?> - <?php echo getTableAttr('country_name', DB::GEO_COUNTRIES, $destination); ?>
                                         </div>
                                     </div>
                                     <div class="row">
@@ -469,7 +558,7 @@ if (!empty($invoice_id)) {
                                         ?>
                                             <tr>
                                                 <td>
-                                                    <div class="fw-bold"><?php echo getTableAttr('item_name', tbl_items, $service_arr[$index]); ?></div>
+                                                    <div class="fw-bold"><?php echo getTableAttr('item_name', DB::ITEMS, $service_arr[$index]); ?></div>
                                                     <span class="text-muted text-truncate">
                                                         <?php
                                                         if (!empty($description_arr[$index])) {
@@ -489,10 +578,10 @@ if (!empty($invoice_id)) {
                                                 </td>
                                                 <td><?php echo $description_arr[$index]; ?></td>
                                                 <td class="text-center"><?php echo $qty_arr[$index]; ?></td>
-                                                <td class="text-end"><?php echo number_format($rate_arr[$index], 2); ?></td>
-                                                <td class="text-end"><?php echo number_format($sub_total_arr[$index], 2); ?></td>
-                                                <td class="text-end"><?php echo $tax_arr[$index]; ?>% (<?php echo number_format($tax_amount_arr[$index], 2); ?>)</td>
-                                                <td class="text-end"><span class="fw-semibold"><?php echo number_format($total_arr[$index], 2); ?></span></td>
+                                                <td class="text-end"><?php echo number_format((float)($rate_arr[$index] ?? 0), 2); ?></td>
+                                                <td class="text-end"><?php echo number_format((float)($sub_total_arr[$index] ?? 0), 2); ?></td>
+                                                <td class="text-end"><?php echo $tax_arr[$index] ?? 0; ?>% (<?php echo number_format((float)($tax_amount_arr[$index] ?? 0), 2); ?>)</td>
+                                                <td class="text-end"><span class="fw-semibold"><?php echo number_format((float)($total_arr[$index] ?? 0), 2); ?></span></td>
                                             </tr>
                                         <?php
                                         }

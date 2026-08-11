@@ -2,6 +2,9 @@
 
 
 use App\Core\DB;
+use App\Core\Database;
+use App\Repository\EmailProviderRepository;
+use App\Service\EmailProviderService;
 use App\Service\SMTPMailer;
 include('admin_elements/admin_header.php');
 
@@ -76,6 +79,8 @@ $modules_config = [
     'purchases'         => ['caption' => 'Purchase',         'prefix' => 'purchase',       'type' => 'vendor'],
     'quotations'        => ['caption' => 'Quotation',        'prefix' => 'quotation',      'type' => 'customer'],
     'debit_notes'       => ['caption' => 'Debit Note',       'prefix' => 'debit_note',     'type' => 'vendor'],
+    'payments_received' => ['caption' => 'Payment Received', 'prefix' => 'payment',        'type' => 'customer'],
+    'recurring_invoices' => ['caption' => 'Recurring Invoice', 'prefix' => 'invoice',       'type' => 'customer'],
 ];
 
 // 2. Resolve Current Module Attributes
@@ -100,6 +105,18 @@ $contact_id = getTableAttr($contact_id_col, $tbl_name, $id);
 // 3. Retrieve Name and Email from the Target Table
 $display_name = getTableAttr('display_name', $contact_table, $contact_id);
 $send_to      = getTableAttr('email', $contact_table, $contact_id);
+
+// Lead fallback: lead-only quotations have customer_id = 0
+if ($type === 'customer' && (empty($contact_id) || $contact_id == '0')) {
+    $lead_id = getTableAttr('lead_id', $tbl_name, $id);
+    if (!empty($lead_id)) {
+        $rs_lead = $mysqli->query("SELECT display_name, email FROM `" . DB::LEADS . "` WHERE id=$lead_id LIMIT 1");
+        if ($rs_lead && ($row_lead = $rs_lead->fetch_array())) {
+            $display_name = s__($row_lead['display_name']);
+            $send_to      = s__($row_lead['email']);
+        }
+    }
+}
 
 // 4. Enhanced Subject Line (Optional: include the name for better context)
 $subject = "$module_caption $doc_no is awaiting your approval";
@@ -133,8 +150,8 @@ if ($action == "send_email") {
 
     $from           = e_s__($_POST['from']);
     $send_to        = e_s__($_POST['send_to']);
-    $cc             = e_s__($_POST['cc']);
-    $bcc            = e_s__($_POST['bcc']);
+    $cc             = e_s__($_POST['cc'] ?? '');
+    $bcc            = e_s__($_POST['bcc'] ?? '');
     $subject        = e_s__($_POST['subject']);
     $description    = e_s__($_POST['description']);
 } else {
@@ -164,6 +181,17 @@ if ($action == 'send_email' && !empty($id)) {
     $display_name           = getTableAttr('display_name', DB::CUSTOMERS, $customer_id);
     // $email                  = getTableAttr('email', DB::CUSTOMERS, $customer_id);
     // $send_to                = $email;
+
+    // Lead fallback: lead-only quotations have customer_id = 0
+    if ((empty($customer_id) || $customer_id == '0') && !empty($row['lead_id'])) {
+        $rs_lead = $mysqli->query("SELECT display_name, email FROM `" . DB::LEADS . "` WHERE id=" . (int)$row['lead_id'] . " LIMIT 1");
+        if ($rs_lead && ($row_lead = $rs_lead->fetch_array())) {
+            $display_name = s__($row_lead['display_name']);
+            if (empty($send_to)) {
+                $send_to = s__($row_lead['email']);
+            }
+        }
+    }
 
     $doc_no                 = s__($row[$pfx . '_no'] ?? $id);
     $doc_date               = s__($row[$pfx . '_date'] ?? '');
@@ -198,20 +226,64 @@ if ($action == 'send_email' && !empty($id)) {
 
 
     // Resolve SMTP credentials strictly from selected email_providers account.
-    $epm = new EmailProviderService();
+    $epm = new EmailProviderService(new EmailProviderRepository(new Database()));
     $provider = $epm->getByEmail($from);
 
     if (!$provider) {
         $error_message .= '<br /> Selected sender account is not active or not found in Email Providers.';
     } else {
-        $smtp_host = trim((string)($provider['smtp_host'] ?? ''));
-        $smtp_username = trim((string)($provider['smtp_username'] ?? $provider['email'] ?? ''));
-        $smtp_password = (string)($provider['smtp_password_decrypted'] ?? $provider['smtp_password'] ?? '');
-        $smtp_port = (int)($provider['smtp_port'] ?? 0);
-        $smtp_encryption = strtolower(trim((string)($provider['email_encryption'] ?? 'tls')));
-        $from = trim((string)($provider['email'] ?? $from));
-        $sender_name = trim((string)($provider['provider_name'] ?? 'Accounts Team'));
+        $provider_id = (int)$provider->id;
+        $from = trim((string)$provider->email);
+        $sender_name = trim((string)$provider->providerName);
     }
+
+    // Ensure the document PDF is saved to disk so it can be attached.
+    // Each module has its own PDF generator page (singular filename) and id
+    // parameter, resolved centrally via App\Helper\PdfHelper.
+    $attachments = [];
+    $pdf_link = '';
+    $pdf_page = \App\Helper\PdfHelper::pageFor($current_module);
+    $pdf_id_param = \App\Helper\PdfHelper::idParamFor($current_module);
+
+    if ($pdf_page !== '' && is_file(dirname(__DIR__) . '/dashboard/' . $pdf_page)) {
+        $pdf_token = hash('sha512', 'bushogai' . $id);
+        $pdf_link = rtrim($admin_base_url, '/') . '/' . $pdf_page . '?' . $pdf_id_param . '=' . $id . '&token=' . $pdf_token;
+
+        $pdf_path = \App\Helper\PdfHelper::storageDirFor($current_module) . '/' . \App\Helper\PdfHelper::filenameWithExt((int)$id);
+
+        if (!is_file($pdf_path) && isset($container)) {
+            $cookieName = strtoupper(PROJECT_PREFIX) . '_DASHBOARD_SESSID';
+            $ch = curl_init($pdf_link . '&mode=save');
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_FOLLOWLOCATION => false,
+                CURLOPT_HEADER => true,
+                CURLOPT_TIMEOUT => 30,
+                CURLOPT_HTTPHEADER => [
+                    'Cookie: ' . $cookieName . '=' . session_id(),
+                ],
+            ]);
+            if (!empty($_SERVER['HTTP_USER_AGENT'])) {
+                curl_setopt($ch, CURLOPT_USERAGENT, $_SERVER['HTTP_USER_AGENT']);
+            }
+            curl_exec($ch);
+            curl_close($ch);
+        }
+
+        if (is_file($pdf_path)) {
+            $attachments[] = [
+                'path' => $pdf_path,
+                'name' => $module_caption . '_' . $doc_no . '.pdf',
+                'mime' => 'application/pdf',
+            ];
+        }
+    }
+
+    $email_body = str_replace(
+        'VIEW ' . strtoupper($module_caption),
+        '<a href="' . htmlspecialchars($pdf_link, ENT_QUOTES, 'UTF-8') . '">VIEW ' . strtoupper($module_caption) . '</a>',
+        $email_body
+    );
 
 
 
@@ -219,12 +291,13 @@ if ($action == 'send_email' && !empty($id)) {
     if (!empty($provider) && empty($error_message)) {
         $mailer = new SMTPMailer();
         $headers = [
-            'provider_id' => (int)($provider['id'] ?? 0),
+            'provider_id' => $provider_id,
             'from' => $from,
             'from_name' => $sender_name,
             'Reply-To' => $from,
             'CC' => $cc,
             'BCC' => $bcc,
+            'attachments' => $attachments,
         ];
 
         $sendSuccess = $mailer->send(

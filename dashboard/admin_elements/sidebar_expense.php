@@ -10,10 +10,16 @@ $current_id = (int)($_GET["expense_id"] ?? 0);
 <div class="sidebar-content">
     <div class="sidebar-section sidebar-section-body d-flex align-items-center pb-2 border-bottom border-1">
         <div>
-            <select class="form-select border-0 fw-bold" name="expenses_ordering" id="expenses_ordering" onchange="window.location.href='expense_overview.php?expense_id=<?php echo $expense_id; ?>&expenses_ordering='+this.value;">
+            <select class="form-select border-0 fw-bold" name="expenses_ordering" id="expenses_ordering" onchange="window.location.href='expense_overview.php?expense_id=<?php echo $current_id; ?>&expenses_ordering='+this.value;">
                 <option value="all" <?php if ($expenses_ordering === "all") echo "selected"; ?>>All</option>
 <?php
-$statusLabels = ['draft' => 'Draft', 'submitted' => 'Submitted', 'approved' => 'Approved', 'rejected' => 'Rejected', 'paid' => 'Paid'];
+$statusLabels = [
+    'draft' => 'Draft', 'submitted' => 'Submitted', 'approved' => 'Approved',
+    'rejected' => 'Rejected', 'paid' => 'Paid', 'unbilled' => 'Unbilled',
+    'invoiced' => 'Invoiced', 'reimbursed' => 'Reimbursed', 'billable' => 'Billable',
+    'non_billable' => 'Non-Billable', 'with_receipts' => 'With Receipts',
+    'without_receipts' => 'Without Receipts',
+];
 foreach ($statusLabels as $val => $lbl) {
     $sel = $expenses_ordering === $val ? "selected" : "";
     echo "<option value=\"{$val}\" {$sel}>{$lbl}</option>";
@@ -31,16 +37,31 @@ foreach ($statusLabels as $val => $lbl) {
         <div class="table-responsive">
             <table class="table table-hover"><tbody>
 <?php
-$where = $expenses_ordering !== "all" ? " AND t.expense_status = '" . $expenses_ordering . "'" : "";
+$status_map = [
+    'unbilled' => "t.expense_status = 'unbilled'",
+    'invoiced' => "t.expense_status = 'invoiced'",
+    'reimbursed' => "t.expense_status = 'reimbursed'",
+    'billable' => "t.billable = '1'",
+    'non_billable' => "t.billable = '0'",
+    'with_receipts' => "EXISTS (SELECT 1 FROM `" . tbl_expense_attachments . "` ea WHERE ea.expense_id = t.id)",
+    'without_receipts' => "NOT EXISTS (SELECT 1 FROM `" . tbl_expense_attachments . "` ea WHERE ea.expense_id = t.id)",
+];
+if ($expenses_ordering !== 'all' && isset($status_map[$expenses_ordering])) {
+    $where = " AND " . $status_map[$expenses_ordering];
+} elseif ($expenses_ordering !== 'all') {
+    $where = " AND t.expense_status = '" . e_s__($expenses_ordering) . "'";
+} else {
+    $where = '';
+}
 $r = $mysqli->query("SELECT t.id, t.expense_status, t.expense_date, t.grand_total, t.customer_id FROM `" . DB::EXPENSES . "` t WHERE t.id > 0 AND t.customer_id != '' $where ORDER BY t.id DESC LIMIT 25");
 $c = $mysqli->query("SELECT COUNT(*) FROM `" . DB::EXPENSES . "` t WHERE t.id > 0 AND t.customer_id != '' $where")->fetch_row();
 $total = $c[0] ?? 0;
 while ($row = $r->fetch_array()) {
     $sel = $row["id"] == $current_id ? "table-primary shadow-sm" : "";
     $name = getTableAttr("display_name", DB::CUSTOMERS, $row["customer_id"]);
-    $date = dd_($row["expense_date"]);
+    $date = ddm_($row["expense_date"]);
     $amt = number_format($row["grand_total"], 2);
-    $st = strtoupper($row["expense_status"]);
+    $st = strtoupper((string)($row["expense_status"] ?? ''));
 ?>
     <tr id="<?php echo $row["id"]; ?>" class="<?php echo $sel; ?>">
         <td><a href="expense_overview.php?expense_id=<?php echo $row["id"]; ?>" class="text-black text-decoration-none d-block">

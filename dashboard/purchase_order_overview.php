@@ -1,5 +1,7 @@
 <?php
 
+use App\Core\DB;
+use App\Core\Session;
 include('admin_elements/admin_header.php');
 
 $module = 'purchase_orders';
@@ -16,6 +18,7 @@ $success_message = '';
 */
 include('admin_elements/permissions.php');
 
+$activeOrganizationId = dashboardRequireActiveOrganization();
 
 /*
 |--------------------------------------------------------------------------
@@ -31,7 +34,7 @@ if (empty($purchase_order_id) && isset($_REQUEST['id'])) $purchase_order_id = e_
 
 // ------------------ CHECK IF EXISTS ----------------
 //VERIFY IF IS VALID 
-$rs_valid     = $mysqli->query("SELECT id FROM `" . tbl_purchase_orders . "` WHERE id='" . $purchase_order_id . "'");
+$rs_valid     = $mysqli->query("SELECT id FROM `" . tbl_purchase_orders . "` WHERE id='" . $purchase_order_id . "' AND organization_id='" . (int)$activeOrganizationId . "'");
 if ($rs_valid->num_rows == 0) {
     flash_error('Invalid Record in the database.');
     header("Location:listing_purchase_orders.php");
@@ -80,6 +83,16 @@ if (isset($_REQUEST['purchase_order_item_id']) && !empty($_REQUEST['purchase_ord
 
 if (($action == "convert_$module" && !empty($purchase_order_id))) {
 
+    // Guard against double conversion: a PO already converted to a purchase
+    // must not be converted again (would create orphan duplicate purchases).
+    $rs_po_status = $mysqli->query("SELECT purchase_order_status, purchase_id FROM `" . tbl_purchase_orders . "` WHERE id='" . (int)$purchase_order_id . "' AND organization_id='" . (int)$activeOrganizationId . "'");
+    $po_status_row = $rs_po_status ? $rs_po_status->fetch_assoc() : null;
+    if ($po_status_row && ($po_status_row['purchase_order_status'] === 'purchased' || !empty($po_status_row['purchase_id']))) {
+        flash_error('This Purchase Order has already been converted to a Purchase.');
+        header("Location:purchase_order_overview.php?purchase_order_id=" . (int)$purchase_order_id);
+        exit;
+    }
+
     // ======================================================
     // PURCHASE NO Auto Generation System
     // ======================================================
@@ -105,20 +118,20 @@ if (($action == "convert_$module" && !empty($purchase_order_id))) {
 
 
     // -- purchase
-    $result = $mysqli->query("INSERT INTO `" . tbl_purchases . "` (vendor_id, warehouse_id, subject, reference_no, purchase_date, expiry_date, grand_subtotal, grand_discount_type, grand_discount_type_value, grand_discount_amount, grand_after_discount, grand_tax, grand_total, vendor_notes, terms_and_conditions, purchase_status, is_active, created_at, updated_at)
-     SELECT vendor_id, warehouse_id, subject, reference_no, NOW(), NOW(), grand_subtotal, grand_discount_type, grand_discount_type_value, grand_discount_amount, grand_after_discount, grand_tax, grand_total, vendor_notes, terms_and_conditions, 'draft', is_active, NOW(), NOW() FROM `" . tbl_purchase_orders . "` WHERE id = $purchase_order_id;");
+    $result = $mysqli->query("INSERT INTO `" . DB::PURCHASES . "` (vendor_id, warehouse_id, subject, reference_no, purchase_date, expiry_date, grand_subtotal, grand_discount_type, grand_discount_type_value, grand_discount_amount, grand_after_discount, grand_tax, grand_total, vendor_notes, terms_and_conditions, purchase_status, is_active, organization_id, created_at, updated_at)
+     SELECT vendor_id, warehouse_id, subject, reference_no, NOW(), NOW(), grand_subtotal, grand_discount_type, grand_discount_type_value, grand_discount_amount, grand_after_discount, grand_tax, grand_total, vendor_notes, terms_and_conditions, 'draft', is_active, organization_id, NOW(), NOW() FROM `" . DB::PURCHASE_ORDERS . "` WHERE id = $purchase_order_id;");
 
     $new_purchase_id = $mysqli->insert_id;
     fp__($tbl_name, $new_purchase_id);
 
     // Update purchase no
-    $mysqli->query("UPDATE `" . tbl_purchases . "` SET purchase_no = '" . $purchase_no . "', purchase_order_id = $purchase_order_id WHERE id=$new_purchase_id");
+    $mysqli->query("UPDATE `" . DB::PURCHASES . "` SET purchase_no = '" . $purchase_no . "', purchase_order_id = $purchase_order_id WHERE id=$new_purchase_id");
 
     // -- purchase Items
-    $result = $mysqli->query("INSERT INTO `" . tbl_purchase_items . "` ( purchase_id, service, description, qty, rate, discount_type, discount_type_value, discount_amount, tax, tax_amount, sub_total, total, created_at, updated_at, created_by) 
-    SELECT $new_purchase_id, service, description, qty, rate, discount_type, discount_type_value, discount_amount, tax, tax_amount, sub_total, total, NOW(), NOW(), '" . Session::userId() . "' FROM `" . tbl_purchase_order_items . "` WHERE purchase_order_id = $purchase_order_id");
+    $result = $mysqli->query("INSERT INTO `" . DB::PURCHASE_ITEMS . "` ( purchase_id, service, description, qty, rate, discount_type, discount_type_value, discount_amount, tax, tax_amount, sub_total, total, created_at, updated_at, created_by) 
+    SELECT $new_purchase_id, service, description, qty, rate, discount_type, discount_type_value, discount_amount, tax, tax_amount, sub_total, total, NOW(), NOW(), '" . Session::userId() . "' FROM `" . DB::PURCHASE_ORDER_ITEMS . "` WHERE purchase_order_id = $purchase_order_id");
 
-    fp__(tbl_purchase_items, $mysqli->insert_id);
+    fp__(DB::PURCHASE_ITEMS, $mysqli->insert_id);
 
 
     $success_message = 'This Purchase Order has been Converted to Purchase Successfully. Please click here to view. <a href="purchase_overview.php?purchase_id=' . $new_purchase_id . '"> ' . $purchase_no . '</a>';
@@ -161,8 +174,8 @@ if (($action == "convert_$module" && !empty($purchase_order_id))) {
 
 
     // -- Purchase order
-    $result = $mysqli->query("INSERT INTO `" . tbl_purchase_orders . "` (vendor_id, warehouse_id, purchase_order_no, subject, reference_no, purchase_order_date, expiry_date, grand_subtotal, grand_discount_type, grand_discount_type_value, grand_discount_amount, grand_after_discount, grand_tax, grand_total, vendor_notes, terms_and_conditions, purchase_order_status, is_active, created_at, updated_at)
-    SELECT vendor_id, warehouse_id, '" . $purchase_order_no . "', subject, reference_no, NOW(), NOW(), grand_subtotal, grand_discount_type, grand_discount_type_value, grand_discount_amount, grand_after_discount, grand_tax, grand_total, vendor_notes, terms_and_conditions, 'draft', is_active, NOW(), NOW() FROM `" . tbl_purchase_orders . "` WHERE id = $purchase_order_id;");
+    $result = $mysqli->query("INSERT INTO `" . tbl_purchase_orders . "` (vendor_id, warehouse_id, purchase_order_no, subject, reference_no, purchase_order_date, expiry_date, grand_subtotal, grand_discount_type, grand_discount_type_value, grand_discount_amount, grand_after_discount, grand_tax, grand_total, vendor_notes, terms_and_conditions, purchase_order_status, is_active, organization_id, created_at, updated_at)
+    SELECT vendor_id, warehouse_id, '" . $purchase_order_no . "', subject, reference_no, NOW(), NOW(), grand_subtotal, grand_discount_type, grand_discount_type_value, grand_discount_amount, grand_after_discount, grand_tax, grand_total, vendor_notes, terms_and_conditions, 'draft', is_active, organization_id, NOW(), NOW() FROM `" . tbl_purchase_orders . "` WHERE id = $purchase_order_id;");
 
     $new_cloned_id = $mysqli->insert_id;
     fp__($tbl_name, $new_cloned_id);
@@ -208,7 +221,9 @@ if (($action == "convert_$module" && !empty($purchase_order_id))) {
 
             // Delete PDF - Next Time System will Generate New with Confirmed Status 
             $pdf        = getTableAttr('pdf', tbl_purchase_orders, $purchase_order_id);
-            unlink("../pdfs_purchase_orders/" . $pdf . ".pdf");
+            if (!empty($pdf) && is_file("../pdfs_purchase_orders/" . $pdf . ".pdf")) {
+                unlink("../pdfs_purchase_orders/" . $pdf . ".pdf");
+            }
             $mysqli->query("UPDATE " . tbl_purchase_orders . "  SET pdf = '' WHERE id=$purchase_order_id");
         } else if ($purchase_order_status == 'confirmed') {
 
@@ -323,7 +338,7 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
                 */
             if (!empty($purchase_order_id)) {
 
-                $result = $mysqli->query("SELECT * FROM `$tbl_name` WHERE id=$purchase_order_id");
+                $result = $mysqli->query("SELECT * FROM `$tbl_name` WHERE id=$purchase_order_id AND organization_id=" . (int)$activeOrganizationId);
                 $row = $result->fetch_array();
 
                 $vendor_id                  = s__($row['vendor_id']);
@@ -380,7 +395,7 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
                 $trn                    = s__($row_vendor['trn']);
 
                 // Vendor Billing Address 
-                $rs_billing     = $mysqli->query("SELECT * FROM `" . tbl_vendor_addresses . "` WHERE vendor_id=$vendor_id AND type='billing' ");
+                $rs_billing     = $mysqli->query("SELECT * FROM `" . DB::VENDOR_ADDRESSES . "` WHERE addressable_type='Vendor' AND addressable_id=$vendor_id AND type='billing' ");
                 $row_billing    = $rs_billing->fetch_array();
 
                 $billing_attention      = (!empty($row_billing['attention']) ? s__($row_billing['attention']) : '');
@@ -394,8 +409,8 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
                 $billing_fax            = (!empty($row_billing['fax']) ? s__($row_billing['fax']) : '');
 
 
-                $purchase_order_date    = processDateYtoD($purchase_order_date);
-                $expiry_date            = ($expiry_date == '1970-01-01') ? '' : processDateDtoY($expiry_date);
+                $purchase_order_date    = ddm_($purchase_order_date);
+                $expiry_date            = ($expiry_date == '1970-01-01' || empty($expiry_date)) ? '' : ddm_($expiry_date);
 
 
                 // ------------------ TOTAL PURCHASE ORDER ITEMS ------------------
@@ -473,9 +488,9 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
                                                 $purchase_no             = s__($row_purchases['purchase_no']);
 
                                                 $purchase_date           = s__($row_purchases['purchase_date']);
-                                                $purchase_date           = processDateYtoD($purchase_date);
+                                                $purchase_date           = ddm_($purchase_date);
                                                 $expiry_date            = s__($row_purchases['expiry_date']);
-                                                $expiry_date            = processDateYtoD($expiry_date);
+                                                $expiry_date            = ddm_($expiry_date);
 
                                                 $purchase_status         = s__($row_purchases['purchase_status']);
                                                 $grand_total            = s__($row_purchases['grand_total']);

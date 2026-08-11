@@ -1,5 +1,7 @@
 <?php
 
+use App\Core\DB;
+use App\Core\Session;
 use App\Service\JournalService;
 include('admin_elements/admin_header.php');
 
@@ -17,6 +19,8 @@ $success_message = '';
 */
 include('admin_elements/permissions.php');
 
+$activeOrganizationId = dashboardRequireActiveOrganization();
+
 
 /*
 |--------------------------------------------------------------------------
@@ -33,7 +37,7 @@ if (empty($debit_note_id) && isset($_REQUEST['id'])) $debit_note_id = e_s__($_RE
 
 // ------------------ CHECK IF EXISTS ----------------
 //VERIFY IF IS VALID 
-$rs_valid     = $mysqli->query("SELECT id FROM `" . tbl_debit_notes . "` WHERE id='" . $debit_note_id . "'");
+$rs_valid     = $mysqli->query("SELECT id FROM `" . tbl_debit_notes . "` WHERE id='" . $debit_note_id . "' AND organization_id = " . (int)$activeOrganizationId);
 if ($rs_valid->num_rows == 0) {
     flash_error('Invalid Record in the database.');
     header("Location:listing_debit_notes.php");
@@ -89,8 +93,8 @@ if (($action == "clone_$module" && !empty($debit_note_id))) {
 
 
     // -- Debit Note
-    $result = $mysqli->query("INSERT INTO `" . tbl_debit_notes . "` (vendor_id, warehouse_id, debit_note_no, reference_no, purchase_id, debit_note_date, grand_subtotal, grand_discount_type, grand_discount_type_value, grand_discount_amount, grand_after_discount, grand_tax, grand_total, vendor_notes, terms_and_conditions, debit_note_status, is_active, created_at, updated_at)
-    SELECT vendor_id, warehouse_id, '" . $debit_note_no . "', reference_no, purchase_id, NOW(), grand_subtotal, grand_discount_type, grand_discount_type_value, grand_discount_amount, grand_after_discount, grand_tax, grand_total, vendor_notes, terms_and_conditions, 'draft', is_active, NOW(), NOW() FROM `" . tbl_debit_notes . "` WHERE id = $debit_note_id;");
+    $result = $mysqli->query("INSERT INTO `" . tbl_debit_notes . "` (vendor_id, warehouse_id, debit_note_no, reference_no, purchase_id, debit_note_date, grand_subtotal, grand_discount_type, grand_discount_type_value, grand_discount_amount, grand_after_discount, grand_tax, grand_total, vendor_notes, terms_and_conditions, debit_note_status, is_active, organization_id, created_at, updated_at)
+    SELECT vendor_id, warehouse_id, '" . $debit_note_no . "', reference_no, purchase_id, NOW(), grand_subtotal, grand_discount_type, grand_discount_type_value, grand_discount_amount, grand_after_discount, grand_tax, grand_total, vendor_notes, terms_and_conditions, 'draft', is_active, organization_id, NOW(), NOW() FROM `" . tbl_debit_notes . "` WHERE id = $debit_note_id;");
 
     $new_cloned_id = $mysqli->insert_id;
     fp__($tbl_name, $new_cloned_id);
@@ -120,7 +124,7 @@ if (($action == "clone_$module" && !empty($debit_note_id))) {
 */
 } else if (($action == "update_$module" && !empty($debit_note_id) && !empty($debit_note_status))) {
 
-    $result = $mysqli->query("UPDATE `$tbl_name` SET debit_note_status = '" . $debit_note_status . "' WHERE id=$debit_note_id");
+    $result = $mysqli->query("UPDATE `$tbl_name` SET debit_note_status = '" . $debit_note_status . "' WHERE id=$debit_note_id AND organization_id = " . (int)$activeOrganizationId);
 
     if ($result) {
         $success_message = "The $module_caption status has been updated successfully.";
@@ -140,9 +144,6 @@ if (($action == "clone_$module" && !empty($debit_note_id))) {
                 if ($void_check && $void_check->num_rows > 0) {
                     $success_message .= " Note: Void journal entry already exists.";
                 } else {
-                    // Initialize Journal Manager
-                    $journal = new JournalService();
-                    
                     // Get debit note data
                     $debit_note_no = getTableAttr('debit_note_no', tbl_debit_notes, $debit_note_id);
                     $grand_subtotal = getTableAttr('grand_subtotal', tbl_debit_notes, $debit_note_id);
@@ -166,52 +167,56 @@ if (($action == "clone_$module" && !empty($debit_note_id))) {
                                 // Original debit becomes credit
                                 $reversing_entries[] = array(
                                     'account' => $item['account'],
-                                    'amount'  => $item['debit'],
-                                    'type'    => 'credit'
+                                    'debit'   => 0.0,
+                                    'credit'  => (float)$item['debit']
                                 );
                             }
                             if ($item['credit'] > 0) {
                                 // Original credit becomes debit
                                 $reversing_entries[] = array(
                                     'account' => $item['account'],
-                                    'amount'  => $item['credit'],
-                                    'type'    => 'debit'
+                                    'debit'   => (float)$item['credit'],
+                                    'credit'  => 0.0
                                 );
                             }
                         }
                         
                         if (count($reversing_entries) > 0) {
                             // Create reversing journal entry
-                            $void_journal_result = $journal->createJournalEntry(
+                            $journal = \App\Core\Container::getInstance()->get(JournalService::class);
+                            $journal->createJournal(
                                 array(
-                                    'reference_type'   => 'debit_note_void',
-                                    'reference_id'     => $debit_note_id,
-                                    'reference_no'     => $debit_note_no . ' (VOID)',
                                     'journal_date'     => date('Y-m-d'),
-                                    'description'      => 'VOID - Reversal of Debit Note #' . $debit_note_no,
+                                    'journal_status'   => 'posted',
+                                    'reference_no'     => $debit_note_no . ' (VOID)',
+                                    'notes'            => 'VOID - Reversal of Debit Note #' . $debit_note_no,
+                                    'reference_type'   => 'debit_note_void',
+                                    'reference_id'     => (int)$debit_note_id,
                                     'currency'         => 'AED',
-                                    'grand_subtotal'   => -$grand_subtotal,
-                                    'grand_total'      => -$grand_total,
-                                    'reporting_method' => 'accrual'
+                                    'reporting_method' => 'accrual',
+                                    'warehouse_id'     => 0
                                 ),
-                                $reversing_entries
+                                $reversing_entries,
+                                (int)$activeOrganizationId,
+                                (int)Session::userId()
                             );
-                            
-                            if ($void_journal_result['success']) {
-                                error_log("Void journal entry created: ID {$void_journal_result['journal_id']} for Debit Note {$debit_note_id}");
-                                $success_message .= " Reversing journal entry created successfully.";
-                            } else {
-                                error_log("Failed to create void journal for Debit Note {$debit_note_id}: " . $void_journal_result['message']);
-                                $success_message .= " Warning: " . $void_journal_result['message'];
-                            }
+                            $success_message .= " Reversing journal entry created successfully.";
                         }
                     } else {
-                        error_log("No original journal found to reverse for Debit Note {$debit_note_id}");
+                        log_error("No original journal found to reverse for Debit Note {$debit_note_id}", 'WARNING', __FILE__, __LINE__, backend_runtime_log_context([
+                            'module' => $module,
+                            'module_slug' => $module,
+                            'debit_note_id' => $debit_note_id,
+                        ]));
                         $success_message .= " Note: No journal entry found to reverse.";
                     }
                 }
-            } catch (Exception $e) {
-                error_log("Void journal creation exception for Debit Note {$debit_note_id}: " . $e->getMessage());
+            } catch (\Throwable $e) {
+                log_error("Void journal creation exception for Debit Note {$debit_note_id}: " . $e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
+                    'module' => $module,
+                    'module_slug' => $module,
+                    'debit_note_id' => $debit_note_id,
+                ]));
                 $success_message .= " Note: Reversing journal entry not created (" . $e->getMessage() . ")";
             }
         }
@@ -231,9 +236,6 @@ if (($action == "clone_$module" && !empty($debit_note_id))) {
                 if ($journal_check && $journal_check->num_rows > 0) {
                     $success_message .= " Note: Journal entry already exists.";
                 } else {
-                    // Initialize Journal Manager
-                    $journal = new JournalService();
-                    
                     // Get debit note data
                     $debit_note_no = getTableAttr('debit_note_no', tbl_debit_notes, $debit_note_id);
                     $vendor_id = getTableAttr('vendor_id', tbl_debit_notes, $debit_note_id);
@@ -242,68 +244,74 @@ if (($action == "clone_$module" && !empty($debit_note_id))) {
                     $grand_total = getTableAttr('grand_total', tbl_debit_notes, $debit_note_id);
                     
                     // Get account mappings from config
-                    
+
                     // Accounts for Debit Note
                     // DR: Accounts Payable (decrease what we owe vendor)
                     // CR: Purchase Returns/COGS (decrease expense/returns inventory value)
-                    
-                    $ap_account = DEBIT_NOTE_AP;
-                    $purchase_returns_account = DEBIT_NOTE_PURCHASE_RETURNS;
-                    
-                    // Verify accounts exist
-                    $ap_exists = $mysqli->query("SELECT account_code FROM `" . tbl_accounts . "` WHERE account_code = '{$ap_account}' LIMIT 1");
-                    $returns_exists = $mysqli->query("SELECT account_code FROM `" . tbl_accounts . "` WHERE account_code = '{$purchase_returns_account}' LIMIT 1");
-                    
-                    if ($ap_exists && $ap_exists->num_rows > 0 && $returns_exists && $returns_exists->num_rows > 0) {
-                        
+
+                    $ap_account = defined('DEBIT_NOTE_AP') ? DEBIT_NOTE_AP : '2100';
+                    $purchase_returns_account = defined('DEBIT_NOTE_PURCHASE_RETURNS') ? DEBIT_NOTE_PURCHASE_RETURNS : '5100';
+
+                    // Verify accounts exist (resolve to real account ids)
+                    $ap_row = $mysqli->query("SELECT id FROM `" . DB::ACCOUNTS . "` WHERE account_code IN ('2100','2110','2000') OR account_name LIKE '%Payable%' LIMIT 1");
+                    $ap_account_id = ($ap_row && $ap_row->num_rows > 0) ? (int)$ap_row->fetch_assoc()['id'] : (int)$ap_account;
+                    $returns_row = $mysqli->query("SELECT id FROM `" . DB::ACCOUNTS . "` WHERE account_code = '{$purchase_returns_account}' OR account_name LIKE '%Returns%' OR account_name LIKE '%Purchase%' LIMIT 1");
+                    $returns_account_id = ($returns_row && $returns_row->num_rows > 0) ? (int)$returns_row->fetch_assoc()['id'] : (int)$purchase_returns_account;
+
+                    if ($ap_account_id > 0 && $returns_account_id > 0) {
+
                         // Build journal entries
                         $journal_entries = array(
                             array(
-                                'account' => $ap_account,
-                                'amount'  => $grand_total,
-                                'type'    => 'debit'
+                                'account' => $ap_account_id,
+                                'debit'   => (float)$grand_total,
+                                'credit'  => 0.0
                             ),
                             array(
-                                'account' => $purchase_returns_account,
-                                'amount'  => $grand_total,
-                                'type'    => 'credit'
+                                'account' => $returns_account_id,
+                                'debit'   => 0.0,
+                                'credit'  => (float)$grand_total
                             )
                         );
-                        
+
                         // Create journal entry
-                        $journal_result = $journal->createJournalEntry(
+                        $journal = \App\Core\Container::getInstance()->get(JournalService::class);
+                        $journal->createJournal(
                             array(
-                                'reference_type'   => 'debit_note',
-                                'reference_id'     => $debit_note_id,
-                                'reference_no'     => $debit_note_no,
                                 'journal_date'     => date('Y-m-d'),
-                                'description'      => 'Debit Note #' . $debit_note_no . ' - Vendor ID: ' . $vendor_id,
+                                'journal_status'   => 'posted',
+                                'reference_no'     => $debit_note_no,
+                                'notes'            => 'Debit Note #' . $debit_note_no . ' - Vendor ID: ' . $vendor_id,
+                                'reference_type'   => 'debit_note',
+                                'reference_id'     => (int)$debit_note_id,
                                 'currency'         => 'AED',
-                                'grand_subtotal'   => $grand_subtotal,
-                                'grand_total'      => $grand_total,
-                                'reporting_method' => 'accrual'
+                                'reporting_method' => 'accrual',
+                                'warehouse_id'     => 0
                             ),
-                            $journal_entries
+                            $journal_entries,
+                            (int)$activeOrganizationId,
+                            (int)Session::userId()
                         );
-                        
-                        if ($journal_result['success']) {
-                            error_log("Debit Note journal entry created: ID {$journal_result['journal_id']} for Debit Note {$debit_note_id}");
-                            $success_message .= " Journal entry created successfully.";
-                        } else {
-                            error_log("Failed to create journal for Debit Note {$debit_note_id}: " . $journal_result['message']);
-                            $success_message .= " Warning: " . $journal_result['message'];
-                        }
+                        $success_message .= " Journal entry created successfully.";
                     } else {
                         $missing = array();
-                        if (!$ap_exists || $ap_exists->num_rows == 0) $missing[] = "AP ({$ap_account})";
-                        if (!$returns_exists || $returns_exists->num_rows == 0) $missing[] = "Purchase Returns ({$purchase_returns_account})";
+                        if ($ap_account_id <= 0) $missing[] = "AP ({$ap_account})";
+                        if ($returns_account_id <= 0) $missing[] = "Purchase Returns ({$purchase_returns_account})";
                         $error_msg = "Missing accounts: " . implode(', ', $missing);
-                        error_log("Debit Note {$debit_note_id}: {$error_msg}");
+                        log_error("Debit Note {$debit_note_id}: {$error_msg}", 'WARNING', __FILE__, __LINE__, backend_runtime_log_context([
+                            'module' => $module,
+                            'module_slug' => $module,
+                            'debit_note_id' => $debit_note_id,
+                        ]));
                         $success_message .= " Warning: {$error_msg}";
                     }
                 }
-            } catch (Exception $e) {
-                error_log("Journal creation exception for Debit Note {$debit_note_id}: " . $e->getMessage());
+            } catch (\Throwable $e) {
+                log_error("Journal creation exception for Debit Note {$debit_note_id}: " . $e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
+                    'module' => $module,
+                    'module_slug' => $module,
+                    'debit_note_id' => $debit_note_id,
+                ]));
                 $success_message .= " Note: Journal entry not created (" . $e->getMessage() . ")";
             }
         }
@@ -314,7 +322,9 @@ if (($action == "clone_$module" && !empty($debit_note_id))) {
 
             // Delete PDF - Next Time System will Generate New with Confirmed Status 
             $pdf        = getTableAttr('pdf', tbl_debit_notes, $debit_note_id);
-            unlink("../pdfs_debit_notes/" . $pdf . ".pdf");
+            if (!empty($pdf) && is_file("../pdfs_debit_notes/" . $pdf . ".pdf")) {
+                unlink("../pdfs_debit_notes/" . $pdf . ".pdf");
+            }
             $mysqli->query("UPDATE " . tbl_debit_notes . "  SET pdf = '' WHERE id=$debit_note_id");
         } else if ($debit_note_status == 'confirmed') {
 
@@ -430,7 +440,7 @@ $qty_arr = $rate_arr = $sub_total_arr = $tax_arr = $tax_amount_arr = $total_arr 
                 */
             if (!empty($debit_note_id)) {
 
-                $result = $mysqli->query("SELECT * FROM `$tbl_name` WHERE id=$debit_note_id");
+                $result = $mysqli->query("SELECT * FROM `$tbl_name` WHERE id=$debit_note_id AND organization_id = " . (int)$activeOrganizationId);
                 $row = $result->fetch_array();
 
                 $vendor_id              = s__($row['vendor_id']);
@@ -482,7 +492,7 @@ $qty_arr = $rate_arr = $sub_total_arr = $tax_arr = $tax_amount_arr = $total_arr 
                 $trn                    = s__($row_vendor['trn']);
 
                 // Vendor Billing Address 
-                $rs_billing     = $mysqli->query("SELECT * FROM `" . tbl_vendor_addresses . "` WHERE vendor_id=$vendor_id AND type='billing' ");
+                $rs_billing     = $mysqli->query("SELECT * FROM `" . DB::VENDOR_ADDRESSES . "` WHERE addressable_type='Vendor' AND addressable_id=$vendor_id AND type='billing' ");
                 $row_billing    = $rs_billing->fetch_array();
 
                 $billing_attention      = (!empty($row_billing['attention']) ? s__($row_billing['attention']) : '');
@@ -496,7 +506,7 @@ $qty_arr = $rate_arr = $sub_total_arr = $tax_arr = $tax_amount_arr = $total_arr 
                 $billing_fax            = (!empty($row_billing['fax']) ? s__($row_billing['fax']) : '');
 
 
-                $debit_note_date         = processDateYtoD($debit_note_date);
+                $debit_note_date         = ddm_($debit_note_date);
 
 
                 // Initialize all arrays to avoid the "null given" error
@@ -644,13 +654,13 @@ $qty_arr = $rate_arr = $sub_total_arr = $tax_arr = $tax_amount_arr = $total_arr 
 
                                         <tr>
                                             <td>
-                                                <div class="fw-bold"><?php echo getTableAttr('item_name', tbl_items, $service_arr[$index]); ?></div>
+                                                <div class="fw-bold"><?php echo getTableAttr('item_name', tbl_items, $service_arr[$index] ?? 0); ?></div>
                                                 <span class="text-muted">
                                                     <?php
                                                     // ----------------------------------------------
                                                     // Seprate Line Number on base of Space new line
                                                     // ----------------------------------------------
-                                                    $desc = explode("\r", $description_arr[$index]);
+                                                    $desc = explode("\r", (string)($description_arr[$index] ?? ''));
                                                     // print_r($desc);
                                                     $d_counter = 1;
                                                     if (count($desc) > 0) {

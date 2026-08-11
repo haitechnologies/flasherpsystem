@@ -13,10 +13,13 @@ $tbl_name = DB::QUOTATIONS;
 $module_id = getModuleIdBySlug($module, $mysqli);
 $error_message = '';
 $success_message = '';
+$page = (int)($_GET['page'] ?? 1);
 
 include('admin_elements/permissions.php');
 
 $activeOrganizationId = dashboardRequireActiveOrganization();
+
+$lead_id = (int)($_REQUEST['lead_id'] ?? 0);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action == "delete_$module" && !empty($id) && granted('delete', $module_id)) {
     if (!validate_csrf_token($_POST['csrf_token'] ?? '')) {
@@ -67,6 +70,11 @@ $listingConfig = [
     'page_length' => 25,
     'table_classes' => 'custom_datatables datatable-professional display responsive no-wrap table-hover',
     'search_placeholder' => 'Search quotations...',
+    'dt_options' => [
+        'ajax' => [
+            'data' => ['lead_id' => $lead_id],
+        ],
+    ],
 ];
 
 include('admin_elements/listing_template.php');

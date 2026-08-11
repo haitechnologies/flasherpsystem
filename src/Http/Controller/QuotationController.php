@@ -62,6 +62,7 @@ class QuotationController extends BaseController
         try {
             $this->quotationService->updateQuotation($id, $quotationData, $itemsData, $this->orgId, $this->userId);
 
+            updateCustomerLogs((int)($quotationData['customer_id'] ?? 0), 'quotation', 'edit', $id);
             if ($request->get('save_and_send') == 1) {
                 return Response::redirect("send_email.php?current_module=quotations&id=$id");
             }
@@ -90,6 +91,7 @@ class QuotationController extends BaseController
             $newQuotation = $this->quotationService->createQuotation($quotationData, $itemsData, $this->orgId, $this->userId);
             $id = $newQuotation->id;
 
+            updateCustomerLogs((int)($quotationData['customer_id'] ?? 0), 'quotation', 'add', $id);
             if ($request->get('save_and_send') == 1) {
                 return Response::redirect("send_email.php?current_module=quotations&id=$id");
             }
@@ -134,6 +136,7 @@ class QuotationController extends BaseController
             'gross_weight' => $request->getString('gross_weight'),
             'chargeable_weight' => $request->getString('chargeable_weight'),
             'volume' => $request->getString('volume'),
+            'cbm' => $request->getString('cbm'),
             'terms_and_conditions' => $request->getString('terms_and_conditions'),
             'grand_subtotal' => $request->getString('grand_subtotal'),
             'grand_discount_type' => $request->getString('grand_discount_type'),
@@ -189,7 +192,7 @@ class QuotationController extends BaseController
 
         // Default values
         $customer_id = '0';
-        $lead_id = '0';
+        $lead_id = (string)$request->getInt('lead_id');
         $quotation_no = '';
         $quotation_status = 'draft';
         $quotation_date = date('Y-m-d');
@@ -212,6 +215,7 @@ class QuotationController extends BaseController
         $gross_weight = '0';
         $chargeable_weight = '0';
         $volume = '0';
+        $cbm = '0';
         $terms_and_conditions = '';
         $grand_subtotal = '0.00';
         $grand_discount_type = '';
@@ -273,6 +277,7 @@ class QuotationController extends BaseController
                     $gross_weight = (string)$quotation->grossWeight;
                     $chargeable_weight = (string)$quotation->chargeableWeight;
                     $volume = (string)$quotation->volume;
+                    $cbm = (string)$quotation->volume;
                     $customer_notes = (string)$quotation->customerNotes;
                     $terms_and_conditions = (string)$quotation->termsAndConditions;
                     $grand_subtotal = (string)$quotation->grandSubtotal;
@@ -363,51 +368,99 @@ class QuotationController extends BaseController
             $customersList = $this->db->fetchAll("SELECT id, display_name FROM `" . DB::CUSTOMERS . "` WHERE is_active=1 AND approved=1 ORDER BY id DESC");
         } catch (\Throwable $e) {
             $customersList = [];
+            if (function_exists('log_error')) {
+                log_error('quotations form dropdown load failed: ' . $e->getMessage(), 'WARNING', __FILE__, __LINE__, function_exists('backend_runtime_log_context') ? backend_runtime_log_context(['module' => 'quotations', 'module_slug' => 'quotations', 'error_code' => (string)$e->getCode()]) : ['module' => 'quotations', 'module_slug' => 'quotations', 'error_code' => (string)$e->getCode()]);
+            }
         }
         try {
-            $leadsList = $this->db->fetchAll("SELECT id, lead_name FROM `" . DB::LEADS . "` WHERE is_active=1 ORDER BY lead_name");
+            $leadsList = $this->db->fetchAll("SELECT id, display_name FROM `" . DB::LEADS . "` WHERE is_active=1 ORDER BY display_name");
         } catch (\Throwable $e) {
             $leadsList = [];
+            if (function_exists('log_error')) {
+                log_error('quotations form dropdown load failed: ' . $e->getMessage(), 'WARNING', __FILE__, __LINE__, function_exists('backend_runtime_log_context') ? backend_runtime_log_context(['module' => 'quotations', 'module_slug' => 'quotations', 'error_code' => (string)$e->getCode()]) : ['module' => 'quotations', 'module_slug' => 'quotations', 'error_code' => (string)$e->getCode()]);
+            }
         }
         try {
             $orgList = $this->db->fetchAll("SELECT id, warehouse_name FROM `" . DB::ORGANIZATIONS . "` WHERE is_active=1");
         } catch (\Throwable $e) {
             $orgList = [];
+            if (function_exists('log_error')) {
+                log_error('quotations form dropdown load failed: ' . $e->getMessage(), 'WARNING', __FILE__, __LINE__, function_exists('backend_runtime_log_context') ? backend_runtime_log_context(['module' => 'quotations', 'module_slug' => 'quotations', 'error_code' => (string)$e->getCode()]) : ['module' => 'quotations', 'module_slug' => 'quotations', 'error_code' => (string)$e->getCode()]);
+            }
         }
         try {
             $shippersList = $this->db->fetchAll("SELECT id, shipper_name FROM `" . DB::SHIPPERS . "` WHERE is_active=1");
         } catch (\Throwable $e) {
             $shippersList = [];
+            if (function_exists('log_error')) {
+                log_error('quotations form dropdown load failed: ' . $e->getMessage(), 'WARNING', __FILE__, __LINE__, function_exists('backend_runtime_log_context') ? backend_runtime_log_context(['module' => 'quotations', 'module_slug' => 'quotations', 'error_code' => (string)$e->getCode()]) : ['module' => 'quotations', 'module_slug' => 'quotations', 'error_code' => (string)$e->getCode()]);
+            }
         }
         try {
             $consigneesList = $this->db->fetchAll("SELECT id, consignee_name FROM `" . DB::CONSIGNEES . "` WHERE is_active=1");
         } catch (\Throwable $e) {
             $consigneesList = [];
+            if (function_exists('log_error')) {
+                log_error('quotations form dropdown load failed: ' . $e->getMessage(), 'WARNING', __FILE__, __LINE__, function_exists('backend_runtime_log_context') ? backend_runtime_log_context(['module' => 'quotations', 'module_slug' => 'quotations', 'error_code' => (string)$e->getCode()]) : ['module' => 'quotations', 'module_slug' => 'quotations', 'error_code' => (string)$e->getCode()]);
+            }
         }
         try {
             $itemsList = $this->db->fetchAll("SELECT id, item_name FROM `" . DB::ITEMS . "` WHERE is_active=1 AND item_type='services' ORDER BY item_name");
         } catch (\Throwable $e) {
             $itemsList = [];
+            if (function_exists('log_error')) {
+                log_error('quotations form dropdown load failed: ' . $e->getMessage(), 'WARNING', __FILE__, __LINE__, function_exists('backend_runtime_log_context') ? backend_runtime_log_context(['module' => 'quotations', 'module_slug' => 'quotations', 'error_code' => (string)$e->getCode()]) : ['module' => 'quotations', 'module_slug' => 'quotations', 'error_code' => (string)$e->getCode()]);
+            }
         }
         try {
-            $paymentTermsList = $this->db->fetchAll("SELECT id, name FROM `" . DB::PAYMENT_TERMS . "` WHERE is_active=1 ORDER BY name");
+            $paymentTermsList = $this->db->fetchAll("SELECT id, payment_term FROM `" . DB::PAYMENT_TERMS . "` WHERE is_active=1 ORDER BY id");
         } catch (\Throwable $e) {
             $paymentTermsList = [];
+            if (function_exists('log_error')) {
+                log_error('quotations form dropdown load failed: ' . $e->getMessage(), 'WARNING', __FILE__, __LINE__, function_exists('backend_runtime_log_context') ? backend_runtime_log_context(['module' => 'quotations', 'module_slug' => 'quotations', 'error_code' => (string)$e->getCode()]) : ['module' => 'quotations', 'module_slug' => 'quotations', 'error_code' => (string)$e->getCode()]);
+            }
         }
         try {
             $countriesList = $this->db->fetchAll("SELECT id, country, abbr FROM `" . DB::GEO_COUNTRIES . "` WHERE is_active=1 ORDER BY country");
         } catch (\Throwable $e) {
             $countriesList = [];
+            if (function_exists('log_error')) {
+                log_error('quotations form dropdown load failed: ' . $e->getMessage(), 'WARNING', __FILE__, __LINE__, function_exists('backend_runtime_log_context') ? backend_runtime_log_context(['module' => 'quotations', 'module_slug' => 'quotations', 'error_code' => (string)$e->getCode()]) : ['module' => 'quotations', 'module_slug' => 'quotations', 'error_code' => (string)$e->getCode()]);
+            }
         }
         try {
-            $portsList = $this->db->fetchAll("SELECT id, port_name, port_code, country_id FROM `" . DB::PORTS . "` WHERE is_active=1 ORDER BY port_name");
+            $portsList = $this->db->fetchAll("SELECT id, port_name, port_code, country_id FROM `" . DB::PORTS . "` WHERE is_active=1 ORDER BY port_name LIMIT 50");
+            foreach ([$origin, $destination] as $selectedPortId) {
+                if (!is_numeric($selectedPortId) || (int)$selectedPortId <= 0) {
+                    continue;
+                }
+                $found = false;
+                foreach ($portsList as $portRow) {
+                    if ((string)$portRow['id'] === (string)$selectedPortId) {
+                        $found = true;
+                        break;
+                    }
+                }
+                if (!$found) {
+                    $selectedPort = $this->db->fetchOne("SELECT id, port_name, port_code, country_id FROM `" . DB::PORTS . "` WHERE id = :id AND is_active = 1", ['id' => (int)$selectedPortId]);
+                    if ($selectedPort) {
+                        $portsList[] = $selectedPort;
+                    }
+                }
+            }
         } catch (\Throwable $e) {
             $portsList = [];
+            if (function_exists('log_error')) {
+                log_error('quotations form dropdown load failed: ' . $e->getMessage(), 'WARNING', __FILE__, __LINE__, function_exists('backend_runtime_log_context') ? backend_runtime_log_context(['module' => 'quotations', 'module_slug' => 'quotations', 'error_code' => (string)$e->getCode()]) : ['module' => 'quotations', 'module_slug' => 'quotations', 'error_code' => (string)$e->getCode()]);
+            }
         }
         try {
             $servicesList = $this->db->fetchAll("SELECT id, item_name AS service_name, unit_price AS service_rate FROM `" . DB::ITEMS . "` WHERE is_active=1 AND item_type='services' ORDER BY item_name");
         } catch (\Throwable $e) {
             $servicesList = [];
+            if (function_exists('log_error')) {
+                log_error('quotations form dropdown load failed: ' . $e->getMessage(), 'WARNING', __FILE__, __LINE__, function_exists('backend_runtime_log_context') ? backend_runtime_log_context(['module' => 'quotations', 'module_slug' => 'quotations', 'error_code' => (string)$e->getCode()]) : ['module' => 'quotations', 'module_slug' => 'quotations', 'error_code' => (string)$e->getCode()]);
+            }
         }
 
         return Response::html($this->view->render('quotations/form.php', [
@@ -442,6 +495,7 @@ class QuotationController extends BaseController
             'gross_weight' => $gross_weight,
             'chargeable_weight' => $chargeable_weight,
             'volume' => $volume,
+            'cbm' => $cbm,
             'terms_and_conditions' => $terms_and_conditions,
             'grand_subtotal' => $grand_subtotal,
             'grand_discount_type' => $grand_discount_type,

@@ -15,6 +15,7 @@ $module_caption = 'Documents';
 $tbl_name = DB::USERS;
 $error_message = '';
 $success_message = '';
+$page = (int)($_GET['page'] ?? 1);
 
 /*
 |--------------------------------------------------------------------------

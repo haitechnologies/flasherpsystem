@@ -1,6 +1,7 @@
 <?php
 
 use App\Core\DB;
+use App\Core\Session;
 include('admin_elements/admin_header.php');
 
 $module = 'sale_orders';
@@ -381,9 +382,9 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
                 $billing_fax            = (!empty($row_billing['fax']) ? s__($row_billing['fax']) : '');
 
 
-                $sale_order_date         = processDateYtoD($sale_order_date);
-                $expiry_date            = ($expiry_date == '1970-01-01') ? '' : processDateDtoY($expiry_date);
-                $expected_shipment_date = ($expected_shipment_date == '1970-01-01') ? '' : processDateDtoY($expected_shipment_date);
+                $sale_order_date         = ddm_($sale_order_date);
+                $expiry_date            = ($expiry_date == '1970-01-01' || empty($expiry_date)) ? '' : ddm_($expiry_date);
+                $expected_shipment_date = ($expected_shipment_date == '1970-01-01' || empty($expected_shipment_date)) ? '' : ddm_($expected_shipment_date);
 
 
                 // ------------------ TOTAL SALE ORDER ITEMS ------------------
@@ -462,9 +463,9 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
                                                 $invoice_no             = s__($row_invoices['invoice_no']);
 
                                                 $invoice_date           = s__($row_invoices['invoice_date']);
-                                                $invoice_date           = processDateYtoD($invoice_date);
+                                                $invoice_date           = ddm_($invoice_date);
                                                 $expiry_date            = s__($row_invoices['expiry_date']);
-                                                $expiry_date            = processDateYtoD($expiry_date);
+                                                $expiry_date            = ddm_($expiry_date);
 
                                                 $invoice_status         = s__($row_invoices['invoice_status']);
                                                 $grand_total            = s__($row_invoices['grand_total']);
@@ -698,13 +699,13 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
 
                                     <tr>
                                         <td>
-                                            <div class="fw-bold"><?php echo getTableAttr('item_name', tbl_items, $service_arr[$index]); ?></div>
+                                            <div class="fw-bold"><?php echo getTableAttr('item_name', tbl_items, $service_arr[$index] ?? 0); ?></div>
                                             <span class="text-muted">
                                                 <?php
                                                 // ----------------------------------------------
                                                 // Seprate Line Number on base of Space new line
                                                 // ----------------------------------------------
-                                                $desc = explode("\r", $description_arr[$index]);
+                                                $desc = explode("\r", (string)($description_arr[$index] ?? ''));
                                                 // print_r($desc);
                                                 $d_counter = 1;
                                                 if (count($desc) > 0) {
@@ -718,7 +719,7 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
                                                 ?>
                                             </span>
                                         </td>
-                                        <td><?php echo $description_arr[$index]; ?></td>
+                                        <td><?php echo $description_arr[$index] ?? ''; ?></td>
                                         <td class="text-center"><?php echo $qty_arr[$index]; ?></td>
                                         <td class="text-end"><?php echo $rate_arr[$index]; ?></td>
                                         <td class="text-end"><?php echo $sub_total_arr[$index]; ?></td>

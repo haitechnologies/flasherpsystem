@@ -11,8 +11,8 @@ use App\Http\Request;
 use App\Http\Response;
 use App\Service\SaleOrderService;
 use App\Security\Roles;
-use App\Exception\ValidationException;
 use App\Exception\NotFoundException;
+use App\Exception\ValidationException;
 use App\Helper\DateHelper;
 
 class SaleOrderController extends BaseController
@@ -50,6 +50,10 @@ class SaleOrderController extends BaseController
                 => $this->handleUpdate($request, $id),
             $request->isPost() && $action === 'add_sale_orders' && $this->canCreate()
                 => $this->handleCreate($request),
+            $request->isPost() && $action === 'convert_quotation_to_sale_orders' && $this->canCreate()
+                => $this->handleConvertQuotation($request),
+            $request->isPost() && $action === 'convert_sale_orders' && $id > 0 && $this->canEdit()
+                => $this->handleConvertToInvoice($request, $id),
             default => $this->showForm($request, $id),
         };
     }
@@ -72,6 +76,12 @@ class SaleOrderController extends BaseController
             flash_error($error);
             return Response::redirect("sale_orders.php?id=$id&action=edit_sale_orders");
         } catch (\Throwable $e) {
+            log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
+                'module' => 'sale_orders',
+                'module_slug' => 'sale_orders',
+                'stack_trace' => $e->getTraceAsString(),
+                'error_code' => (string)$e->getCode(),
+            ]));
             flash_error($e->getMessage());
             return Response::redirect("sale_orders.php?id=$id&action=edit_sale_orders");
         }
@@ -96,8 +106,66 @@ class SaleOrderController extends BaseController
             flash_error($error);
             return Response::redirect("sale_orders.php");
         } catch (\Throwable $e) {
+            log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
+                'module' => 'sale_orders',
+                'module_slug' => 'sale_orders',
+                'stack_trace' => $e->getTraceAsString(),
+                'error_code' => (string)$e->getCode(),
+            ]));
             flash_error($e->getMessage());
             return Response::redirect("sale_orders.php");
+        }
+    }
+
+    private function handleConvertQuotation(Request $request): Response
+    {
+        $quotationId = $request->getInt('quotation_id');
+
+        try {
+            $saleOrder = $this->saleOrderService->convertFromQuotation($quotationId, $this->orgId, $this->userId);
+            flash_success('The Sale Order has been created from Quotation successfully.');
+            return Response::redirect("sale_order_overview.php?sale_order_id={$saleOrder->id}");
+        } catch (NotFoundException $e) {
+            flash_error($e->getMessage());
+            return Response::redirect("quotation_overview.php?quotation_id=$quotationId");
+        } catch (ValidationException $e) {
+            $error = current($e->getErrors());
+            flash_error($error);
+            return Response::redirect("quotation_overview.php?quotation_id=$quotationId");
+        } catch (\Throwable $e) {
+            log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
+                'module' => 'sale_orders',
+                'module_slug' => 'sale_orders',
+                'stack_trace' => $e->getTraceAsString(),
+                'error_code' => (string)$e->getCode(),
+            ]));
+            flash_error($e->getMessage());
+            return Response::redirect("quotation_overview.php?quotation_id=$quotationId");
+        }
+    }
+
+    private function handleConvertToInvoice(Request $request, int $id): Response
+    {
+        try {
+            $result = $this->saleOrderService->convertToInvoice($id, $this->orgId, $this->userId);
+            flash_success('This Sale Order has been Converted to Invoice Successfully. <a href="invoice_overview.php?invoice_id=' . $result['invoice_id'] . '">' . $result['invoice_no'] . '</a>');
+            return Response::redirect("invoice_overview.php?invoice_id={$result['invoice_id']}");
+        } catch (NotFoundException $e) {
+            flash_error($e->getMessage());
+            return Response::redirect('listing_sale_orders.php');
+        } catch (ValidationException $e) {
+            $error = current($e->getErrors());
+            flash_error($error);
+            return Response::redirect("sale_order_overview.php?sale_order_id=$id");
+        } catch (\Throwable $e) {
+            log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
+                'module' => 'sale_orders',
+                'module_slug' => 'sale_orders',
+                'stack_trace' => $e->getTraceAsString(),
+                'error_code' => (string)$e->getCode(),
+            ]));
+            flash_error($e->getMessage());
+            return Response::redirect("sale_order_overview.php?sale_order_id=$id");
         }
     }
 
@@ -115,14 +183,19 @@ class SaleOrderController extends BaseController
             'sales_person' => $request->getString('sales_person'),
             'job_reference_no' => $request->getString('job_reference_no'),
             'master_awb_no' => $request->getString('master_awb_no'),
-            'shipper' => $request->getString('shipper'),
-            'consignee' => $request->getString('consignee'),
-            'origin' => $request->getString('origin'),
-            'destination' => $request->getString('destination'),
+            'mawb_bol' => $request->getString('mawb_bol'),
+            'hwb_hbol' => $request->getString('hwb_hbol'),
+            'shipper_id' => $request->getString('shipper_id'),
+            'consignee_id' => $request->getString('consignee_id'),
+            'origin_port' => $request->getString('origin_port'),
+            'origin_country' => $request->getString('origin_country'),
+            'destination_port' => $request->getString('destination_port'),
+            'destination_country' => $request->getString('destination_country'),
             'no_of_packs' => $request->getString('no_of_packs'),
             'gross_weight' => $request->getString('gross_weight'),
             'chargeable_weight' => $request->getString('chargeable_weight'),
             'volume' => $request->getString('volume'),
+            'cbm' => $request->getString('cbm'),
             'terms_and_conditions' => $request->getString('terms_and_conditions'),
             'grand_subtotal' => $request->getString('grand_subtotal'),
             'grand_discount_type' => $request->getString('grand_discount_type'),
@@ -133,6 +206,7 @@ class SaleOrderController extends BaseController
             'grand_tax' => $request->getString('grand_tax'),
             'grand_total' => $request->getString('grand_total'),
             'publish' => $request->get('publish') ? true : false,
+            'is_active' => $request->get('publish') ? true : false,
             'sale_order_status' => $request->getString('sale_order_status', 'draft'),
         ];
     }
@@ -203,6 +277,15 @@ class SaleOrderController extends BaseController
         $gross_weight = '0';
         $chargeable_weight = '0';
         $volume = '0';
+        $cbm = '0';
+        $mawb_bol = '';
+        $hwb_hbol = '';
+        $origin_port = '0';
+        $origin_country = '0';
+        $destination_port = '0';
+        $destination_country = '0';
+        $invoice_id = '';
+        $quotation_id = '';
         $terms_and_conditions = '';
         $grand_subtotal = '0.00';
         $grand_discount_type = '';
@@ -253,14 +336,24 @@ class SaleOrderController extends BaseController
                     $sales_person = (string)$saleOrder->salesPerson;
                     $job_reference_no = (string)$saleOrder->jobReferenceNo;
                     $master_awb_no = (string)$saleOrder->masterAwbNo;
-                    $shipper = (string)$saleOrder->shipper;
-                    $consignee = (string)$saleOrder->consignee;
-                    $origin = (string)$saleOrder->origin;
-                    $destination = (string)$saleOrder->destination;
+                    $shipper = (string)$saleOrder->shipperId;
+                    $consignee = (string)$saleOrder->consigneeId;
+                    $origin = (string)$saleOrder->originPort;
+                    $destination = (string)$saleOrder->destinationPort;
                     $no_of_packs = (string)$saleOrder->noOfPacks;
                     $gross_weight = (string)$saleOrder->grossWeight;
                     $chargeable_weight = (string)$saleOrder->chargeableWeight;
                     $volume = (string)$saleOrder->volume;
+                    $cbm = (string)$saleOrder->cbm;
+                    $mawb_bol = (string)$saleOrder->mawbBol;
+                    $hwb_hbol = (string)$saleOrder->hwbHbol;
+                    $origin_port = (string)$saleOrder->originPort;
+                    $origin_country = (string)$saleOrder->originCountry;
+                    $destination_port = (string)$saleOrder->destinationPort;
+                    $destination_country = (string)$saleOrder->destinationCountry;
+                    $invoice_id = $saleOrder->invoiceId !== null ? (string)$saleOrder->invoiceId : '';
+                    $quotation_id = $saleOrder->quotationId !== null ? (string)$saleOrder->quotationId : '';
+                    $payment_term = (string)$saleOrder->paymentTerm;
                     $customer_notes = (string)$saleOrder->customerNotes;
                     $terms_and_conditions = (string)$saleOrder->termsAndConditions;
                     $grand_subtotal = (string)$saleOrder->grandSubtotal;
@@ -272,7 +365,7 @@ class SaleOrderController extends BaseController
                     $grand_total = (string)$saleOrder->grandTotal;
                     $is_active = $saleOrder->isActive ? 1 : 0;
 
-                    $sale_order_date = \App\Helper\DateHelper::toDbDate($sale_order_date);
+                    $sale_order_date = \App\Helper\DateHelper::toDisplayDate($sale_order_date);
                     $expiry_date = ($expiry_date === '1970-01-01') ? '' : DateHelper::toDisplayDate($expiry_date);
                     $expected_shipment_date = ($expected_shipment_date === '1970-01-01') ? '' : DateHelper::toDisplayDate($expected_shipment_date);
 
@@ -291,6 +384,12 @@ class SaleOrderController extends BaseController
                         $total_arr[] = $item->total;
                     }
                 } catch (\Throwable $e) {
+                    log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
+                        'module' => 'sale_orders',
+                        'module_slug' => 'sale_orders',
+                        'stack_trace' => $e->getTraceAsString(),
+                        'error_code' => (string)$e->getCode(),
+                    ]));
                     $error_message = $e->getMessage();
                 }
             }
@@ -302,29 +401,94 @@ class SaleOrderController extends BaseController
 
         // Fetch dropdown data
         try {
-            $customersList = $this->db->fetchAll("SELECT id, display_name FROM `" . DB::CUSTOMERS . "` WHERE is_active=1 AND approved=1 ORDER BY id DESC");
+            $customersList = $this->db->fetchAll("SELECT id, display_name FROM `" . DB::CUSTOMERS . "` WHERE is_active=1 AND approved=1 AND organization_id = :org_id ORDER BY id DESC", ['org_id' => $this->orgId]);
         } catch (\Throwable $e) {
             $customersList = [];
+            if (function_exists('log_error')) {
+                log_error('sale_orders form dropdown load failed: ' . $e->getMessage(), 'WARNING', __FILE__, __LINE__, function_exists('backend_runtime_log_context') ? backend_runtime_log_context(['module' => 'sale_orders', 'module_slug' => 'sale_orders', 'error_code' => (string)$e->getCode()]) : ['module' => 'sale_orders', 'module_slug' => 'sale_orders', 'error_code' => (string)$e->getCode()]);
+            }
         }
         try {
             $orgList = $this->db->fetchAll("SELECT id, warehouse_name FROM `" . DB::ORGANIZATIONS . "` WHERE is_active=1");
         } catch (\Throwable $e) {
             $orgList = [];
+            if (function_exists('log_error')) {
+                log_error('sale_orders form dropdown load failed: ' . $e->getMessage(), 'WARNING', __FILE__, __LINE__, function_exists('backend_runtime_log_context') ? backend_runtime_log_context(['module' => 'sale_orders', 'module_slug' => 'sale_orders', 'error_code' => (string)$e->getCode()]) : ['module' => 'sale_orders', 'module_slug' => 'sale_orders', 'error_code' => (string)$e->getCode()]);
+            }
         }
         try {
-            $shippersList = $this->db->fetchAll("SELECT id, shipper_name FROM `" . DB::SHIPPERS . "` WHERE is_active=1");
+            $shippersList = $this->db->fetchAll("SELECT id, shipper_name FROM `" . DB::SHIPPERS . "` WHERE is_active=1 AND organization_id = :org_id", ['org_id' => $this->orgId]);
         } catch (\Throwable $e) {
             $shippersList = [];
+            if (function_exists('log_error')) {
+                log_error('sale_orders form dropdown load failed: ' . $e->getMessage(), 'WARNING', __FILE__, __LINE__, function_exists('backend_runtime_log_context') ? backend_runtime_log_context(['module' => 'sale_orders', 'module_slug' => 'sale_orders', 'error_code' => (string)$e->getCode()]) : ['module' => 'sale_orders', 'module_slug' => 'sale_orders', 'error_code' => (string)$e->getCode()]);
+            }
         }
         try {
-            $consigneesList = $this->db->fetchAll("SELECT id, consignee_name FROM `" . DB::CONSIGNEES . "` WHERE is_active=1");
+            $consigneesList = $this->db->fetchAll("SELECT id, consignee_name FROM `" . DB::CONSIGNEES . "` WHERE is_active=1 AND organization_id = :org_id", ['org_id' => $this->orgId]);
         } catch (\Throwable $e) {
             $consigneesList = [];
+            if (function_exists('log_error')) {
+                log_error('sale_orders form dropdown load failed: ' . $e->getMessage(), 'WARNING', __FILE__, __LINE__, function_exists('backend_runtime_log_context') ? backend_runtime_log_context(['module' => 'sale_orders', 'module_slug' => 'sale_orders', 'error_code' => (string)$e->getCode()]) : ['module' => 'sale_orders', 'module_slug' => 'sale_orders', 'error_code' => (string)$e->getCode()]);
+            }
         }
         try {
-            $itemsList = $this->db->fetchAll("SELECT id, item_name FROM `" . DB::ITEMS . "` WHERE is_active=1 AND item_type='services' ORDER BY item_name");
+            $itemsList = $this->db->fetchAll("SELECT id, item_name, unit_price FROM `" . DB::ITEMS . "` WHERE is_active=1 AND item_type='services' AND organization_id = :org_id ORDER BY item_name", ['org_id' => $this->orgId]);
         } catch (\Throwable $e) {
             $itemsList = [];
+            if (function_exists('log_error')) {
+                log_error('sale_orders form dropdown load failed: ' . $e->getMessage(), 'WARNING', __FILE__, __LINE__, function_exists('backend_runtime_log_context') ? backend_runtime_log_context(['module' => 'sale_orders', 'module_slug' => 'sale_orders', 'error_code' => (string)$e->getCode()]) : ['module' => 'sale_orders', 'module_slug' => 'sale_orders', 'error_code' => (string)$e->getCode()]);
+            }
+        }
+        try {
+            $paymentTermsList = $this->db->fetchAll("SELECT id, payment_term FROM `" . DB::PAYMENT_TERMS . "` WHERE publish=1 ORDER BY id");
+        } catch (\Throwable $e) {
+            $paymentTermsList = [];
+            if (function_exists('log_error')) {
+                log_error('sale_orders form dropdown load failed: ' . $e->getMessage(), 'WARNING', __FILE__, __LINE__, function_exists('backend_runtime_log_context') ? backend_runtime_log_context(['module' => 'sale_orders', 'module_slug' => 'sale_orders', 'error_code' => (string)$e->getCode()]) : ['module' => 'sale_orders', 'module_slug' => 'sale_orders', 'error_code' => (string)$e->getCode()]);
+            }
+        }
+        try {
+            $leadsList = $this->db->fetchAll("SELECT id, display_name FROM `" . DB::LEADS . "` WHERE is_active=1 AND organization_id = :org_id ORDER BY display_name", ['org_id' => $this->orgId]);
+        } catch (\Throwable $e) {
+            $leadsList = [];
+            if (function_exists('log_error')) {
+                log_error('sale_orders form dropdown load failed: ' . $e->getMessage(), 'WARNING', __FILE__, __LINE__, function_exists('backend_runtime_log_context') ? backend_runtime_log_context(['module' => 'sale_orders', 'module_slug' => 'sale_orders', 'error_code' => (string)$e->getCode()]) : ['module' => 'sale_orders', 'module_slug' => 'sale_orders', 'error_code' => (string)$e->getCode()]);
+            }
+        }
+        try {
+            $countriesList = $this->db->fetchAll("SELECT id, country, abbr FROM `" . DB::GEO_COUNTRIES . "` WHERE is_active=1 ORDER BY country");
+        } catch (\Throwable $e) {
+            $countriesList = [];
+            if (function_exists('log_error')) {
+                log_error('sale_orders form dropdown load failed: ' . $e->getMessage(), 'WARNING', __FILE__, __LINE__, function_exists('backend_runtime_log_context') ? backend_runtime_log_context(['module' => 'sale_orders', 'module_slug' => 'sale_orders', 'error_code' => (string)$e->getCode()]) : ['module' => 'sale_orders', 'module_slug' => 'sale_orders', 'error_code' => (string)$e->getCode()]);
+            }
+        }
+        try {
+            $portsList = $this->db->fetchAll("SELECT id, port_name, port_code, country_id FROM `" . DB::PORTS . "` WHERE is_active=1 ORDER BY port_name LIMIT 50");
+            foreach ([$origin, $destination] as $selectedPortId) {
+                if (!is_numeric($selectedPortId) || (int)$selectedPortId <= 0) {
+                    continue;
+                }
+                $found = false;
+                foreach ($portsList as $portRow) {
+                    if ((string)$portRow['id'] === (string)$selectedPortId) {
+                        $found = true;
+                        break;
+                    }
+                }
+                if (!$found) {
+                    $selectedPort = $this->db->fetchOne("SELECT id, port_name, port_code, country_id FROM `" . DB::PORTS . "` WHERE id = :id AND is_active = 1", ['id' => (int)$selectedPortId]);
+                    if ($selectedPort) {
+                        $portsList[] = $selectedPort;
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            $portsList = [];
+            if (function_exists('log_error')) {
+                log_error('sale_orders form dropdown load failed: ' . $e->getMessage(), 'WARNING', __FILE__, __LINE__, function_exists('backend_runtime_log_context') ? backend_runtime_log_context(['module' => 'sale_orders', 'module_slug' => 'sale_orders', 'error_code' => (string)$e->getCode()]) : ['module' => 'sale_orders', 'module_slug' => 'sale_orders', 'error_code' => (string)$e->getCode()]);
+            }
         }
 
         return Response::html($this->view->render('sale_orders/form.php', [
@@ -355,6 +519,16 @@ class SaleOrderController extends BaseController
             'gross_weight' => $gross_weight,
             'chargeable_weight' => $chargeable_weight,
             'volume' => $volume,
+            'cbm' => $cbm,
+            'mawb_bol' => $mawb_bol,
+            'hwb_hbol' => $hwb_hbol,
+            'origin_port' => $origin_port,
+            'origin_country' => $origin_country,
+            'destination_port' => $destination_port,
+            'destination_country' => $destination_country,
+            'invoice_id' => $invoice_id,
+            'quotation_id' => $quotation_id,
+            'payment_term' => $payment_term,
             'terms_and_conditions' => $terms_and_conditions,
             'grand_subtotal' => $grand_subtotal,
             'grand_discount_type' => $grand_discount_type,
@@ -380,6 +554,10 @@ class SaleOrderController extends BaseController
             'shippersList' => $shippersList,
             'consigneesList' => $consigneesList,
             'itemsList' => $itemsList,
+            'paymentTermsList' => $paymentTermsList,
+            'leadsList' => $leadsList,
+            'countriesList' => $countriesList,
+            'portsList' => $portsList,
             'canCreate' => $this->canCreate(),
             'canEdit' => $this->canEdit(),
         ]));

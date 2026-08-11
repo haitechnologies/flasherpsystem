@@ -12,6 +12,7 @@ $module_caption = 'Purchase Order';
 $tbl_name = DB::PURCHASE_ORDERS;
 $error_message = '';
 $success_message = '';
+$page = (int)($_GET['page'] ?? 1);
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\SMTP;
@@ -23,13 +24,26 @@ include('admin_elements/permissions.php');
 
 $activeOrganizationId = dashboardRequireActiveOrganization();
 
-if (($action == "delete_$module" && !empty($id))) {
-    if (Session::roleId() == '1') {
-        $mysqli->query("DELETE FROM `" . DB::PURCHASE_ORDER_ITEMS . "` WHERE purchase_order_id=$id");
-        $mysqli->query("DELETE FROM `$tbl_name` WHERE id=$id ");
+if (!empty($action) && $action == "delete_$module") {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !validate_csrf_token($_POST['csrf_token'] ?? '')) {
+        $error_message = 'Invalid security token. Please try again.';
+        log_error('Invalid CSRF token on purchase order delete', 'SECURITY', __FILE__, __LINE__, backend_runtime_log_context([
+            'module' => 'purchase_orders',
+            'module_slug' => 'purchase_orders',
+        ]));
+        $action = '';
+    }
+}
+
+if (($action == "delete_$module" && !empty($id)) && granted('delete', $module_id)) {
+    $purchaseOrderId = (int)$id;
+    $uid = (int)Session::userId();
+    if (is_SystemAdmin() || is_SuperAdmin()) {
+        $mysqli->query("DELETE FROM `" . DB::PURCHASE_ORDER_ITEMS . "` WHERE purchase_order_id=$purchaseOrderId");
+        $mysqli->query("DELETE FROM `$tbl_name` WHERE id=$purchaseOrderId AND organization_id=$activeOrganizationId");
     } else {
-        $mysqli->query("DELETE FROM `" . DB::PURCHASE_ORDER_ITEMS . "` WHERE purchase_order_id=$id");
-        $mysqli->query("DELETE FROM `$tbl_name` WHERE id=$id AND created_by='" . Session::userId() . "'");
+        $mysqli->query("DELETE FROM `" . DB::PURCHASE_ORDER_ITEMS . "` WHERE purchase_order_id=$purchaseOrderId AND created_by='$uid'");
+        $mysqli->query("DELETE FROM `$tbl_name` WHERE id=$purchaseOrderId AND organization_id=$activeOrganizationId AND created_by='$uid'");
     }
 
     if ($mysqli->affected_rows > 0) {
