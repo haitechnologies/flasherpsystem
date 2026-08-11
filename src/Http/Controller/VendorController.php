@@ -63,11 +63,9 @@ class VendorController extends BaseController
             return Response::redirect("vendor_overview.php?vendor_id=$id");
         } catch (ValidationException $e) {
             $error = current($e->getErrors());
-            flash_error($error);
-            return Response::redirect("vendors.php?id=$id&action=edit_vendors");
+            return $this->renderFormWithData($data, $error, $id);
         } catch (NotFoundException $e) {
-            flash_error($e->getMessage());
-            return Response::redirect("vendors.php?id=$id&action=edit_vendors");
+            return $this->renderFormWithData($data, $e->getMessage(), $id);
         } catch (\Throwable $e) {
             log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
                 'module' => 'vendors',
@@ -75,8 +73,7 @@ class VendorController extends BaseController
                 'stack_trace' => $e->getTraceAsString(),
                 'error_code' => (string)$e->getCode(),
             ]));
-            flash_error('The Vendor could not be updated.');
-            return Response::redirect("vendors.php?id=$id&action=edit_vendors");
+            return $this->renderFormWithData($data, 'The Vendor could not be updated.', $id);
         }
     }
 
@@ -90,8 +87,7 @@ class VendorController extends BaseController
             return Response::redirect("vendor_overview.php?vendor_id=$new->id");
         } catch (ValidationException $e) {
             $error = current($e->getErrors());
-            flash_error($error);
-            return Response::redirect("vendors.php");
+            return $this->renderFormWithData($data, $error, 0);
         } catch (\Throwable $e) {
             log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
                 'module' => 'vendors',
@@ -99,9 +95,121 @@ class VendorController extends BaseController
                 'stack_trace' => $e->getTraceAsString(),
                 'error_code' => (string)$e->getCode(),
             ]));
-            flash_error('The Vendor could not be saved.');
-            return Response::redirect("vendors.php");
+            return $this->renderFormWithData($data, 'The Vendor could not be saved.', 0);
         }
+    }
+
+    private function renderFormWithData(array $vendorData, string $error_message, int $id): Response
+    {
+        $module = 'vendors';
+        $moduleCaption = $this->moduleCaption;
+        $session_user_id = $this->userId;
+
+        $vendor_owner = (string)($vendorData['vendor_owner'] ?? '');
+        $payment_term = (string)($vendorData['payment_term'] ?? '0');
+        $vendor_status = (string)($vendorData['vendor_status'] ?? '0');
+        $vendor_source = (string)($vendorData['vendor_source'] ?? '0');
+        $assigned_to = (string)($vendorData['assigned_to'] ?? '0');
+        $vendor_type = (string)($vendorData['vendor_type'] ?? '');
+        $salutation = (string)($vendorData['salutation'] ?? '');
+        $first_name = (string)($vendorData['first_name'] ?? '');
+        $last_name = (string)($vendorData['last_name'] ?? '');
+        $display_name = (string)($vendorData['display_name'] ?? '');
+        $company_name = (string)($vendorData['company_name'] ?? '');
+        $address = (string)($vendorData['address'] ?? '');
+        $opening_balance = (string)($vendorData['opening_balance'] ?? '0');
+        $payable_account_id = (string)($vendorData['payable_account_id'] ?? '');
+        $credit_limit = (string)($vendorData['credit_limit'] ?? '0');
+        $email = (string)($vendorData['email'] ?? '');
+        $phone = (string)($vendorData['phone'] ?? '');
+        $mobile = (string)($vendorData['mobile'] ?? '');
+        $tax_treatment = (string)($vendorData['tax_treatment'] ?? '0');
+        $trn = (string)($vendorData['trn'] ?? '');
+        $corporate_tax_number = (string)($vendorData['corporate_tax_number'] ?? '');
+        $license_number = (string)($vendorData['license_number'] ?? '');
+        $license_expiry = (string)($vendorData['license_expiry'] ?? '');
+        $currency = (string)($vendorData['currency'] ?? '0');
+        $exchange_rate = (string)($vendorData['exchange_rate'] ?? '1');
+        $sales_person = (string)($vendorData['sales_person'] ?? '0');
+        $cs_agent = (string)($vendorData['cs_agent'] ?? '0');
+        $lead_category = (string)($vendorData['lead_category'] ?? '');
+        $rating = (string)($vendorData['rating'] ?? '0');
+        $contacted_date = (string)($vendorData['contacted_date'] ?? '');
+        $description = (string)($vendorData['description'] ?? '');
+        $tags_value = (string)($vendorData['tags'] ?? '');
+        $tags_arr = $tags_value !== '' ? explode(',', $tags_value) : [];
+        $website = (string)($vendorData['website'] ?? '');
+        $department = (string)($vendorData['department'] ?? '');
+        $designation = (string)($vendorData['designation'] ?? '');
+        $x = (string)($vendorData['x'] ?? '');
+        $facebook = (string)($vendorData['facebook'] ?? '');
+        $instagram = (string)($vendorData['instagram'] ?? '');
+        $is_active = !empty($vendorData['is_active']) ? 1 : 0;
+
+        try { $tagsList = $this->db->fetchAll("SELECT id, value FROM `" . DB::TAXONOMIES . "` WHERE is_active=1 AND type='vendor_tag' ORDER BY value"); } catch (\Throwable $e) { $tagsList = []; }
+        try { $statusesList = $this->db->fetchAll("SELECT id, value FROM `" . DB::TAXONOMIES . "` WHERE is_active=1 AND type='vendor_status' ORDER BY value"); } catch (\Throwable $e) { $statusesList = []; }
+        try { $sourcesList = $this->db->fetchAll("SELECT id, value FROM `" . DB::TAXONOMIES . "` WHERE is_active=1 AND type='vendor_source' ORDER BY value"); } catch (\Throwable $e) { $sourcesList = []; }
+        try { $usersList = $this->db->fetchAll("SELECT id, full_name FROM `" . DB::USERS . "` WHERE is_active=1 ORDER BY full_name"); } catch (\Throwable $e) { $usersList = []; }
+        try { $departmentsList = $this->db->fetchAll("SELECT id, department, email FROM `" . DB::DEPARTMENTS . "` WHERE publish=1 ORDER BY department"); } catch (\Throwable $e) { $departmentsList = []; }
+        try { $taxTreatmentsList = $this->db->fetchAll("SELECT id, tax_treatment FROM `" . DB::TAX_TREATMENTS . "` WHERE is_active=1 ORDER BY id ASC"); } catch (\Throwable $e) { $taxTreatmentsList = []; }
+        try { $currencyList = $this->db->fetchAll("SELECT id, currency FROM `" . DB::CURRENCIES . "` WHERE is_active=1 ORDER BY id ASC"); } catch (\Throwable $e) { $currencyList = []; }
+        try { $accountsList = $this->db->fetchAll("SELECT id, account_name FROM `" . DB::ACCOUNTS . "` WHERE is_active=1 ORDER BY account_name"); } catch (\Throwable $e) { $accountsList = []; }
+
+        return Response::html($this->view->render('vendors/form.php', [
+            'id' => $id,
+            'module' => $module,
+            'moduleCaption' => $moduleCaption,
+            'session_user_id' => $session_user_id,
+            'error_message' => $error_message,
+            'vendor_type' => $vendor_type,
+            'salutation' => $salutation,
+            'first_name' => $first_name,
+            'last_name' => $last_name,
+            'display_name' => $display_name,
+            'address' => $address,
+            'opening_balance' => $opening_balance,
+            'payable_account_id' => $payable_account_id,
+            'credit_limit' => $credit_limit,
+            'accountsList' => $accountsList,
+            'email' => $email,
+            'phone' => $phone,
+            'mobile' => $mobile,
+            'contacted_date' => $contacted_date,
+            'description' => $description,
+            'tagsList' => $tagsList,
+            'tags_arr' => $tags_arr,
+            'statusesList' => $statusesList,
+            'vendor_status' => $vendor_status,
+            'sourcesList' => $sourcesList,
+            'vendor_source' => $vendor_source,
+            'usersList' => $usersList,
+            'departmentsList' => $departmentsList,
+            'assigned_to' => $assigned_to,
+            'is_active' => $is_active,
+            'vendor_owner' => $vendor_owner,
+            'taxTreatmentsList' => $taxTreatmentsList,
+            'tax_treatment' => $tax_treatment,
+            'trn' => $trn,
+            'corporate_tax_number' => $corporate_tax_number,
+            'license_number' => $license_number,
+            'license_expiry' => $license_expiry,
+            'currencyList' => $currencyList,
+            'currency' => $currency,
+            'exchange_rate' => $exchange_rate,
+            'sales_person' => $sales_person,
+            'lead_category' => $lead_category,
+            'cs_agent' => $cs_agent,
+            'rating' => $rating,
+            'website' => $website,
+            'department' => $department,
+            'designation' => $designation,
+            'x' => $x,
+            'facebook' => $facebook,
+            'instagram' => $instagram,
+            'canCreate' => $this->canCreate(),
+            'canView' => $this->canView(),
+            'canEdit' => $this->canEdit(),
+        ]));
     }
 
     private function buildVendorData(Request $request, bool $isCreate): array

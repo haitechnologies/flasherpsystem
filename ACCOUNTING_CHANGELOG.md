@@ -7,6 +7,19 @@ and this project uses **date-based versioning** (`YYYY-MM-DD`).
 
 ---
 
+
+---
+
+## [2026-08-12] Part 4 — QA: 6 Purchase Modules Fixes + Form Retention
+
+### Fixed
+- DebitNoteService: added computeNoteTotals() (ported from CreditNoteService); createNote + updateNote now recompute grand totals from items instead of trusting submitted values; updateNote now deletes+recreates debit_note journal on items/totals change when status='open'
+- Form value retention on validation error added to 4 controllers: PurchaseController, ExpenseController, VendorController, DebitNoteController (PurchaseOrderController already had it)
+
+### Added
+- renderFormWithData() method added to PurchaseController, ExpenseController, VendorController, DebitNoteController — renders form directly with submitted data on validation failure instead of redirect (no data loss)
+- Full QA test harness validates all 6 modules CRUD (25/25 pass, journals balanced)
+
 *Accounting modules: banks, customers, quotations, sale_orders, invoices, payments_received, credit_notes, vendors, expenses, purchase_orders, purchases, payments_made, debit_notes, journals, accounts, reports.*
 
 ---

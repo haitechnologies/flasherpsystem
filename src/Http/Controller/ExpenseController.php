@@ -63,8 +63,7 @@ class ExpenseController extends BaseController
             return Response::redirect('listing_expenses.php');
         } catch (ValidationException $e) {
             $error = current($e->getErrors());
-            flash_error($error);
-            return Response::redirect("expenses.php?id=$id&action=edit_expenses");
+            return $this->renderFormWithData($expenseData, $itemsData, $error, $id);
         } catch (\Throwable $e) {
             log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
                 'module' => 'expenses',
@@ -72,8 +71,7 @@ class ExpenseController extends BaseController
                 'stack_trace' => $e->getTraceAsString(),
                 'error_code' => (string)$e->getCode(),
             ]));
-            flash_error($e->getMessage());
-            return Response::redirect("expenses.php?id=$id&action=edit_expenses");
+            return $this->renderFormWithData($expenseData, $itemsData, $e->getMessage(), $id);
         }
     }
 
@@ -88,8 +86,7 @@ class ExpenseController extends BaseController
             return Response::redirect('listing_expenses.php');
         } catch (ValidationException $e) {
             $error = current($e->getErrors());
-            flash_error($error);
-            return Response::redirect("expenses.php");
+            return $this->renderFormWithData($expenseData, $itemsData, $error, 0);
         } catch (\Throwable $e) {
             log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
                 'module' => 'expenses',
@@ -97,8 +94,7 @@ class ExpenseController extends BaseController
                 'stack_trace' => $e->getTraceAsString(),
                 'error_code' => (string)$e->getCode(),
             ]));
-            flash_error($e->getMessage());
-            return Response::redirect("expenses.php");
+            return $this->renderFormWithData($expenseData, $itemsData, $e->getMessage(), 0);
         }
     }
 
@@ -211,6 +207,75 @@ class ExpenseController extends BaseController
         if ($total_rows == 0) {
             $total_rows = 1;
         }
+
+        $vendorsList = [];
+        $customersList = [];
+        try {
+            $vendorsList = $this->db->fetchAll("SELECT id, display_name FROM `" . DB::VENDORS . "` ORDER BY id DESC");
+        } catch (\Throwable $e) {
+        }
+        try {
+            $customersList = $this->db->fetchAll("SELECT id, display_name FROM `" . DB::CUSTOMERS . "` WHERE is_active=1 AND approved=1 ORDER BY id DESC");
+        } catch (\Throwable $e) {
+        }
+
+        return Response::html($this->view->render('expenses/form.php', [
+            'id' => $id,
+            'module' => $module,
+            'moduleCaption' => $moduleCaption,
+            'moduleId' => $moduleId,
+            'session_user_id' => $session_user_id,
+            'session_role_id' => $session_role_id,
+            'error_message' => $error_message,
+            'expense_date' => $expense_date,
+            'paid_through' => $paid_through,
+            'vendor_id' => $vendor_id,
+            'reference_no' => $reference_no,
+            'customer_id' => $customer_id,
+            'billable' => $billable,
+            'grand_total' => $grand_total,
+            'total_rows' => $total_rows,
+            'item_id_arr' => $item_id_arr,
+            'expense_account_arr' => $expense_account_arr,
+            'description_arr' => $description_arr,
+            'total_arr' => $total_arr,
+            'vendorsList' => $vendorsList,
+            'customersList' => $customersList,
+            'canCreate' => $this->canCreate(),
+            'canEdit' => $this->canEdit(),
+        ]));
+    }
+
+    private function renderFormWithData(array $expenseData, array $itemsData, string $errorMessage, int $id): Response
+    {
+        $error_message = $errorMessage;
+        $module = 'expenses';
+        $moduleCaption = $this->moduleCaption;
+        $moduleId = $this->moduleId;
+        $session_user_id = $this->userId;
+        $session_role_id = $this->roleId;
+
+        $expense_date = DateHelper::toDisplayDate($expenseData['expense_date'] ?? '') ?: ($expenseData['expense_date'] ?? date('d-m-Y'));
+        $paid_through = $expenseData['paid_through'] ?? '';
+        $vendor_id = $expenseData['vendor_id'] ?? '0';
+        $reference_no = $expenseData['reference_no'] ?? '';
+        $customer_id = $expenseData['customer_id'] ?? '0';
+        $billable = $expenseData['billable'] ?? 0;
+        $grand_total = $expenseData['grand_total'] ?? '0.00';
+
+        $item_id_arr = [];
+        $expense_account_arr = [];
+        $description_arr = [];
+        $total_arr = [];
+
+        foreach ($itemsData as $item) {
+            $item_id_arr[] = $item['item_id'] ?? null;
+            $expense_account_arr[] = $item['expense_account'] ?? '';
+            $description_arr[] = $item['description'] ?? '';
+            $total_arr[] = $item['total'] ?? '0';
+        }
+
+        $total_rows = count($itemsData) > 0 ? count($itemsData) : 1;
 
         $vendorsList = [];
         $customersList = [];

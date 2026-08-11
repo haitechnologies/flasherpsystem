@@ -67,6 +67,8 @@ class DebitNoteService
 
             $debitNoteDate = $this->parseDate((string)($data['debit_note_date'] ?? ''));
 
+            $recomputed = $this->computeNoteTotals($itemsData, $data);
+
             $debitNote = new DebitNote(
                 id: null,
                 organizationId: $orgId,
@@ -80,13 +82,13 @@ class DebitNoteService
                 purchasePerson: (int)($data['purchase_person'] ?? 0),
                 vendorNotes: !empty($data['vendor_notes']) ? trim((string)$data['vendor_notes']) : null,
                 termsAndConditions: !empty($data['terms_and_conditions']) ? trim((string)$data['terms_and_conditions']) : null,
-                grandSubtotal: (float)($data['grand_subtotal'] ?? 0.0),
-                grandDiscountType: !empty($data['grand_discount_type']) ? trim((string)$data['grand_discount_type']) : '0.00',
-                grandDiscountTypeValue: (float)($data['grand_discount_type_value'] ?? 0.0),
-                grandDiscountAmount: (float)($data['grand_discount_amount'] ?? 0.0),
-                grandAfterDiscount: (float)($data['grand_after_discount'] ?? 0.0),
-                grandTax: (float)($data['grand_tax'] ?? 0.0),
-                grandTotal: (float)($data['grand_total'] ?? 0.0),
+                grandSubtotal: $recomputed['grandSubtotal'],
+                grandDiscountType: $recomputed['grandDiscountType'],
+                grandDiscountTypeValue: $recomputed['grandDiscountTypeValue'],
+                grandDiscountAmount: $recomputed['grandDiscountAmount'],
+                grandAfterDiscount: $recomputed['grandAfterDiscount'],
+                grandTax: $recomputed['grandTax'],
+                grandTotal: $recomputed['grandTotal'],
                 publish: isset($data['publish']) ? (bool)$data['publish'] : true,
                 isActive: isset($data['is_active']) ? (bool)$data['is_active'] : true,
                 createdBy: $userId,
@@ -174,6 +176,8 @@ class DebitNoteService
         try {
             $debitNoteDate = isset($data['debit_note_date']) ? $this->parseDate((string)$data['debit_note_date']) : $debitNote->debitNoteDate;
 
+            $recomputed = $this->computeNoteTotals($itemsData, $data);
+
             $updatedDebitNote = new DebitNote(
                 id: $debitNote->id,
                 organizationId: $debitNote->organizationId,
@@ -187,13 +191,13 @@ class DebitNoteService
                 purchasePerson: isset($data['purchase_person']) ? (int)$data['purchase_person'] : $debitNote->purchasePerson,
                 vendorNotes: isset($data['vendor_notes']) ? (!empty($data['vendor_notes']) ? trim((string)$data['vendor_notes']) : null) : $debitNote->vendorNotes,
                 termsAndConditions: isset($data['terms_and_conditions']) ? (!empty($data['terms_and_conditions']) ? trim((string)$data['terms_and_conditions']) : null) : $debitNote->termsAndConditions,
-                grandSubtotal: isset($data['grand_subtotal']) ? (float)$data['grand_subtotal'] : $debitNote->grandSubtotal,
-                grandDiscountType: isset($data['grand_discount_type']) ? trim((string)$data['grand_discount_type']) : $debitNote->grandDiscountType,
-                grandDiscountTypeValue: isset($data['grand_discount_type_value']) ? (float)$data['grand_discount_type_value'] : $debitNote->grandDiscountTypeValue,
-                grandDiscountAmount: isset($data['grand_discount_amount']) ? (float)$data['grand_discount_amount'] : $debitNote->grandDiscountAmount,
-                grandAfterDiscount: isset($data['grand_after_discount']) ? (float)$data['grand_after_discount'] : $debitNote->grandAfterDiscount,
-                grandTax: isset($data['grand_tax']) ? (float)$data['grand_tax'] : $debitNote->grandTax,
-                grandTotal: isset($data['grand_total']) ? (float)$data['grand_total'] : $debitNote->grandTotal,
+                grandSubtotal: $recomputed['grandSubtotal'],
+                grandDiscountType: $recomputed['grandDiscountType'],
+                grandDiscountTypeValue: $recomputed['grandDiscountTypeValue'],
+                grandDiscountAmount: $recomputed['grandDiscountAmount'],
+                grandAfterDiscount: $recomputed['grandAfterDiscount'],
+                grandTax: $recomputed['grandTax'],
+                grandTotal: $recomputed['grandTotal'],
                 publish: isset($data['publish']) ? (bool)$data['publish'] : $debitNote->publish,
                 isActive: isset($data['is_active']) ? (bool)$data['is_active'] : $debitNote->isActive,
                 createdAt: $debitNote->createdAt,
@@ -236,6 +240,40 @@ class DebitNoteService
             $deletedIds = array_diff($existingIds, $incomingIds);
             if (!empty($deletedIds)) {
                 $this->debitNoteRepo->deleteItemsByIds($deletedIds, $id);
+            }
+
+            $this->deleteDebitNoteJournal($id);
+            $updatedStatus = $updatedDebitNote->debitNoteStatus;
+            if ($updatedStatus === 'open' && $updatedDebitNote->grandTotal > 0) {
+                $purchaseReturns = $this->db->fetchOne(
+                    "SELECT id FROM `{DB::ACCOUNTS}` WHERE account_code IN ('4160','4170') OR account_name LIKE '%Returns%' OR account_name LIKE '%Allowances%' ORDER BY (account_code='4160') DESC LIMIT 1"
+                );
+                $ap = $this->db->fetchOne(
+                    "SELECT id FROM `{DB::ACCOUNTS}` WHERE account_code IN ('2100','2110','2200') OR account_name LIKE '%Payable%' LIMIT 1"
+                );
+                if ($purchaseReturns !== null && $ap !== null) {
+                    $this->journalService->createJournal(
+                        [
+                            'journal_date' => $updatedDebitNote->debitNoteDate,
+                            'journal_status' => 'posted',
+                            'reference_no' => $updatedDebitNote->debitNoteNo,
+                            'notes' => 'Debit Note #' . $updatedDebitNote->debitNoteNo . ' - Vendor ID: ' . $updatedDebitNote->vendorId,
+                            'reporting_method' => 'accrual',
+                            'reference_type' => 'debit_note',
+                            'reference_id' => $updatedDebitNote->id,
+                            'currency' => 'AED',
+                            'warehouse_id' => $updatedDebitNote->warehouseId,
+                            'grand_subtotal' => $updatedDebitNote->grandSubtotal,
+                            'grand_total' => $updatedDebitNote->grandTotal,
+                        ],
+                        [
+                            ['account' => (int)$ap['id'], 'debit' => $updatedDebitNote->grandTotal, 'credit' => 0.0, 'description' => 'Debit Note #' . $updatedDebitNote->debitNoteNo],
+                            ['account' => (int)$purchaseReturns['id'], 'debit' => 0.0, 'credit' => $updatedDebitNote->grandTotal, 'description' => 'Debit Note #' . $updatedDebitNote->debitNoteNo],
+                        ],
+                        $orgId,
+                        $userId
+                    );
+                }
             }
 
             $this->db->commit();
@@ -441,5 +479,42 @@ class DebitNoteService
             $this->db->execute("DELETE FROM `{DB::JOURNAL_ITEMS}` WHERE journal_id = :jid", ['jid' => $jid]);
             $this->db->execute("DELETE FROM `{DB::JOURNALS}` WHERE id = :jid", ['jid' => $jid]);
         }
+    }
+
+    private function computeNoteTotals(array $itemsData, array $data): array
+    {
+        $grandSubtotal = 0.0;
+        $grandTax = 0.0;
+        foreach ($itemsData as $itemData) {
+            if (empty($itemData['service'])) {
+                continue;
+            }
+            $itemQty = isset($itemData['qty']) ? (float)$itemData['qty'] : 1.0;
+            $itemRate = isset($itemData['rate']) ? (float)$itemData['rate'] : 0.0;
+            $itemSub = $itemQty * $itemRate;
+            $itemTaxPct = isset($itemData['tax']) ? (float)$itemData['tax'] : 0.0;
+            $grandSubtotal += $itemSub;
+            $grandTax += $itemSub * $itemTaxPct / 100;
+        }
+        $discountType = !empty($data['grand_discount_type']) ? trim((string)$data['grand_discount_type']) : '';
+        $discountValue = (float)($data['grand_discount_type_value'] ?? 0.0);
+        $discountAmount = 0.0;
+        if ($discountType === 'percent') {
+            $discountAmount = $grandSubtotal * $discountValue / 100;
+        } elseif ($discountType === 'fixed') {
+            $discountAmount = $discountValue;
+        }
+        $grandAfterDiscount = $grandSubtotal - $discountAmount;
+        $grandTotal = $grandAfterDiscount + $grandTax;
+
+        return [
+            'grandSubtotal' => $grandSubtotal,
+            'grandDiscountType' => $discountType,
+            'grandDiscountTypeValue' => $discountValue,
+            'grandDiscountAmount' => $discountAmount,
+            'grandAfterDiscount' => $grandAfterDiscount,
+            'grandTax' => $grandTax,
+            'grandTotal' => $grandTotal,
+        ];
     }
 }

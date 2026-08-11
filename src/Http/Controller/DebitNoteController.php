@@ -67,8 +67,7 @@ class DebitNoteController extends BaseController
             return Response::redirect('listing_debit_notes.php');
         } catch (ValidationException $e) {
             $error = current($e->getErrors());
-            flash_error($error);
-            return Response::redirect("debit_notes.php?id=$id&action=edit_debit_notes");
+            return $this->renderFormWithData($noteData, $itemsData, $error, $id);
         } catch (\Throwable $e) {
             log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
                 'module' => 'debit_notes',
@@ -76,8 +75,7 @@ class DebitNoteController extends BaseController
                 'stack_trace' => $e->getTraceAsString(),
                 'error_code' => (string)$e->getCode(),
             ]));
-            flash_error($e->getMessage());
-            return Response::redirect("debit_notes.php?id=$id&action=edit_debit_notes");
+            return $this->renderFormWithData($noteData, $itemsData, $e->getMessage(), $id);
         }
     }
 
@@ -97,8 +95,7 @@ class DebitNoteController extends BaseController
             return Response::redirect('listing_debit_notes.php');
         } catch (ValidationException $e) {
             $error = current($e->getErrors());
-            flash_error($error);
-            return Response::redirect("debit_notes.php");
+            return $this->renderFormWithData($noteData, $itemsData, $error, 0);
         } catch (\Throwable $e) {
             log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
                 'module' => 'debit_notes',
@@ -106,8 +103,7 @@ class DebitNoteController extends BaseController
                 'stack_trace' => $e->getTraceAsString(),
                 'error_code' => (string)$e->getCode(),
             ]));
-            flash_error($e->getMessage());
-            return Response::redirect("debit_notes.php");
+            return $this->renderFormWithData($noteData, $itemsData, $e->getMessage(), 0);
         }
     }
 
@@ -282,6 +278,116 @@ class DebitNoteController extends BaseController
             $itemsList = $this->db->fetchAll("SELECT id, item_name FROM `" . DB::ITEMS . "` WHERE is_active=1 AND item_type='services' AND organization_id=:org_id ORDER BY item_name", ['org_id' => $this->orgId]);
         } catch (\Throwable $e) {
         }
+
+        return Response::html($this->view->render('debit_notes/form.php', [
+            'id' => $id,
+            'module' => $module,
+            'moduleCaption' => $moduleCaption,
+            'moduleId' => $moduleId,
+            'session_user_id' => $session_user_id,
+            'session_role_id' => $session_role_id,
+            'error_message' => $error_message,
+            'debit_note_no' => $debit_note_no,
+            'debit_note_date' => $debit_note_date,
+            'debit_note_status' => $debit_note_status,
+            'reference_no' => $reference_no,
+            'vendor_id' => $vendor_id,
+            'purchase_id' => $purchase_id,
+            'warehouse_id' => $warehouse_id,
+            'purchase_person' => $purchase_person,
+            'vendor_notes' => $vendor_notes,
+            'terms_and_conditions' => $terms_and_conditions,
+            'grand_subtotal' => $grand_subtotal,
+            'grand_discount_type' => $grand_discount_type,
+            'grand_discount_type_value' => $grand_discount_type_value,
+            'grand_discount_amount' => $grand_discount_amount,
+            'grand_after_discount' => $grand_after_discount,
+            'grand_tax' => $grand_tax,
+            'grand_total' => $grand_total,
+            'is_active' => $is_active,
+            'total_rows' => $total_rows,
+            'item_id_arr' => $item_id_arr,
+            'service_arr' => $service_arr,
+            'description_arr' => $description_arr,
+            'qty_arr' => $qty_arr,
+            'rate_arr' => $rate_arr,
+            'sub_total_arr' => $sub_total_arr,
+            'tax_arr' => $tax_arr,
+            'tax_amount_arr' => $tax_amount_arr,
+            'total_arr' => $total_arr,
+            'vendorsList' => $vendorsList,
+            'warehousesList' => $warehousesList,
+            'itemsList' => $itemsList,
+            'canCreate' => $this->canCreate(),
+            'canEdit' => $this->canEdit(),
+        ]));
+    }
+
+    private function renderFormWithData(array $noteData, array $itemsData, string $error_message, int $id): Response
+    {
+        $module = 'debit_notes';
+        $moduleCaption = $this->moduleCaption;
+        $moduleId = $this->moduleId;
+        $session_user_id = $this->userId;
+        $session_role_id = $this->roleId;
+
+        $debit_note_no = '';
+        $debit_note_date = (string)($noteData['debit_note_date'] ?? date('d-m-Y'));
+        $debit_note_status = (string)($noteData['debit_note_status'] ?? 'draft');
+        $reference_no = (string)($noteData['reference_no'] ?? '');
+        $vendor_id = (string)($noteData['vendor_id'] ?? '0');
+        $purchase_id = (string)($noteData['purchase_id'] ?? '0');
+        $warehouse_id = (string)($noteData['warehouse_id'] ?? '0');
+        $purchase_person = (string)($noteData['purchase_person'] ?? '0');
+        $vendor_notes = (string)($noteData['vendor_notes'] ?? '');
+        $terms_and_conditions = (string)($noteData['terms_and_conditions'] ?? '');
+        $grand_subtotal = (string)($noteData['grand_subtotal'] ?? '0.00');
+        $grand_discount_type = (string)($noteData['grand_discount_type'] ?? '');
+        $grand_discount_type_value = (string)($noteData['grand_discount_type_value'] ?? '');
+        $grand_discount_amount = (string)($noteData['grand_discount_amount'] ?? '');
+        $grand_after_discount = (string)($noteData['grand_after_discount'] ?? '');
+        $grand_tax = (string)($noteData['grand_tax'] ?? '0.00');
+        $grand_total = (string)($noteData['grand_total'] ?? '0.00');
+        $is_active = !empty($noteData['publish']) ? 1 : 0;
+
+        $item_id_arr = [];
+        $service_arr = [];
+        $description_arr = [];
+        $qty_arr = [];
+        $rate_arr = [];
+        $sub_total_arr = [];
+        $tax_arr = [];
+        $tax_amount_arr = [];
+        $total_arr = [];
+
+        foreach ($itemsData as $item) {
+            $item_id_arr[] = $item['id'] ?? '';
+            $service_arr[] = $item['service'] ?? '';
+            $description_arr[] = $item['description'] ?? '';
+            $qty_arr[] = $item['qty'] ?? '1';
+            $rate_arr[] = $item['rate'] ?? '0';
+            $sub_total_arr[] = $item['sub_total'] ?? '0';
+            $tax_arr[] = $item['tax'] ?? '0';
+            $tax_amount_arr[] = $item['tax_amount'] ?? '0';
+            $total_arr[] = $item['total'] ?? '0';
+        }
+        $total_rows = count($itemsData);
+        if ($total_rows === 0) {
+            $total_rows = 1;
+        }
+
+        $vendorsList = [];
+        $warehousesList = [];
+        $itemsList = [];
+        try {
+            $vendorsList = $this->db->fetchAll("SELECT id, display_name FROM `" . DB::VENDORS . "` WHERE is_active=1 AND organization_id=:org_id ORDER BY id DESC", ['org_id' => $this->orgId]);
+        } catch (\Throwable $e) {}
+        try {
+            $warehousesList = $this->db->fetchAll("SELECT id, warehouse_name FROM `" . DB::WAREHOUSES . "` WHERE is_active=1 ORDER BY warehouse_name");
+        } catch (\Throwable $e) {}
+        try {
+            $itemsList = $this->db->fetchAll("SELECT id, item_name FROM `" . DB::ITEMS . "` WHERE is_active=1 AND item_type='services' AND organization_id=:org_id ORDER BY item_name", ['org_id' => $this->orgId]);
+        } catch (\Throwable $e) {}
 
         return Response::html($this->view->render('debit_notes/form.php', [
             'id' => $id,
