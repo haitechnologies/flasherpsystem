@@ -38,9 +38,16 @@ $total = $c[0] ?? 0;
 while ($row = $r->fetch_array()) {
     $sel = $row["id"] == $current_id ? "table-primary shadow-sm" : "";
     $name = getTableAttr("display_name", DB::CUSTOMERS, $row["customer_id"]);
-    $date = dd_($row["sale_order_date"]);
+    $date = ddm_($row["sale_order_date"]);
     $amt = number_format($row["grand_total"], 2);
-    $st = strtoupper($row["sale_order_status"]);
+    $status_class = match($row["sale_order_status"]) {
+        'approved', 'delivered', 'shipped' => 'text-success',
+        'cancelled' => 'text-danger',
+        'draft' => 'text-secondary',
+        'sent' => 'text-info',
+        default => 'text-info'
+    };
+    $st = '<span class="' . $status_class . '">' . strtoupper($row["sale_order_status"]) . '</span>';
 ?>
     <tr id="<?php echo $row["id"]; ?>" class="<?php echo $sel; ?>">
         <td><a href="sale_order_overview.php?sale_order_id=<?php echo $row["id"]; ?>" class="text-black text-decoration-none d-block">

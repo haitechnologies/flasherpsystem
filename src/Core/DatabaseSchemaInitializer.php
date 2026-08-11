@@ -55,7 +55,7 @@ class DatabaseSchemaInitializer
         }
 
         if (!$conn) {
-            error_log("DatabaseSchemaInitializer: No database connection provided");
+            ErrorCapture::record("DatabaseSchemaInitializer: No database connection provided");
             return;
         }
 
@@ -90,13 +90,13 @@ class DatabaseSchemaInitializer
     {
         if ($conn instanceof mysqli) {
             if (!$conn->query($sql)) {
-                error_log("ERROR creating {$tableName} table: " . $conn->error);
+                ErrorCapture::record("ERROR creating {$tableName} table: " . $conn->error);
             }
         } elseif ($conn instanceof PDO) {
             try {
                 $conn->exec($sql);
             } catch (PDOException $e) {
-                error_log("ERROR creating {$tableName} table: " . $e->getMessage());
+                ErrorCapture::record("ERROR creating {$tableName} table: " . $e->getMessage());
             }
         }
     }
@@ -334,7 +334,7 @@ class DatabaseSchemaInitializer
                 $check->execute([$inquiryRepliesTable]);
                 $hasColumn = (bool) $check->fetch();
             } catch (PDOException $e) {
-                error_log("ERROR checking email_queue_id column: " . $e->getMessage());
+                ErrorCapture::record("ERROR checking email_queue_id column: " . $e->getMessage());
             }
         }
 
@@ -348,7 +348,7 @@ class DatabaseSchemaInitializer
                 try {
                     $conn->exec($alterSql);
                 } catch (PDOException $e) {
-                    error_log("ERROR adding email_queue_id to inquiry replies: " . $e->getMessage());
+                    ErrorCapture::record("ERROR adding email_queue_id to inquiry replies: " . $e->getMessage());
                 }
             }
         }
@@ -392,7 +392,7 @@ class DatabaseSchemaInitializer
                     $existsStmt->execute([$tableName, $columnName]);
                     $hasColumn = (bool) $existsStmt->fetch();
                 } catch (PDOException $e) {
-                    error_log("ERROR checking {$columnName} on {$tableName}: " . $e->getMessage());
+                    ErrorCapture::record("ERROR checking {$columnName} on {$tableName}: " . $e->getMessage());
                     continue;
                 }
             }
@@ -403,13 +403,13 @@ class DatabaseSchemaInitializer
 
             if ($conn instanceof mysqli) {
                 if (!$conn->query($alterSql)) {
-                    error_log("ERROR adding {$columnName} to {$tableName}: " . $conn->error);
+                    ErrorCapture::record("ERROR adding {$columnName} to {$tableName}: " . $conn->error);
                 }
             } elseif ($conn instanceof PDO) {
                 try {
                     $conn->exec($alterSql);
                 } catch (PDOException $e) {
-                    error_log("ERROR adding {$columnName} to {$tableName}: " . $e->getMessage());
+                    ErrorCapture::record("ERROR adding {$columnName} to {$tableName}: " . $e->getMessage());
                 }
             }
         }
@@ -440,7 +440,7 @@ class DatabaseSchemaInitializer
             if ($conn instanceof mysqli) {
                 $existsStmt = $conn->prepare($colQuery);
                 if (!$existsStmt) {
-                    error_log("ERROR preparing MFA column check for {$columnName}: " . $conn->error);
+                    ErrorCapture::record("ERROR preparing MFA column check for {$columnName}: " . $conn->error);
                     continue;
                 }
                 $existsStmt->bind_param('ss', $tableName, $columnName);
@@ -448,7 +448,7 @@ class DatabaseSchemaInitializer
                     $existsStmt->store_result();
                     $hasColumn = $existsStmt->num_rows > 0;
                 } else {
-                    error_log("ERROR executing MFA column check for {$columnName}: " . $existsStmt->error);
+                    ErrorCapture::record("ERROR executing MFA column check for {$columnName}: " . $existsStmt->error);
                 }
                 $existsStmt->close();
             } elseif ($conn instanceof PDO) {
@@ -457,7 +457,7 @@ class DatabaseSchemaInitializer
                     $existsStmt->execute([$tableName, $columnName]);
                     $hasColumn = (bool) $existsStmt->fetch();
                 } catch (PDOException $e) {
-                    error_log("ERROR executing MFA column check for {$columnName}: " . $e->getMessage());
+                    ErrorCapture::record("ERROR executing MFA column check for {$columnName}: " . $e->getMessage());
                     continue;
                 }
             }
@@ -468,13 +468,13 @@ class DatabaseSchemaInitializer
 
             if ($conn instanceof mysqli) {
                 if (!$conn->query($alterSql)) {
-                    error_log("ERROR adding {$columnName} to {$tableName}: " . $conn->error);
+                    ErrorCapture::record("ERROR adding {$columnName} to {$tableName}: " . $conn->error);
                 }
             } elseif ($conn instanceof PDO) {
                 try {
                     $conn->exec($alterSql);
                 } catch (PDOException $e) {
-                    error_log("ERROR adding {$columnName} to {$tableName}: " . $e->getMessage());
+                    ErrorCapture::record("ERROR adding {$columnName} to {$tableName}: " . $e->getMessage());
                 }
             }
         }

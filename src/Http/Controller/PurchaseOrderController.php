@@ -62,12 +62,10 @@ class PurchaseOrderController extends BaseController
             flash_success('The Purchase Order has been updated successfully.');
             return Response::redirect('listing_purchase_orders.php');
         } catch (ValidationException $e) {
-            $error = current($e->getErrors());
-            flash_error($error);
-            return Response::redirect("purchase_orders.php?id=$id&action=edit_purchase_orders");
+            return $this->renderFormWithData($orderData, $itemsData, current($e->getErrors()), $id);
         } catch (\Throwable $e) {
-            flash_error($e->getMessage());
-            return Response::redirect("purchase_orders.php?id=$id&action=edit_purchase_orders");
+            $this->logError("PurchaseOrderController::handleUpdate error: " . $e->getMessage());
+            return $this->renderFormWithData($orderData, $itemsData, $e->getMessage(), $id);
         }
     }
 
@@ -81,12 +79,10 @@ class PurchaseOrderController extends BaseController
             flash_success('The Purchase Order has been saved successfully.');
             return Response::redirect('listing_purchase_orders.php');
         } catch (ValidationException $e) {
-            $error = current($e->getErrors());
-            flash_error($error);
-            return Response::redirect("purchase_orders.php");
+            return $this->renderFormWithData($orderData, $itemsData, current($e->getErrors()), 0);
         } catch (\Throwable $e) {
-            flash_error($e->getMessage());
-            return Response::redirect("purchase_orders.php");
+            $this->logError("PurchaseOrderController::handleCreate error: " . $e->getMessage());
+            return $this->renderFormWithData($orderData, $itemsData, $e->getMessage(), 0);
         }
     }
 
@@ -148,11 +144,6 @@ class PurchaseOrderController extends BaseController
         $session_user_id = $this->userId;
         $session_role_id = $this->roleId;
         $error_message = $request->getString('error_message');
-        if (empty($error_message)) {
-            foreach (\App\Core\FlashMessage::all() as $fm) {
-                if ($fm['type'] === 'danger') { $error_message = $fm['message']; break; }
-            }
-        }
         $action = $request->getString('action');
 
         // Default values
@@ -190,6 +181,7 @@ class PurchaseOrderController extends BaseController
                 $row = $this->db->fetchOne($sql, ['id' => $id]);
                 $created_by = $row ? (int)$row['created_by'] : 0;
             } catch (\Throwable $e) {
+                $this->logError("PurchaseOrderController::showForm error: " . $e->getMessage());
                 $created_by = 0;
             }
 
@@ -199,6 +191,7 @@ class PurchaseOrderController extends BaseController
                 try {
                     $order = $this->purchaseOrderService->getPurchaseOrder($id, $this->orgId);
                     $vendor_id = (string)$order->vendorId;
+                    $purchase_order_no = (string)($order->purchaseOrderNo ?? '');
                     $purchase_order_status = $order->purchaseOrderStatus;
                     $purchase_order_date = DateHelper::toDisplayDate($order->purchaseOrderDate) ?: $order->purchaseOrderDate;
                     $reference_no = (string)$order->referenceNo;
@@ -214,7 +207,7 @@ class PurchaseOrderController extends BaseController
                     $grand_tax = (string)$order->grandTax;
                     $grand_total = (string)$order->grandTotal;
 
-                    $items = $this->purchaseOrderService->getPurchaseOrderItems($id, $this->orgId);
+                    $items = $this->purchaseOrderService->getPurchaseOrderItems($id);
                     $total_rows = count($items);
 
                     foreach ($items as $item) {
@@ -229,6 +222,7 @@ class PurchaseOrderController extends BaseController
                         $total_arr[] = $item->total;
                     }
                 } catch (\Throwable $e) {
+                    $this->logError("PurchaseOrderController::showForm error: " . $e->getMessage());
                     $error_message = $e->getMessage();
                 }
             }
@@ -243,6 +237,7 @@ class PurchaseOrderController extends BaseController
         try {
             $vendorOptions = $this->db->fetchAll("SELECT id, display_name FROM `" . DB::VENDORS . "` WHERE is_active=1 ORDER BY id DESC");
         } catch (\Throwable $e) {
+            $this->logError("PurchaseOrderController::showForm error: " . $e->getMessage());
             $vendorOptions = [];
         }
 
@@ -250,13 +245,15 @@ class PurchaseOrderController extends BaseController
         try {
             $warehouseOptions = $this->db->fetchAll("SELECT id, warehouse_name FROM `" . DB::WAREHOUSES . "` WHERE is_active=1");
         } catch (\Throwable $e) {
+            $this->logError("PurchaseOrderController::showForm error: " . $e->getMessage());
             $warehouseOptions = [];
         }
 
         $itemsList = [];
         try {
-            $itemsList = $this->db->fetchAll("SELECT id, item_name FROM `" . DB::ITEMS . "` WHERE is_active=1 AND item_type='services' ORDER BY item_name");
+            $itemsList = $this->db->fetchAll("SELECT id, item_name, cost_price FROM `" . DB::ITEMS . "` WHERE is_active=1 AND item_type='services' ORDER BY item_name");
         } catch (\Throwable $e) {
+            $this->logError("PurchaseOrderController::showForm error: " . $e->getMessage());
             $itemsList = [];
         }
 
@@ -269,6 +266,120 @@ class PurchaseOrderController extends BaseController
             'session_role_id' => $session_role_id,
             'error_message' => $error_message,
             'vendor_id' => $vendor_id,
+            'purchase_order_no' => $purchase_order_no ?? '',
+            'purchase_order_status' => $purchase_order_status,
+            'purchase_order_date' => $purchase_order_date,
+            'reference_no' => $reference_no,
+            'subject' => $subject,
+            'warehouse_id' => $warehouse_id,
+            'vendor_notes' => $vendor_notes,
+            'terms_and_conditions' => $terms_and_conditions,
+            'grand_subtotal' => $grand_subtotal,
+            'grand_discount_type' => $grand_discount_type,
+            'grand_discount_type_value' => $grand_discount_type_value,
+            'grand_discount_amount' => $grand_discount_amount,
+            'grand_after_discount' => $grand_after_discount,
+            'grand_tax' => $grand_tax,
+            'grand_total' => $grand_total,
+            'total_rows' => $total_rows,
+            'item_id_arr' => $item_id_arr,
+            'service_arr' => $service_arr,
+            'description_arr' => $description_arr,
+            'qty_arr' => $qty_arr,
+            'rate_arr' => $rate_arr,
+            'sub_total_arr' => $sub_total_arr,
+            'tax_arr' => $tax_arr,
+            'tax_amount_arr' => $tax_amount_arr,
+            'total_arr' => $total_arr,
+            'vendorOptions' => $vendorOptions,
+            'warehouseOptions' => $warehouseOptions,
+            'itemsList' => $itemsList,
+            'canCreate' => $this->canCreate(),
+            'canEdit' => $this->canEdit(),
+        ]));
+    }
+
+    private function renderFormWithData(array $orderData, array $itemsData, string $errorMessage, int $id): Response
+    {
+        $error_message = $errorMessage;
+        $module = 'purchase_orders';
+        $moduleCaption = $this->moduleCaption;
+        $moduleId = $this->moduleId;
+        $session_user_id = $this->userId;
+        $session_role_id = $this->roleId;
+
+        $vendor_id = $orderData['vendor_id'] ?? '0';
+        $purchase_order_no = $orderData['purchase_order_no'] ?? '';
+        $purchase_order_status = $orderData['purchase_order_status'] ?? 'draft';
+        $purchase_order_date = DateHelper::toDisplayDate($orderData['purchase_order_date'] ?? '') ?: ($orderData['purchase_order_date'] ?? '');
+        $reference_no = $orderData['reference_no'] ?? '';
+        $subject = $orderData['subject'] ?? '';
+        $warehouse_id = $orderData['warehouse_id'] ?? '0';
+        $vendor_notes = $orderData['vendor_notes'] ?? '';
+        $terms_and_conditions = $orderData['terms_and_conditions'] ?? '';
+        $grand_subtotal = $orderData['grand_subtotal'] ?? '0.00';
+        $grand_discount_type = $orderData['grand_discount_type'] ?? '';
+        $grand_discount_type_value = $orderData['grand_discount_type_value'] ?? '';
+        $grand_discount_amount = $orderData['grand_discount_amount'] ?? '';
+        $grand_after_discount = $orderData['grand_after_discount'] ?? '';
+        $grand_tax = $orderData['grand_tax'] ?? '0.00';
+        $grand_total = $orderData['grand_total'] ?? '0.00';
+
+        $item_id_arr = [];
+        $service_arr = [];
+        $description_arr = [];
+        $qty_arr = [];
+        $rate_arr = [];
+        $sub_total_arr = [];
+        $tax_arr = [];
+        $tax_amount_arr = [];
+        $total_arr = [];
+
+        foreach ($itemsData as $item) {
+            $item_id_arr[] = $item['id'] ?? null;
+            $service_arr[] = $item['service'] ?? '';
+            $description_arr[] = $item['description'] ?? '';
+            $qty_arr[] = $item['qty'] ?? '1';
+            $rate_arr[] = $item['rate'] ?? '0';
+            $sub_total_arr[] = $item['sub_total'] ?? '0';
+            $tax_arr[] = $item['tax'] ?? '0';
+            $tax_amount_arr[] = $item['tax_amount'] ?? '0';
+            $total_arr[] = $item['total'] ?? '0';
+        }
+
+        $total_rows = count($itemsData) > 0 ? count($itemsData) : 1;
+
+        $vendorOptions = [];
+        try {
+            $vendorOptions = $this->db->fetchAll("SELECT id, display_name FROM `" . DB::VENDORS . "` WHERE is_active=1 ORDER BY id DESC");
+        } catch (\Throwable $e) {
+            $this->logError("PurchaseOrderController::renderFormWithData error: " . $e->getMessage());
+        }
+
+        $warehouseOptions = [];
+        try {
+            $warehouseOptions = $this->db->fetchAll("SELECT id, warehouse_name FROM `" . DB::WAREHOUSES . "` WHERE is_active=1");
+        } catch (\Throwable $e) {
+            $this->logError("PurchaseOrderController::renderFormWithData error: " . $e->getMessage());
+        }
+
+        $itemsList = [];
+        try {
+            $itemsList = $this->db->fetchAll("SELECT id, item_name, cost_price FROM `" . DB::ITEMS . "` WHERE is_active=1 AND item_type='services' ORDER BY item_name");
+        } catch (\Throwable $e) {
+            $this->logError("PurchaseOrderController::renderFormWithData error: " . $e->getMessage());
+        }
+
+        return Response::html($this->view->render('purchase_orders/form.php', [
+            'id' => $id,
+            'module' => $module,
+            'moduleCaption' => $moduleCaption,
+            'moduleId' => $moduleId,
+            'session_user_id' => $session_user_id,
+            'session_role_id' => $session_role_id,
+            'error_message' => $error_message,
+            'vendor_id' => $vendor_id,
+            'purchase_order_no' => $purchase_order_no,
             'purchase_order_status' => $purchase_order_status,
             'purchase_order_date' => $purchase_order_date,
             'reference_no' => $reference_no,

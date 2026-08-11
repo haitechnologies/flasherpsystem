@@ -160,15 +160,42 @@ $current_id = (int)($_GET['customer_id'] ?? 0);
                     while ($row = $result->fetch_array()) {
                         $isSelected = ($row['id'] == $current_id) ? 'table-primary shadow-sm' : '';
 
-                        // Calculate outstanding receivables (unpaid invoices)
-                        $customer_receivables = 0;
-                        $rec_query = $mysqli->query("SELECT SUM(grand_total) as total FROM " . DB::INVOICES . " WHERE customer_id = {$row['id']} AND invoice_status NOT IN ('paid', 'cancelled')");
-                        if ($rec_query && $rec_row = $rec_query->fetch_assoc()) {
-                            $customer_receivables = (float)($rec_row['total'] ?? 0);
-                        }
+                        // Calculate balance due = opening + invoiced - paid - credited
+                        $customer_balance = 0.0;
 
-                        $formatted_amount = BASE_CURRENCY['code'] . dec_($customer_receivables);
+                        $ob_query = $mysqli->query("SELECT COALESCE(opening_balance, 0) as ob FROM `" . DB::CUSTOMERS . "` WHERE id = {$row['id']}");
+                        $opening_balance = ($ob_query && $ob_row = $ob_query->fetch_assoc()) ? (float)($ob_row['ob'] ?? 0) : 0.0;
+
+                        $inv_query = $mysqli->query("SELECT COALESCE(SUM(grand_total), 0) as total FROM `" . DB::INVOICES . "` WHERE customer_id = {$row['id']} AND invoice_status NOT IN ('draft','void','cancelled','writeoff')");
+                        $invoiced = ($inv_query && $inv_row = $inv_query->fetch_assoc()) ? (float)($inv_row['total'] ?? 0) : 0.0;
+
+                        $pay_query = $mysqli->query("SELECT COALESCE(SUM(total_amount_received), 0) as total FROM `" . DB::PAYMENTS_RECEIVED . "` WHERE customer_id = {$row['id']} AND payment_status != 'void'");
+                        $paid = ($pay_query && $pay_row = $pay_query->fetch_assoc()) ? (float)($pay_row['total'] ?? 0) : 0.0;
+
+                        $cr_query = $mysqli->query("SELECT COALESCE(SUM(grand_total), 0) as total FROM `" . DB::CREDIT_NOTES . "` WHERE customer_id = {$row['id']} AND credit_note_status NOT IN ('draft','void')");
+                        $credited = ($cr_query && $cr_row = $cr_query->fetch_assoc()) ? (float)($cr_row['total'] ?? 0) : 0.0;
+
+                        $customer_balance = $opening_balance + $invoiced - $paid - $credited;
+
+                        $formatted_amount = BASE_CURRENCY['code'] . dec_($customer_balance);
                         $attachment_icon = ($row['total_attachments'] > 0) ? '<i class="ph-paperclip"></i>' : '';
+
+                        $overdue_query = $mysqli->query("SELECT COUNT(*) as cnt FROM `" . DB::INVOICES . "` WHERE customer_id = {$row['id']} AND invoice_status NOT IN ('draft','void','cancelled','writeoff') AND expiry_date < CURDATE()");
+                        $overdue_cnt = (int)(($overdue_query && $overdue_row = $overdue_query->fetch_assoc()) ? ($overdue_row['cnt'] ?? 0) : 0);
+
+                        $invoice_count_query = $mysqli->query("SELECT COUNT(*) as cnt FROM `" . DB::INVOICES . "` WHERE customer_id = {$row['id']}");
+                        $invoice_count = (int)(($invoice_count_query && $invoice_count_row = $invoice_count_query->fetch_assoc()) ? ($invoice_count_row['cnt'] ?? 0) : 0);
+                        if ($invoice_count === 0) {
+                            $cust_status_class = 'text-muted';
+                            $cust_status_label = 'No Invoices';
+                        } elseif ($customer_balance > 0) {
+                            $cust_status_class = $overdue_cnt > 0 ? 'text-danger' : 'text-warning';
+                            $cust_status_label = $overdue_cnt > 0 ? 'OVERDUE' : 'UNPAID';
+                        } else {
+                            $cust_status_class = 'text-success';
+                            $cust_status_label = 'PAID';
+                        }
+                        $cust_status_html = '<span class="' . $cust_status_class . ' small fw-semibold">' . $cust_status_label . '</span>';
                     ?>
                         <tr id="<?php echo $row['id']; ?>" class="<?php echo $isSelected; ?>">
                             <td>
@@ -178,6 +205,9 @@ $current_id = (int)($_GET['customer_id'] ?? 0);
                                             <div><?php echo $row['display_name']; ?></div>
                                             <div class="text-muted small">
                                                 <?php echo $formatted_amount; ?>
+                                            </div>
+                                            <div class="small mt-1">
+                                                <?php echo $cust_status_html; ?>
                                             </div>
                                         </div>
                                         <div class="col-lg-2 text-end">

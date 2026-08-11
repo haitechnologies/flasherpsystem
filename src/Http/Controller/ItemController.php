@@ -29,9 +29,10 @@ class ItemController extends BaseController
     {
         try {
             return $this->db->fetchAll(
-                "SELECT id, tax_treatment FROM `" . \App\Core\DB::TAX_TREATMENTS . "` WHERE is_active = 1 ORDER BY tax_treatment ASC"
+                "SELECT id, tax_treatment FROM `" . \App\Core\DB::TAX_TREATMENTS . "` WHERE is_active = 1 AND organization_id = " . (int)$this->orgId . " ORDER BY tax_treatment ASC"
             );
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("ItemController::getTaxTreatments error: " . $e->getMessage());
             return [];
         }
     }
@@ -40,9 +41,10 @@ class ItemController extends BaseController
     {
         try {
             return $this->db->fetchAll(
-                "SELECT id, display_name FROM `" . \App\Core\DB::VENDORS . "` WHERE is_active = 1 ORDER BY display_name ASC"
+                "SELECT id, display_name FROM `" . \App\Core\DB::VENDORS . "` WHERE is_active = 1 AND organization_id = " . (int)$this->orgId . " ORDER BY display_name ASC"
             );
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("ItemController::getVendors error: " . $e->getMessage());
             return [];
         }
     }
@@ -96,7 +98,8 @@ class ItemController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("items.php?id=$id&action=edit_items");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("ItemController::handleUpdate error: " . $e->getMessage());
             flash_error('Item could not be updated.');
             return Response::redirect("items.php?id=$id&action=edit_items");
         }
@@ -126,7 +129,8 @@ class ItemController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("items.php");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("ItemController::handleCreate error: " . $e->getMessage());
             flash_error('Item could not be saved.');
             return Response::redirect("items.php");
         }

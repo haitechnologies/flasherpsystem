@@ -68,6 +68,7 @@ class SetupStatusController extends BaseController
             flash_error($error);
             return Response::redirect("setup_statuses.php?id=$id&action=edit_setup_statuses");
         } catch (\Throwable $e) {
+            $this->logError("SetupStatusController::handleUpdate error: " . $e->getMessage());
             flash_error('The Status could not be updated.');
             return Response::redirect("setup_statuses.php?id=$id&action=edit_setup_statuses");
         }
@@ -90,6 +91,7 @@ class SetupStatusController extends BaseController
             flash_error($error);
             return Response::redirect("setup_statuses.php");
         } catch (\Throwable $e) {
+            $this->logError("SetupStatusController::handleCreate error: " . $e->getMessage());
             flash_error('The Status could not be saved.');
             return Response::redirect("setup_statuses.php");
         }

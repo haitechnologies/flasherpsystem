@@ -104,6 +104,12 @@ class JobController extends BaseController
             $_SESSION['__jobs_old_input'] = $_POST;
             return Response::redirect("jobs.php?id=$id&action=edit_jobs&error_message=" . urlencode($error));
         } catch (\Throwable $e) {
+            log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
+                'module' => 'jobs',
+                'module_slug' => 'jobs',
+                'stack_trace' => $e->getTraceAsString(),
+                'error_code' => (string)$e->getCode(),
+            ]));
             flash_error($e->getMessage());
             $_SESSION['__jobs_old_input'] = $_POST;
             return Response::redirect("jobs.php?id=$id&action=edit_jobs&error_message=" . urlencode($e->getMessage()));
@@ -131,6 +137,12 @@ class JobController extends BaseController
             $_SESSION['__jobs_old_input'] = $_POST;
             return Response::redirect("jobs.php?error_message=" . urlencode($error));
         } catch (\Throwable $e) {
+            log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
+                'module' => 'jobs',
+                'module_slug' => 'jobs',
+                'stack_trace' => $e->getTraceAsString(),
+                'error_code' => (string)$e->getCode(),
+            ]));
             flash_error($e->getMessage());
             $_SESSION['__jobs_old_input'] = $_POST;
             return Response::redirect("jobs.php?error_message=" . urlencode($e->getMessage()));
@@ -307,6 +319,12 @@ class JobController extends BaseController
             flash_success('Job has been sent for approval. Accounts department will review it.');
             return Response::redirect("view_job.php?id=$id");
         } catch (\Throwable $e) {
+            log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
+                'module' => 'jobs',
+                'module_slug' => 'jobs',
+                'stack_trace' => $e->getTraceAsString(),
+                'error_code' => (string)$e->getCode(),
+            ]));
             flash_error($e->getMessage());
             return Response::redirect("view_job.php?id=$id");
         }
@@ -331,6 +349,12 @@ class JobController extends BaseController
             flash_success('Job has been approved successfully.');
             return Response::redirect("view_job.php?id=$id");
         } catch (\Throwable $e) {
+            log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
+                'module' => 'jobs',
+                'module_slug' => 'jobs',
+                'stack_trace' => $e->getTraceAsString(),
+                'error_code' => (string)$e->getCode(),
+            ]));
             flash_error($e->getMessage());
             return Response::redirect("view_job.php?id=$id");
         }
@@ -355,6 +379,12 @@ class JobController extends BaseController
             flash_success('Job has been sent back to draft. Operations can now make changes.');
             return Response::redirect("view_job.php?id=$id");
         } catch (\Throwable $e) {
+            log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
+                'module' => 'jobs',
+                'module_slug' => 'jobs',
+                'stack_trace' => $e->getTraceAsString(),
+                'error_code' => (string)$e->getCode(),
+            ]));
             flash_error($e->getMessage());
             return Response::redirect("view_job.php?id=$id");
         }
@@ -633,6 +663,12 @@ class JobController extends BaseController
                     }
                     $total_rows = count($dimItems);
                 } catch (\Throwable $e) {
+                    log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
+                        'module' => 'jobs',
+                        'module_slug' => 'jobs',
+                        'stack_trace' => $e->getTraceAsString(),
+                        'error_code' => (string)$e->getCode(),
+                    ]));
                     $error_message = $e->getMessage();
                 }
             }
@@ -759,7 +795,7 @@ class JobController extends BaseController
             $countriesList = [];
         }
         try {
-            $departmentsList = $this->db->fetchAll("SELECT id, department, email FROM `" . DB::DEPARTMENTS . "` WHERE is_active=1 ORDER BY department");
+            $departmentsList = $this->db->fetchAll("SELECT id, department, email FROM `" . DB::DEPARTMENTS . "` WHERE publish=1 ORDER BY department");
         } catch (\Throwable $e) {
             $departmentsList = [];
         }
@@ -963,6 +999,12 @@ class JobController extends BaseController
             );
             return Response::json(['success' => true, 'id' => $newId, 'carrier_name' => $name]);
         } catch (\Throwable $e) {
+            log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
+                'module' => 'jobs',
+                'module_slug' => 'jobs',
+                'stack_trace' => $e->getTraceAsString(),
+                'error_code' => (string)$e->getCode(),
+            ]));
             return Response::json(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
         }
     }
@@ -995,6 +1037,12 @@ class JobController extends BaseController
             );
             return Response::json(['success' => true, 'id' => $newId, 'port_name' => $portName, 'port_code' => $portCode]);
         } catch (\Throwable $e) {
+            log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
+                'module' => 'jobs',
+                'module_slug' => 'jobs',
+                'stack_trace' => $e->getTraceAsString(),
+                'error_code' => (string)$e->getCode(),
+            ]));
             return Response::json(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
         }
     }

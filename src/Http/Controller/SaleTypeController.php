@@ -64,7 +64,8 @@ class SaleTypeController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("sale_types.php?id=$id&action=edit_sale_types");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("SaleTypeController::handleUpdate error: " . $e->getMessage());
             flash_error('The Sale Type could not be updated.');
             return Response::redirect("sale_types.php?id=$id&action=edit_sale_types");
         }
@@ -84,7 +85,8 @@ class SaleTypeController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("sale_types.php");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("SaleTypeController::handleCreate error: " . $e->getMessage());
             flash_error('The Sale Type could not be saved.');
             return Response::redirect("sale_types.php");
         }

@@ -20,7 +20,16 @@ class CreditNoteRepository
 
     public function find(int $id, int $orgId): ?CreditNote
     {
-        $sql = "SELECT * FROM `{DB::CREDIT_NOTES}` WHERE id = :id AND organization_id = :org_id";
+        $sql = "SELECT id, organization_id, credit_note_no, credit_note_date, credit_note_status,
+                       reference_no, customer_id, invoice_id, warehouse_id, subject, payment_term,
+                       expiry_date, expected_shipment_date, shipment_type, sales_person,
+                       job_reference_no, master_awb_no, shipper, consignee, origin, destination,
+                       no_of_packs, gross_weight, chargeable_weight, volume, customer_notes,
+                       terms_and_conditions, grand_subtotal, grand_discount_type,
+                       grand_discount_type_value, grand_discount_amount, grand_after_discount,
+                       grand_tax, grand_total, qrcode, pdf, publish, is_active,
+                       created_at, updated_at, updated_by, created_by
+                FROM `{DB::CREDIT_NOTES}` WHERE id = :id AND organization_id = :org_id";
         $row = $this->db->fetchOne($sql, ['id' => $id, 'org_id' => $orgId]);
         if ($row === null) {
             return null;
@@ -30,7 +39,10 @@ class CreditNoteRepository
 
     public function findItems(int $parentId, int $orgId): array
     {
-        $sql = "SELECT * FROM `{DB::CREDIT_NOTE_ITEMS}` WHERE credit_note_id = :credit_note_id AND organization_id = :org_id ORDER BY id ASC";
+        $sql = "SELECT id, organization_id, credit_note_id, service, description, qty, rate,
+                       discount_type, discount_type_value, discount_amount, tax, tax_amount,
+                       sub_total, total, created_at, updated_at, updated_by, created_by
+                FROM `{DB::CREDIT_NOTE_ITEMS}` WHERE credit_note_id = :credit_note_id AND organization_id = :org_id ORDER BY id ASC";
         $rows = $this->db->fetchAll($sql, ['credit_note_id' => $parentId, 'org_id' => $orgId]);
         $items = [];
         foreach ($rows as $row) {
@@ -41,7 +53,10 @@ class CreditNoteRepository
 
     public function findItem(int $id, int $orgId): ?CreditNoteItem
     {
-        $sql = "SELECT * FROM `{DB::CREDIT_NOTE_ITEMS}` WHERE id = :id AND organization_id = :org_id";
+        $sql = "SELECT id, organization_id, credit_note_id, service, description, qty, rate,
+                       discount_type, discount_type_value, discount_amount, tax, tax_amount,
+                       sub_total, total, created_at, updated_at, updated_by, created_by
+                FROM `{DB::CREDIT_NOTE_ITEMS}` WHERE id = :id AND organization_id = :org_id";
         $row = $this->db->fetchOne($sql, ['id' => $id, 'org_id' => $orgId]);
         if ($row === null) {
             return null;
@@ -70,18 +85,24 @@ class CreditNoteRepository
     {
         $sql = "INSERT INTO `{DB::CREDIT_NOTES}` (
                     organization_id, credit_note_no, credit_note_date, credit_note_status,
-                    reference_no, customer_id, invoice_id, warehouse_id, sales_person,
-                    customer_notes, terms_and_conditions,
-                    grand_subtotal, grand_discount_type, grand_discount_type_value,
-                    grand_discount_amount, grand_after_discount, grand_tax, grand_total,
-                    publish, is_active, created_at, updated_at, updated_by, created_by
+                    reference_no, customer_id, invoice_id, warehouse_id, subject, payment_term,
+                    expiry_date, expected_shipment_date, shipment_type, sales_person,
+                    job_reference_no, master_awb_no, shipper, consignee, origin, destination,
+                    no_of_packs, gross_weight, chargeable_weight, volume, customer_notes,
+                    terms_and_conditions, grand_subtotal, grand_discount_type,
+                    grand_discount_type_value, grand_discount_amount, grand_after_discount,
+                    grand_tax, grand_total, qrcode, pdf, publish, is_active,
+                    created_at, updated_at, updated_by, created_by
                 ) VALUES (
                     :organization_id, :credit_note_no, :credit_note_date, :credit_note_status,
-                    :reference_no, :customer_id, :invoice_id, :warehouse_id, :sales_person,
-                    :customer_notes, :terms_and_conditions,
-                    :grand_subtotal, :grand_discount_type, :grand_discount_type_value,
-                    :grand_discount_amount, :grand_after_discount, :grand_tax, :grand_total,
-                    :publish, :is_active, NOW(), NOW(), :updated_by, :created_by
+                    :reference_no, :customer_id, :invoice_id, :warehouse_id, :subject, :payment_term,
+                    :expiry_date, :expected_shipment_date, :shipment_type, :sales_person,
+                    :job_reference_no, :master_awb_no, :shipper, :consignee, :origin, :destination,
+                    :no_of_packs, :gross_weight, :chargeable_weight, :volume, :customer_notes,
+                    :terms_and_conditions, :grand_subtotal, :grand_discount_type,
+                    :grand_discount_type_value, :grand_discount_amount, :grand_after_discount,
+                    :grand_tax, :grand_total, :qrcode, :pdf, :publish, :is_active,
+                    NOW(), NOW(), :updated_by, :created_by
                 )";
 
         $params = $creditNote->toArray();
@@ -107,7 +128,22 @@ class CreditNoteRepository
                     customer_id = :customer_id,
                     invoice_id = :invoice_id,
                     warehouse_id = :warehouse_id,
+                    subject = :subject,
+                    payment_term = :payment_term,
+                    expiry_date = :expiry_date,
+                    expected_shipment_date = :expected_shipment_date,
+                    shipment_type = :shipment_type,
                     sales_person = :sales_person,
+                    job_reference_no = :job_reference_no,
+                    master_awb_no = :master_awb_no,
+                    shipper = :shipper,
+                    consignee = :consignee,
+                    origin = :origin,
+                    destination = :destination,
+                    no_of_packs = :no_of_packs,
+                    gross_weight = :gross_weight,
+                    chargeable_weight = :chargeable_weight,
+                    volume = :volume,
                     customer_notes = :customer_notes,
                     terms_and_conditions = :terms_and_conditions,
                     grand_subtotal = :grand_subtotal,
@@ -117,6 +153,8 @@ class CreditNoteRepository
                     grand_after_discount = :grand_after_discount,
                     grand_tax = :grand_tax,
                     grand_total = :grand_total,
+                    qrcode = :qrcode,
+                    pdf = :pdf,
                     publish = :publish,
                     is_active = :is_active,
                     updated_at = NOW(),
@@ -148,10 +186,12 @@ class CreditNoteRepository
     {
         $sql = "INSERT INTO `{DB::CREDIT_NOTE_ITEMS}` (
                     organization_id, credit_note_id, service, description, qty, rate,
+                    discount_type, discount_type_value, discount_amount,
                     sub_total, tax, tax_amount, total,
                     created_at, updated_at, updated_by, created_by
                 ) VALUES (
                     :organization_id, :credit_note_id, :service, :description, :qty, :rate,
+                    :discount_type, :discount_type_value, :discount_amount,
                     :sub_total, :tax, :tax_amount, :total,
                     NOW(), NOW(), :updated_by, :created_by
                 )";
@@ -176,6 +216,9 @@ class CreditNoteRepository
                     description = :description,
                     qty = :qty,
                     rate = :rate,
+                    discount_type = :discount_type,
+                    discount_type_value = :discount_type_value,
+                    discount_amount = :discount_amount,
                     sub_total = :sub_total,
                     tax = :tax,
                     tax_amount = :tax_amount,
@@ -242,7 +285,24 @@ class CreditNoteRepository
             customerId: (int)($row['customer_id'] ?? 0),
             invoiceId: (int)($row['invoice_id'] ?? 0),
             warehouseId: (int)($row['warehouse_id'] ?? 0),
+            subject: $row['subject'] !== null ? (string)$row['subject'] : null,
+            paymentTerm: (int)($row['payment_term'] ?? 0),
+            expiryDate: $row['expiry_date'] !== null ? (string)$row['expiry_date'] : null,
+            expectedShipmentDate: $row['expected_shipment_date'] !== null ? (string)$row['expected_shipment_date'] : null,
+            shipmentType: $row['shipment_type'] !== null ? (string)$row['shipment_type'] : null,
             salesPerson: (int)($row['sales_person'] ?? 0),
+            jobReferenceNo: $row['job_reference_no'] !== null ? (string)$row['job_reference_no'] : null,
+            masterAwbNo: $row['master_awb_no'] !== null ? (string)$row['master_awb_no'] : null,
+            shipper: (int)($row['shipper'] ?? 0),
+            consignee: (int)($row['consignee'] ?? 0),
+            origin: (int)($row['origin'] ?? 0),
+            destination: (int)($row['destination'] ?? 0),
+            noOfPacks: (int)($row['no_of_packs'] ?? 0),
+            grossWeight: (float)($row['gross_weight'] ?? 0.0),
+            chargeableWeight: (float)($row['chargeable_weight'] ?? 0.0),
+            volume: (float)($row['volume'] ?? 0.0),
+            qrcode: $row['qrcode'] !== null ? (string)$row['qrcode'] : null,
+            pdf: $row['pdf'] !== null ? (string)$row['pdf'] : null,
             customerNotes: $row['customer_notes'] !== null ? (string)$row['customer_notes'] : null,
             termsAndConditions: $row['terms_and_conditions'] !== null ? (string)$row['terms_and_conditions'] : null,
             grandSubtotal: (float)($row['grand_subtotal'] ?? 0.0),
@@ -271,6 +331,9 @@ class CreditNoteRepository
             description: $row['description'] !== null ? (string)$row['description'] : null,
             qty: (float)($row['qty'] ?? 1.0),
             rate: (float)($row['rate'] ?? 0.0),
+            discountType: $row['discount_type'] !== null ? (string)$row['discount_type'] : null,
+            discountTypeValue: (float)($row['discount_type_value'] ?? 0.0),
+            discountAmount: (float)($row['discount_amount'] ?? 0.0),
             subTotal: (float)($row['sub_total'] ?? 0.0),
             tax: (float)($row['tax'] ?? 0.0),
             taxAmount: (float)($row['tax_amount'] ?? 0.0),

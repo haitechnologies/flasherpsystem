@@ -55,12 +55,18 @@ class CustomerContactService
         $customerId = (int)($data['customer_id'] ?? 0);
         $this->ensureCustomerExists($customerId, $orgId);
 
+        $isPrimary = (bool)($data['is_primary'] ?? false);
+
         $this->db->beginTransaction();
         try {
+            if ($isPrimary) {
+                $this->customerRepo->clearPrimaryContacts($customerId, $orgId);
+            }
+
             $contact = new CustomerContact(
                 id: null,
                 organizationId: $orgId,
-                isPrimary: (bool)($data['is_primary'] ?? false),
+                isPrimary: $isPrimary,
                 customerId: $customerId,
                 firstName: trim((string)$data['first_name']),
                 lastName: trim((string)$data['last_name']),
@@ -88,12 +94,18 @@ class CustomerContactService
         $contact = $this->getContact($id, $orgId);
         $this->validateContactData($data, $orgId, $id);
 
+        $isPrimary = isset($data['is_primary']) ? (bool)$data['is_primary'] : $contact->isPrimary;
+
         $this->db->beginTransaction();
         try {
+            if ($isPrimary && !$contact->isPrimary) {
+                $this->customerRepo->clearPrimaryContacts($contact->customerId, $orgId);
+            }
+
             $updated = new CustomerContact(
                 id: $contact->id,
                 organizationId: $contact->organizationId,
-                isPrimary: isset($data['is_primary']) ? (bool)$data['is_primary'] : $contact->isPrimary,
+                isPrimary: $isPrimary,
                 customerId: $contact->customerId,
                 firstName: isset($data['first_name']) ? trim((string)$data['first_name']) : $contact->firstName,
                 lastName: isset($data['last_name']) ? trim((string)$data['last_name']) : $contact->lastName,

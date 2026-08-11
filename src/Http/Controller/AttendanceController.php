@@ -69,7 +69,7 @@ class AttendanceController extends BaseController
             flash_error($error);
             return Response::redirect("attendance.php?id=$id&action=edit_attendance");
         } catch (\Throwable $e) {
-            error_log("AttendanceController update error: " . $e->getMessage());
+            $this->logError("AttendanceController update error: " . $e->getMessage());
             flash_error($e->getMessage());
             return Response::redirect("attendance.php?id=$id&action=edit_attendance");
         }
@@ -93,7 +93,7 @@ class AttendanceController extends BaseController
             flash_error($error);
             return Response::redirect("attendance.php");
         } catch (\Throwable $e) {
-            error_log("AttendanceController create error: " . $e->getMessage());
+            $this->logError("AttendanceController create error: " . $e->getMessage());
             flash_error($e->getMessage());
             return Response::redirect("attendance.php");
         }

@@ -24,6 +24,7 @@ $success_message = '';
 */
 include('admin_elements/permissions.php');
 
+$activeOrganizationId = dashboardRequireActiveOrganization();
 
 $limit              = 10;
 $stages             = 2;
@@ -51,6 +52,71 @@ $filter_by              = ((isset($_REQUEST['filter_by']) && !empty($_REQUEST['f
 $date_from              = ((isset($_REQUEST['date_from']) && !empty($_REQUEST['date_from'])) ? e_s__($_REQUEST['date_from']) : date('01-m-Y', time()));
 $date_to                = ((isset($_REQUEST['date_to']) && !empty($_REQUEST['date_to'])) ? e_s__($_REQUEST['date_to']) : date('t-m-Y', time()));
 $report_basis           = ((isset($_REQUEST['report_basis']) && !empty($_REQUEST['report_basis'])) ? e_s__($_REQUEST['report_basis']) : '');
+
+
+if (!empty($filter_by) && $filter_by != '0') {
+    if (!function_exists('getDateRangeByFilter')) {
+        function getDateRangeByFilter($filter_by)
+        {
+            $today = new DateTimeImmutable('today');
+            $start = null;
+            $end   = null;
+            switch ($filter_by) {
+                case 'today':
+                    $start = $today;
+                    $end   = $today;
+                    break;
+                case 'this_week':
+                    $start = $today->modify('monday this week');
+                    $end   = $today->modify('sunday this week');
+                    break;
+                case 'this_month':
+                    $start = $today->modify('first day of this month');
+                    $end   = $today->modify('last day of this month');
+                    break;
+                case 'this_quarter':
+                    $quarterStart = (int)floor(($today->format('n') - 1) / 3) * 3 + 1;
+                    $start = $today->setDate($today->format('Y'), $quarterStart, 1);
+                    $end   = $start->modify('+2 months')->modify('last day of this month');
+                    break;
+                case 'this_year':
+                    $start = $today->setDate($today->format('Y'), 1, 1);
+                    $end   = $today->setDate($today->format('Y'), 12, 31);
+                    break;
+                case 'yesterday':
+                    $start = $today->modify('-1 day');
+                    $end   = $start;
+                    break;
+                case 'previous_week':
+                    $start = $today->modify('monday last week');
+                    $end   = $today->modify('sunday last week');
+                    break;
+                case 'previous_month':
+                    $start = $today->modify('first day of last month');
+                    $end   = $today->modify('last day of last month');
+                    break;
+                case 'previous_quarter':
+                    $quarterStart = (int)floor(($today->format('n') - 1) / 3) * 3 + 1 - 3;
+                    $year = $today->format('Y');
+                    if ($quarterStart < 1) {
+                        $quarterStart += 12;
+                        $year--;
+                    }
+                    $start = $today->setDate((int)$year, $quarterStart, 1);
+                    $end   = $start->modify('+2 months')->modify('last day of this month');
+                    break;
+                case 'previous_year':
+                    $start = $today->setDate((int)($today->format('Y') - 1), 1, 1);
+                    $end   = $today->setDate((int)($today->format('Y') - 1), 12, 31);
+                    break;
+                default:
+                    break;
+            }
+            return [$start ? $start->format('d-m-Y') : null, $end ? $end->format('d-m-Y') : null];
+        }
+    }
+    list($date_from, $date_to) = getDateRangeByFilter($filter_by);
+}
 
 
 /*
@@ -95,15 +161,19 @@ $search_query = '';
 // $date_from              = processDateDtoY($date_from);
 // $date_to                = processDateDtoY($date_to);
 
+$date_from_ymd = (!empty($date_from)) ? processDateDtoY($date_from) : '';
+$date_to_ymd   = (!empty($date_to))   ? processDateDtoY($date_to)   : '';
 
-if (!empty($date_from)) {
-    $search_query .= " AND quotation_date >= '" . processDateDtoY($date_from) . "'";
+if (!empty($date_from_ymd)) {
+    $search_query .= " AND quotation_date >= '" . $date_from_ymd . "'";
 }
 
-if (!empty($date_to)) {
-    $search_query .= " AND quotation_date <= '" . processDateDtoY($date_to) . "'";
+if (!empty($date_to_ymd)) {
+    $search_query .= " AND quotation_date <= '" . $date_to_ymd . "'";
     $max_date = $date_to;
 }
+
+$search_query .= " AND organization_id = " . (int)$activeOrganizationId;
 
 
 // ----------------------------------------------------------------------------------------------------
@@ -152,7 +222,7 @@ $accounts_report_category_name  = getTableAttr('category_name', tbl_accounts_rep
                     <div class="col-lg-6">
                         <div class="text-muted"><?php echo $accounts_report_category_name; ?></div>
                         <div class="mb-0">
-                            <span class="fw-semibold">Quote Details</span> - <span class="small">From <?php echo dd_($date_from); ?> To <?php echo dd_($date_to); ?></span>
+                            <span class="fw-semibold">Quote Details</span> - <span class="small">From <?php echo ddm_($date_from); ?> To <?php echo ddm_($date_to); ?></span>
                         </div>
                     </div>
 
@@ -270,7 +340,7 @@ $accounts_report_category_name  = getTableAttr('category_name', tbl_accounts_rep
             <div class="card-header text-center">
                 <p>Flash Logistics FZC</p>
                 <h5 class="mb-0">Quote Details</h5>
-                <p><span class="text-muted">From</span> <?php echo dd_($date_from); ?> <span class="text-muted">To</span> <?php echo dd_($date_to); ?></p>
+                <p><span class="text-muted">From</span> <?php echo ddm_($date_from); ?> <span class="text-muted">To</span> <?php echo ddm_($date_to); ?></p>
             </div>
 
             <div class="table-responsive">
@@ -300,10 +370,10 @@ $accounts_report_category_name  = getTableAttr('category_name', tbl_accounts_rep
                             $quotation_id       = $row["id"];
 
                             $quotation_date     = $row["quotation_date"];
-                            $quotation_date     = dd_($quotation_date);
+                            $quotation_date     = ddm_($quotation_date);
 
                             $expiry_date        = $row["expiry_date"];
-                            $expiry_date        = (($expiry_date == '1970-01-01') ? '' : dd_($expiry_date));
+                            $expiry_date        = (($expiry_date == '1970-01-01') ? '' : ddm_($expiry_date));
 
                             $quotation_no       = $row["quotation_no"];
                             $job_reference_no   = $row["job_reference_no"];

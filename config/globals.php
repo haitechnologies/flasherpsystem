@@ -168,7 +168,12 @@ if (!function_exists('getModuleIdBySlug')) {
       // Fallback to old method if DateTime fails
       $new_date = explode('-', $date);
       if (count($new_date) === 3) {
-        return $new_date[2] . '-' . $new_date[1] . '-' . $new_date[0];
+        $day   = (int)$new_date[0];
+        $month = (int)$new_date[1];
+        $year  = (int)$new_date[2];
+        if (checkdate($month, $day, $year)) {
+          return sprintf('%04d-%02d-%02d', $year, $month, $day);
+        }
       }
 
       return '';
@@ -257,6 +262,18 @@ if (!function_exists('getModuleIdBySlug')) {
    */
   function dd__(string|DateTime|null $datetime, ?string $format = null): string {
     return dd_($datetime, $format ?? 'd M Y g:i:sa');
+  }
+
+  /**
+   * Display date only (no time) - standardized across the codebase
+   * Default format: 06 Feb 2026 (d M Y)
+   *
+   * @param string|DateTime|null $datetime DateTime string or DateTime object
+   * @param string|null $format Custom format string (default: 'd M Y')
+   * @return string Formatted date or '-' if empty/invalid
+   */
+  function ddm_(string|DateTime|null $datetime, ?string $format = null): string {
+    return dd_($datetime, $format ?? 'd M Y');
   }
 
   /**
@@ -1026,13 +1043,14 @@ function convert_number_to_words($num)
     |--------------------------------------------------------------------------
     |
     */
-    function getVendorPayables($vendor_id, $mysqli) {
+    function getVendorPayables($vendor_id, $mysqli, $org_id = null) {
       $vendor_id = intval($vendor_id);
+      $org_clause = (!empty($org_id)) ? " AND organization_id = " . intval($org_id) : "";
 
       $query = "SELECT COALESCE(SUM(grand_total), 0) as total_purchases
                 FROM `" . DB::PURCHASES . "`
                 WHERE vendor_id = {$vendor_id}
-                AND purchase_status NOT IN ('draft', 'declined', 'expired')";
+                AND purchase_status NOT IN ('draft', 'declined', 'expired')" . $org_clause;
       $rs = $mysqli->query($query);
       $row = $rs->fetch_assoc();
       $total_purchases = floatval($row['total_purchases'] ?? 0);
@@ -1040,7 +1058,7 @@ function convert_number_to_words($num)
       $query = "SELECT COALESCE(SUM(total_amount_paid), 0) as total_paid
                 FROM `" . tbl_payments_made . "`
                 WHERE vendor_id = {$vendor_id}
-                AND payment_status != 'void'";
+                AND payment_status != 'void'" . $org_clause;
       $rs = $mysqli->query($query);
       $row = $rs->fetch_assoc();
       $total_paid = floatval($row['total_paid'] ?? 0);
@@ -1208,9 +1226,14 @@ function convert_number_to_words($num)
 
       $record_id_val = ($record_id === '' || $record_id === null) ? null : (int)$record_id;
 
-      $stmt = $mysqli->prepare("INSERT INTO `" . $table . "` (entity_type, entity_id, record_id, module, action, created_at) VALUES (?, ?, ?, ?, ?, ?)");
+      $project_pre = $GLOBALS['project_pre'] ?? 'flasherpsystem';
+      $created_by = (int)($_SESSION[$project_pre]['DASHBOARD']['user_id'] ?? 0);
+      $organization_id = (int)($_SESSION[$project_pre]['DASHBOARD']['organization_id'] ?? 0);
+      $organization_id = $organization_id > 0 ? $organization_id : null;
+
+      $stmt = $mysqli->prepare("INSERT INTO `" . $table . "` (entity_type, entity_id, record_id, module, action, created_by, organization_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
       if ($stmt) {
-        $stmt->bind_param('siisss', $entity_type, $entity_id, $record_id_val, $module, $action, $created_at);
+        $stmt->bind_param('siisssis', $entity_type, $entity_id, $record_id_val, $module, $action, $created_by, $organization_id, $created_at);
         $stmt->execute();
         $stmt->close();
       }
@@ -1220,8 +1243,12 @@ function convert_number_to_words($num)
       updateEntityLog('lead', $lead_id, $module, $record_id, $action);
     }
 
-    function updateCustomerLogs($customer_id, $module, $action = 'edit') {
-      updateEntityLog('customer', $customer_id, $module, '', $action);
+    function updateCustomerLogs($customer_id, $module, $action = 'edit', $record_id = null) {
+      updateEntityLog('customer', $customer_id, $module, $record_id, $action);
+    }
+
+    function updateVendorLogs($vendor_id, $module, $action = 'edit', $record_id = null) {
+      updateEntityLog('vendor', $vendor_id, $module, $record_id, $action);
     }
     /*
     |--------------------------------------------------------------------------
@@ -1354,6 +1381,30 @@ function convert_number_to_words($num)
           $stmt->close();
         }
       }
+    }
+
+    if (!function_exists('rename_file_name')) {
+        /**
+         * Build a unique upload filename (timestamp + increment) avoiding collisions.
+         * Ported from flashlogisticsserver (config/globals.php) with the infinite-loop
+         * edge case removed.
+         */
+        function rename_file_name($file)
+        {
+            $file = (string)$file;
+            $pos = strrpos($file, '.');
+            $ext = $pos !== false ? substr($file, $pos) : '';
+            $slash = strrpos($file, '/');
+            $dir = $slash !== false ? substr($file, 0, $slash + 1) : '';
+            $stamp = time();
+            $i = 0;
+            do {
+                $candidate = $dir . '_' . $stamp . ($i > 0 ? $i : '') . $ext;
+                $i++;
+            } while (file_exists($candidate));
+
+            return $candidate;
+        }
     }
 
       /*

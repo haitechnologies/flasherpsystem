@@ -68,6 +68,7 @@ class LeaveTypeController extends BaseController
             flash_error($e->getMessage());
             return Response::redirect("leave_types.php?id=$id&action=edit_leave_types");
         } catch (\Throwable $e) {
+            $this->logError("LeaveTypeController::handleUpdate error: " . $e->getMessage());
             flash_error('The Leave Type could not be updated.');
             return Response::redirect("leave_types.php?id=$id&action=edit_leave_types");
         }
@@ -92,6 +93,7 @@ class LeaveTypeController extends BaseController
             flash_error($error);
             return Response::redirect("leave_types.php");
         } catch (\Throwable $e) {
+            $this->logError("LeaveTypeController::handleCreate error: " . $e->getMessage());
             flash_error('The Leave Type could not be saved.');
             return Response::redirect("leave_types.php");
         }

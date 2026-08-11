@@ -16,6 +16,7 @@ $success_message = '';
 */
 include('admin_elements/permissions.php');
 
+$activeOrganizationId = dashboardRequireActiveOrganization();
 
 /*
 |--------------------------------------------------------------------------
@@ -24,13 +25,13 @@ include('admin_elements/permissions.php');
 |
 */
 
-function getEquityAccounts($mysqli, $date_join) {
+function getEquityAccounts($mysqli, $date_join, $activeOrganizationId) {
     $sql = "SELECT a.id, a.account_name, a.account_code, a.account_type, a.parent_id, a.level,
                    COALESCE(SUM(ji.debit), 0) AS debit, COALESCE(SUM(ji.credit), 0) AS credit
             FROM `" . tbl_accounts . "` a
             LEFT JOIN `" . tbl_journal_items . "` ji ON ji.account = a.id
             LEFT JOIN `" . tbl_journals . "` j ON j.id = ji.journal_id" . $date_join . "
-            WHERE a.account_type = 'Equity'
+            WHERE a.account_type = 'Equity' AND j.organization_id = " . (int)$activeOrganizationId . "
             GROUP BY a.id
             ORDER BY a.account_name ASC";
     $result = $mysqli->query($sql);
@@ -41,12 +42,12 @@ function getEquityAccounts($mysqli, $date_join) {
     return $accounts;
 }
 
-function calculateBeginningBalance($mysqli, $date_from_ymd) {
+function calculateBeginningBalance($mysqli, $date_from_ymd, $activeOrganizationId) {
     $sql = "SELECT a.id, a.account_name, COALESCE(SUM(ji.credit), 0) - COALESCE(SUM(ji.debit), 0) AS balance
             FROM `" . tbl_accounts . "` a
             LEFT JOIN `" . tbl_journal_items . "` ji ON ji.account = a.id
             LEFT JOIN `" . tbl_journals . "` j ON j.id = ji.journal_id
-            WHERE a.account_type = 'Equity' AND j.journal_date < '" . $date_from_ymd . "'
+            WHERE a.account_type = 'Equity' AND j.journal_date < '" . $date_from_ymd . "' AND j.organization_id = " . (int)$activeOrganizationId . "
             GROUP BY a.id
             ORDER BY a.account_name ASC";
     $result = $mysqli->query($sql);
@@ -57,7 +58,7 @@ function calculateBeginningBalance($mysqli, $date_from_ymd) {
     return $total;
 }
 
-function calculateEquityMovements($mysqli, $date_from_ymd, $date_to_ymd) {
+function calculateEquityMovements($mysqli, $date_from_ymd, $date_to_ymd, $activeOrganizationId) {
     $movements = array(
         'total_income' => 0,
         'total_expenses' => 0,
@@ -72,7 +73,7 @@ function calculateEquityMovements($mysqli, $date_from_ymd, $date_to_ymd) {
             LEFT JOIN `" . tbl_journals . "` j ON j.id = ji.journal_id
             LEFT JOIN `" . tbl_accounts . "` a ON a.id = ji.account
             WHERE a.account_type = 'Income' 
-            AND j.journal_date >= '" . $date_from_ymd . "' AND j.journal_date <= '" . $date_to_ymd . "'";
+            AND j.journal_date >= '" . $date_from_ymd . "' AND j.journal_date <= '" . $date_to_ymd . "' AND j.organization_id = " . (int)$activeOrganizationId;
     $result = $mysqli->query($sql);
     $row = $result->fetch_array(MYSQLI_ASSOC);
     $movements['total_income'] = (float)$row['income'];
@@ -83,7 +84,7 @@ function calculateEquityMovements($mysqli, $date_from_ymd, $date_to_ymd) {
             LEFT JOIN `" . tbl_journals . "` j ON j.id = ji.journal_id
             LEFT JOIN `" . tbl_accounts . "` a ON a.id = ji.account
             WHERE a.account_type = 'Expense' 
-            AND j.journal_date >= '" . $date_from_ymd . "' AND j.journal_date <= '" . $date_to_ymd . "'";
+            AND j.journal_date >= '" . $date_from_ymd . "' AND j.journal_date <= '" . $date_to_ymd . "' AND j.organization_id = " . (int)$activeOrganizationId;
     $result = $mysqli->query($sql);
     $row = $result->fetch_array(MYSQLI_ASSOC);
     $movements['total_expenses'] = (float)$row['expense'];
@@ -97,7 +98,7 @@ function calculateEquityMovements($mysqli, $date_from_ymd, $date_to_ymd) {
             LEFT JOIN `" . tbl_journals . "` j ON j.id = ji.journal_id
             LEFT JOIN `" . tbl_accounts . "` a ON a.id = ji.account
             WHERE (a.account_name LIKE '%Dividend%' OR a.account_name LIKE '%Drawing%' OR a.account_name LIKE '%Distribution%')
-            AND j.journal_date >= '" . $date_from_ymd . "' AND j.journal_date <= '" . $date_to_ymd . "'";
+            AND j.journal_date >= '" . $date_from_ymd . "' AND j.journal_date <= '" . $date_to_ymd . "' AND j.organization_id = " . (int)$activeOrganizationId;
     $result = $mysqli->query($sql);
     $row = $result->fetch_array(MYSQLI_ASSOC);
     $movements['total_dividends'] = (float)$row['dividends'];
@@ -105,12 +106,12 @@ function calculateEquityMovements($mysqli, $date_from_ymd, $date_to_ymd) {
     return $movements;
 }
 
-function getEndingEquityBalance($mysqli, $date_to_ymd) {
+function getEndingEquityBalance($mysqli, $date_to_ymd, $activeOrganizationId) {
     $sql = "SELECT COALESCE(SUM(ji.credit), 0) - COALESCE(SUM(ji.debit), 0) AS balance
             FROM `" . tbl_journal_items . "` ji
             LEFT JOIN `" . tbl_journals . "` j ON j.id = ji.journal_id
             LEFT JOIN `" . tbl_accounts . "` a ON a.id = ji.account
-            WHERE a.account_type = 'Equity' AND j.journal_date <= '" . $date_to_ymd . "'";
+            WHERE a.account_type = 'Equity' AND j.journal_date <= '" . $date_to_ymd . "' AND j.organization_id = " . (int)$activeOrganizationId;
     $result = $mysqli->query($sql);
     $row = $result->fetch_array(MYSQLI_ASSOC);
     return (float)$row['balance'];
@@ -203,10 +204,10 @@ $date_from_ymd = processDateDtoY($date_from);
 $date_to_ymd = processDateDtoY($date_to);
 
 // Get equity movement data
-$beginning_balance = calculateBeginningBalance($mysqli, $date_from_ymd);
-$movements = calculateEquityMovements($mysqli, $date_from_ymd, $date_to_ymd);
-$ending_balance = getEndingEquityBalance($mysqli, $date_to_ymd);
-$equity_accounts = getEquityAccounts($mysqli, "");
+$beginning_balance = calculateBeginningBalance($mysqli, $date_from_ymd, $activeOrganizationId);
+$movements = calculateEquityMovements($mysqli, $date_from_ymd, $date_to_ymd, $activeOrganizationId);
+$ending_balance = getEndingEquityBalance($mysqli, $date_to_ymd, $activeOrganizationId);
+$equity_accounts = getEquityAccounts($mysqli, "", $activeOrganizationId);
 
 // UPDATES LAST VISITED
 $accounts_report_subcategory_id = getTableAttrv("id", tbl_accounts_report_subcategories, " slug = 'movement_of_equity'");
@@ -233,7 +234,7 @@ if ($accounts_report_subcategory_id > 0) {
                     <div class="col-lg-6">
                         <div class="text-muted">Financial Reporting</div>
                         <div class="mb-0">
-                            <span class="fw-semibold">Movement of Equity</span> - <span class="fw-normal">From <?php echo processDateYtoD($date_from_ymd); ?> to <?php echo processDateYtoD($date_to_ymd); ?></span>
+                            <span class="fw-semibold">Movement of Equity</span> - <span class="fw-normal">From <?php echo ddm_($date_from_ymd); ?> to <?php echo ddm_($date_to_ymd); ?></span>
                         </div>
                     </div>
 
@@ -333,7 +334,7 @@ if ($accounts_report_subcategory_id > 0) {
 </div>
     <!-- /page header -->
 
-    <script src="reports_filterby.js"></script>
+    <script src="<?php echo $base_url; ?>/dashboard/js/reports_filterby.js"></script>
 
     <div class="content">
 
@@ -341,7 +342,7 @@ if ($accounts_report_subcategory_id > 0) {
             <div class="card-header text-center">
                 <p>Flash Logistics FZC</p>
                 <h5 class="mb-0">Statement of Changes in Equity</h5>
-                <p><span class="text-muted">For the Period From</span> <?php echo processDateYtoD($date_from_ymd); ?> <span class="text-muted">To</span> <?php echo processDateYtoD($date_to_ymd); ?></p>
+                <p><span class="text-muted">For the Period From</span> <?php echo ddm_($date_from_ymd); ?> <span class="text-muted">To</span> <?php echo ddm_($date_to_ymd); ?></p>
             </div>
 
             <div class="table-responsive">

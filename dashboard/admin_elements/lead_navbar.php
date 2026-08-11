@@ -1,11 +1,10 @@
 <?php
-$leadNavLeadId = isset($_REQUEST['lead_id']) ? (int)$_REQUEST['lead_id'] : 0;
+$leadNavLeadId = (int)($_REQUEST['lead_id'] ?? $_REQUEST['id'] ?? 0);
 $leadNavLinks = [
     'lead.php' => 'Lead',
     'lead_notes.php' => 'Notes',
     'lead_attachments.php' => 'Attachments',
-    'lead_logs.php' => 'Logs',
-    'listing_lead_quotations.php' => 'Quotations',
+    'listing_quotations.php' => 'Quotations',
 ];
 
 $currentScript = basename((string)($_SERVER['SCRIPT_NAME'] ?? ''));

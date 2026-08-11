@@ -4,6 +4,7 @@ declare(strict_types=1);
 /**
  * @var int $id
  * @var string $department
+ * @var string $email
  * @var string $moduleCaption
  * @var string $module
  * @var bool $canCreate
@@ -42,6 +43,12 @@ include 'admin_elements/admin_header.php';
                             <label class="col-lg-3 col-form-label"><span class="text-danger">Department:*</span></label>
                             <div class="col-lg-9">
                                 <input required type="text" name="department" value="<?php echo $department; ?>" class="form-control">
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <label class="col-lg-3 col-form-label">Email:</label>
+                            <div class="col-lg-9">
+                                <input type="email" name="email" value="<?php echo $email; ?>" class="form-control" placeholder="department@example.com">
                             </div>
                         </div>
                     </div>

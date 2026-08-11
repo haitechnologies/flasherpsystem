@@ -7,6 +7,7 @@ namespace App\DataTable;
 use App\Core\DB;
 use App\Helper\BadgeHelper;
 use App\Helper\ActionButtonHelper;
+use App\Core\ErrorCapture;
 
 class DepartmentsDataTable extends BaseDataTable
 {
@@ -34,7 +35,7 @@ class DepartmentsDataTable extends BaseDataTable
                 $this->relatedDataCache['employees'][(int)$empRow['department_id']] = (int)$empRow['cnt'];
             }
         } catch (\Throwable $e) {
-            error_log("DepartmentsDataTable::prepareRelatedData error: " . $e->getMessage());
+            ErrorCapture::record("DepartmentsDataTable::prepareRelatedData error: " . $e->getMessage());
         }
     }
 
@@ -47,6 +48,7 @@ class DepartmentsDataTable extends BaseDataTable
         return [
             $this->rowNumber,
             htmlspecialchars($dept),
+            $row['email'] ?? '',
             $empCount,
             $this->formatTimeAgo($created),
             $this->getActionButtons($id, 'departments'),

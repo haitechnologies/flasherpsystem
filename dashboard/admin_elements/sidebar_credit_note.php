@@ -1,5 +1,7 @@
 <?php
 use App\Core\DB;
+use App\Core\Session;
+$org_id = (int) Session::orgId();
 if (!empty($_GET["credit_notes_ordering"] ?? $_REQUEST["credit_notes_ordering"] ?? "")) {
     $_SESSION["credit_notes_ordering"] = e_s__($_GET["credit_notes_ordering"] ?? $_REQUEST["credit_notes_ordering"]);
 }
@@ -32,15 +34,22 @@ foreach ($statusLabels as $val => $lbl) {
             <table class="table table-hover"><tbody>
 <?php
 $where = $credit_notes_ordering !== "all" ? " AND t.credit_note_status = '" . $credit_notes_ordering . "'" : "";
-$r = $mysqli->query("SELECT t.id, t.credit_note_status, t.credit_note_date, t.grand_total, t.customer_id FROM `" . DB::CREDIT_NOTES . "` t WHERE t.id > 0 AND t.customer_id != '' $where ORDER BY t.id DESC LIMIT 25");
-$c = $mysqli->query("SELECT COUNT(*) FROM `" . DB::CREDIT_NOTES . "` t WHERE t.id > 0 AND t.customer_id != '' $where")->fetch_row();
+$r = $mysqli->query("SELECT t.id, t.credit_note_status, t.credit_note_date, t.grand_total, t.customer_id FROM `" . DB::CREDIT_NOTES . "` t WHERE t.id > 0 AND t.customer_id != '' AND t.organization_id = " . $org_id . " $where ORDER BY t.id DESC LIMIT 25");
+$c = $mysqli->query("SELECT COUNT(*) FROM `" . DB::CREDIT_NOTES . "` t WHERE t.id > 0 AND t.customer_id != '' AND t.organization_id = " . $org_id . " $where")->fetch_row();
 $total = $c[0] ?? 0;
 while ($row = $r->fetch_array()) {
     $sel = $row["id"] == $current_id ? "table-primary shadow-sm" : "";
     $name = getTableAttr("display_name", DB::CUSTOMERS, $row["customer_id"]);
-    $date = dd_($row["credit_note_date"]);
+    $date = ddm_($row["credit_note_date"]);
     $amt = number_format($row["grand_total"], 2);
-    $st = strtoupper($row["credit_note_status"]);
+    $status_class = match($row["credit_note_status"]) {
+        'approved', 'paid' => 'text-success',
+        'void' => 'text-danger',
+        'draft' => 'text-secondary',
+        'sent' => 'text-info',
+        default => 'text-info'
+    };
+    $st = '<span class="' . $status_class . '">' . strtoupper($row["credit_note_status"]) . '</span>';
 ?>
     <tr id="<?php echo $row["id"]; ?>" class="<?php echo $sel; ?>">
         <td><a href="credit_note_overview.php?credit_note_id=<?php echo $row["id"]; ?>" class="text-black text-decoration-none d-block">

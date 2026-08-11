@@ -61,7 +61,7 @@ class RecurringInvoiceController extends BaseController
             $this->invoiceService->updateInvoice($id, $invoiceData, $itemsData, $this->orgId, $this->userId);
             $saveAndSend = $request->getString('save_and_send');
             if ($saveAndSend === '1') {
-                return Response::redirect("send_invoice.php?id=$id");
+                return Response::redirect("send_email.php?current_module=recurring_invoices&id=$id");
             }
             flash_success('The Recurring Invoice has been updated successfully.');
             return Response::redirect('listing_recurring_invoices.php');
@@ -70,6 +70,12 @@ class RecurringInvoiceController extends BaseController
             flash_error($error);
             return Response::redirect("recurring_invoices.php?id=$id&action=edit_invoices");
         } catch (\Throwable $e) {
+            log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
+                'module' => 'recurring_invoices',
+                'module_slug' => 'recurring_invoices',
+                'stack_trace' => $e->getTraceAsString(),
+                'error_code' => (string)$e->getCode(),
+            ]));
             flash_error($e->getMessage());
             return Response::redirect("recurring_invoices.php?id=$id&action=edit_invoices");
         }
@@ -84,7 +90,7 @@ class RecurringInvoiceController extends BaseController
             $invoice = $this->invoiceService->createInvoice($invoiceData, $itemsData, $this->orgId, $this->userId);
             $saveAndSend = $request->getString('save_and_send');
             if ($saveAndSend === '1') {
-                return Response::redirect("send_invoice.php?id=" . $invoice->id);
+                return Response::redirect("send_email.php?current_module=recurring_invoices&id=" . $invoice->id);
             }
             flash_success('The Recurring Invoice has been saved successfully.');
             return Response::redirect('listing_recurring_invoices.php');
@@ -93,6 +99,12 @@ class RecurringInvoiceController extends BaseController
             flash_error($error);
             return Response::redirect("recurring_invoices.php");
         } catch (\Throwable $e) {
+            log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
+                'module' => 'recurring_invoices',
+                'module_slug' => 'recurring_invoices',
+                'stack_trace' => $e->getTraceAsString(),
+                'error_code' => (string)$e->getCode(),
+            ]));
             flash_error($e->getMessage());
             return Response::redirect("recurring_invoices.php");
         }
@@ -283,6 +295,12 @@ class RecurringInvoiceController extends BaseController
                     }
                 }
             } catch (\Throwable $e) {
+                log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
+                    'module' => 'recurring_invoices',
+                    'module_slug' => 'recurring_invoices',
+                    'stack_trace' => $e->getTraceAsString(),
+                    'error_code' => (string)$e->getCode(),
+                ]));
                 $error_message = $e->getMessage();
             }
         }
@@ -353,6 +371,9 @@ class RecurringInvoiceController extends BaseController
                     }
                 } catch (\Throwable $e) {
                     $error_message = $e->getMessage();
+                    if (function_exists('log_error')) {
+                        log_error('Recurring invoice form load failed: ' . $e->getMessage(), 'WARNING', __FILE__, __LINE__, function_exists('backend_runtime_log_context') ? backend_runtime_log_context(['module' => 'recurring_invoices', 'module_slug' => 'recurring_invoices', 'error_code' => (string)$e->getCode(), 'stack_trace' => $e->getTraceAsString()]) : ['module' => 'recurring_invoices', 'module_slug' => 'recurring_invoices', 'error_code' => (string)$e->getCode(), 'stack_trace' => $e->getTraceAsString()]);
+                    }
                 }
             }
         }

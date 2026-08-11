@@ -16,6 +16,8 @@ $success_message = '';
 */
 include('admin_elements/permissions.php');
 
+$activeOrganizationId = dashboardRequireActiveOrganization();
+
 /*
 |--------------------------------------------------------------------------
 | 	GET ALL VARIABLES ADD/UPDATE
@@ -122,17 +124,25 @@ if (!empty($date_to_ymd)) {
 }
 
 if (!function_exists('getCashAccounts')) {
-    function getCashAccounts($mysqli, $date_join)
+    function getCashAccounts($mysqli, $date_join, $activeOrganizationId)
     {
         $rows = [];
+        $org_join = '';
+        if (!empty($activeOrganizationId)) {
+            $org_join = " AND j.organization_id = " . (int)$activeOrganizationId;
+        }
+        $org_filters = '';
+        if (!empty($activeOrganizationId)) {
+            $org_filters = '';
+        }
         $sql = "SELECT a.id, a.account_name, a.account_code, a.account_type, a.parent_id, a.level,
                        COALESCE(SUM(ji.debit), 0) AS debit,
                        COALESCE(SUM(ji.credit), 0) AS credit
                 FROM `" . tbl_accounts . "` a
                 LEFT JOIN `" . tbl_journal_items . "` ji ON ji.account = a.id
-                LEFT JOIN `" . tbl_journals . "` j ON j.id = ji.journal_id" . $date_join . "
+                LEFT JOIN `" . tbl_journals . "` j ON j.id = ji.journal_id" . $date_join . $org_join . "
                 WHERE a.account_type = 'Assets'
-                  AND (a.account_name LIKE '%Cash%' OR a.account_name LIKE '%Bank%')
+                  AND (a.account_name LIKE '%Cash%' OR a.account_name LIKE '%Bank%')" . $org_filters . "
                 GROUP BY a.id
                 ORDER BY a.account_name ASC";
 
@@ -155,7 +165,7 @@ if (!function_exists('calculateCashMovement')) {
     }
 }
 
-$cash_accounts = getCashAccounts($mysqli, $date_join);
+$cash_accounts = getCashAccounts($mysqli, $date_join, $activeOrganizationId);
 
 // UPDATES LAST VISITED
 $accounts_report_subcategory_id = getTableAttrv("id", tbl_accounts_report_subcategories, " slug = 'cash_flow_statement'");
@@ -181,7 +191,7 @@ if (!empty($accounts_report_subcategory_id)) {
                     <div class="col-lg-6">
                         <div class="text-muted"><?php echo $accounts_report_category_name; ?></div>
                         <div class="mb-0">
-                            <span class="fw-semibold">Cash Flow Statement</span> - <span class="small">From <?php echo dd_($date_from); ?> To <?php echo dd_($date_to); ?></span>
+                            <span class="fw-semibold">Cash Flow Statement</span> - <span class="small">From <?php echo ddm_($date_from); ?> To <?php echo ddm_($date_to); ?></span>
                         </div>
                     </div>
 
@@ -300,7 +310,7 @@ if (!empty($accounts_report_subcategory_id)) {
             <div class="card-header text-center">
                 <p>Flash Logistics FZC</p>
                 <h5 class="mb-0">Cash Flow Statement</h5>
-                <p><span class="text-muted">From</span> <?php echo dd_($date_from); ?> <span class="text-muted">To</span> <?php echo dd_($date_to); ?></p>
+                <p><span class="text-muted">From</span> <?php echo ddm_($date_from); ?> <span class="text-muted">To</span> <?php echo ddm_($date_to); ?></p>
             </div>
 
             <div class="table-responsive">

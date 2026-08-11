@@ -23,6 +23,15 @@ include('admin_elements/permissions.php');
 
 $activeOrganizationId = dashboardRequireActiveOrganization();
 
+if (($action == "update_$module" || $action == "add_$module") && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!validate_csrf_token($_POST['csrf_token'] ?? '')) {
+        $error_message = 'Invalid security token. Please try again.';
+        flash_error($error_message);
+        log_error('Invalid CSRF token on payments_made add/update');
+        $action = '';
+    }
+}
+
 
 $vendor_id = e_s__($_REQUEST['vendor_id'] ?? 0);
 
@@ -52,6 +61,7 @@ if (!empty($post_purchase_id)) {
 
 // ---------------------- Items (Purchases/Line Items) -------------------
 $item_id_arr                = array();
+$purchase_id_arr            = array();
 $amount_paid_on_arr         = array();
 $amount_paid_arr            = array();
 
@@ -120,10 +130,13 @@ if ($action == "update_$module" && !empty($id)) {
 
     if (empty($vendor_id)) {
         $error_message = 'Please select Vendor.';
+        flash_error($error_message);
     } else if (empty($payment_date)) {
         $error_message = 'Please select Payment Date.';
+        flash_error($error_message);
     } else if (empty($paid_from) || $paid_from == 'Please select') {
         $error_message = 'Please select Paid From.';
+        flash_error($error_message);
     } else {
 
         $payment_date   = processDateDtoY($payment_date);
@@ -146,7 +159,7 @@ if ($action == "update_$module" && !empty($id)) {
                                             payment_method		        = '" . $payment_method . "',
                                             paid_from		            = '" . $paid_from . "',
                                             reference_no		        = '" . $reference_no . "'
-                                        WHERE id=$id");
+                                        WHERE id=$id AND organization_id = " . (int)$activeOrganizationId);
 
         if ($update_row) {
             $success_message = "The $module_caption has been updated successfully.";
@@ -161,6 +174,12 @@ if ($action == "update_$module" && !empty($id)) {
 
                 $tbl_payment_made_items = DB::table('payment_made_items');
 
+                $existing_item_ids = array();
+                $result_existing = $mysqli->query("SELECT id FROM `$tbl_payment_made_items` WHERE payment_id = " . (int)$payment_id);
+                while ($row_existing = $result_existing->fetch_array()) {
+                    $existing_item_ids[] = (int)$row_existing['id'];
+                }
+
                 for ($payment_item = 1; $payment_item <= $total_rows; $payment_item++) {
 
                     $index = $payment_item - 1;
@@ -171,31 +190,30 @@ if ($action == "update_$module" && !empty($id)) {
 
 
                     $item_amount_paid               = (($item_amount_paid == '') ? 0 : $item_amount_paid);
+                    $item_amount_paid_on_formatted  = !empty($item_amount_paid_on) ? processDateDtoY($item_amount_paid_on) : NULL;
 
-                    // Update Items
-                    if (!empty($item_id) && !empty($item_amount_paid)) {
+                    if (!empty($item_id) && in_array((int)$item_id, $existing_item_ids)) {
+                        // Existing Item — Update
+                        if (!empty($item_amount_paid)) {
+                            $update_row = $mysqli->query("UPDATE `$tbl_payment_made_items` SET 
+                                                                amount_paid_on          = '" . $item_amount_paid_on_formatted . "',
+                                                                amount_paid             = '" . $item_amount_paid . "' 
+                                                            WHERE id=$item_id AND payment_id = " . (int)$payment_id);
 
-                        $update_row = $mysqli->query("UPDATE `$tbl_payment_made_items` SET 
-                                                            purchase_id             = '" . $item_id . "',
-                                                            amount_paid_on          = '" . $item_amount_paid_on . "',
-                                                            amount_paid             = '" . $item_amount_paid . "' 
-                                                        WHERE id=$item_id");
+                            if ($update_row) $updated_row++;
+                            fp__($tbl_payment_made_items, $item_id);
+                        } else {
+                            // Existing Item — Deleted
+                            $mysqli->query("DELETE FROM `$tbl_payment_made_items` WHERE id=$item_id AND payment_id = " . (int)$payment_id);
+                        }
 
-                        if ($update_row) $updated_row++;
-                        fp__($tbl_payment_made_items, $item_id);
+                        // New Items (item_id is the purchase_id for unpaid purchases)
+                    } else if (!empty($item_id) && !empty($item_amount_paid)) {
 
-                        // New Items
-                    } else if (empty($item_id) && !empty($item_amount_paid)) {
-
-                        $insert_row = $mysqli->query("INSERT INTO `$tbl_payment_made_items`(payment_id, purchase_id, amount_paid_on, amount_paid) VALUES ('" . $payment_id . "', '" . $item_id . "', '" . $item_amount_paid_on . "', '" . $item_amount_paid . "'); ");
+                        $insert_row = $mysqli->query("INSERT INTO `$tbl_payment_made_items`(payment_id, purchase_id, amount_paid_on, amount_paid, organization_id) VALUES ('" . (int)$payment_id . "', '" . $item_id . "', '" . $item_amount_paid_on_formatted . "', '" . $item_amount_paid . "', '" . (int)$activeOrganizationId . "'); ");
 
                         if ($insert_row) $inserted_row++;
                         fp__($tbl_payment_made_items, $mysqli->insert_id);
-
-                        // Deleted Items
-                    } else if (!empty($item_id) && empty($item_amount_paid)) {
-
-                        $mysqli->query("DELETE FROM `$tbl_payment_made_items` WHERE id=$item_id");
                     }
 
                 } 
@@ -207,6 +225,7 @@ if ($action == "update_$module" && !empty($id)) {
                 $success_message = '';
                 $payment_date   = processDateYtoD($payment_date);
                 $error_message = "No items added. Please add at least one item.";
+                flash_error($error_message);
             } else {
                 // JOURNAL ENTRY (Payment Made) - AccountingJournalManager
                 $journal_table = DB::JOURNALS;
@@ -226,36 +245,48 @@ if ($action == "update_$module" && !empty($id)) {
                     $ap_account = $mysqli->query("SELECT id FROM `{$accounts_table}` WHERE account_code IN ('2100', '2110', '2000') OR account_name LIKE '%Payable%' LIMIT 1")->fetch_assoc();
 
                     if (!empty($paid_from) && !empty($ap_account['id'])) {
-                        $journal = new JournalService();
                         $vendor_name = getTableAttr('display_name', DB::VENDORS, $vendor_id);
 
                         $journal_entries = array(
                             array(
                                 'account' => (int)$ap_account['id'],
-                                'amount'  => (float)$total_amount_paid,
-                                'type'    => 'debit'
+                                'debit'   => (float)$total_amount_paid,
+                                'credit'  => 0.0
                             ),
                             array(
                                 'account' => (int)$paid_from,
-                                'amount'  => (float)$total_amount_paid,
-                                'type'    => 'credit'
+                                'debit'   => 0.0,
+                                'credit'  => (float)$total_amount_paid
                             )
                         );
 
-                        $journal->createJournalEntry(
-                            array(
-                                'reference_type'   => 'payment_made',
-                                'reference_id'     => $payment_id,
-                                'reference_no'     => $reference_no,
-                                'journal_date'     => $payment_date,
-                                'description'      => 'Payment Made #' . $payment_id . ' - ' . $vendor_name,
-                                'currency'         => 'AED',
-                                'grand_subtotal'   => $total_amount_paid,
-                                'grand_total'      => $total_amount_paid,
-                                'reporting_method' => 'cash'
-                            ),
-                            $journal_entries
-                        );
+                        try {
+                            $journalManager = \App\Core\Container::getInstance()->get(JournalService::class);
+                            $journalManager->createJournal(
+                                array(
+                                    'journal_date'     => $payment_date,
+                                    'journal_status'   => 'posted',
+                                    'reference_no'     => $reference_no,
+                                    'notes'            => 'Payment Made #' . $payment_id . ' - ' . $vendor_name,
+                                    'reporting_method' => 'cash',
+                                    'reference_type'   => 'payment_made',
+                                    'reference_id'     => (int)$payment_id,
+                                    'currency'         => 'AED',
+                                    'warehouse_id'     => 0
+                                ),
+                                $journal_entries,
+                                (int)$activeOrganizationId,
+                                (int)Session::userId()
+                            );
+                        } catch (\Throwable $e) {
+                            log_error('Payment Made journal creation failed: ' . $e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
+                                'module' => $module,
+                                'module_slug' => $module,
+                                'payment_id' => $payment_id ?? null,
+                            ]));
+                            $error_message = 'Payment saved but journal entry could not be created.';
+                            flash_error($error_message);
+                        }
                     }
                 } else if (!empty($existing_journal_id)) {
                     $mysqli->query("DELETE FROM `{$journal_items_table}` WHERE journal_id={$existing_journal_id}");
@@ -267,6 +298,7 @@ if ($action == "update_$module" && !empty($id)) {
             }
         } else {
             $error_message = "The $module_caption could not be updated. Please try again.";
+            flash_error($error_message);
         }
     }
 
@@ -280,10 +312,13 @@ if ($action == "update_$module" && !empty($id)) {
 
     if (empty($vendor_id)) {
         $error_message = 'Please select Vendor.';
+        flash_error($error_message);
     } else if (empty($payment_date)) {
         $error_message = 'Please select Payment Date.';
+        flash_error($error_message);
     } else if (empty($paid_from) || $paid_from == 'Please select') {
         $error_message = 'Please select Paid From.';
+        flash_error($error_message);
     } else {
 
         // PROCESS ITEMS
@@ -314,7 +349,7 @@ if ($action == "update_$module" && !empty($id)) {
                         }
 
                         $tbl_payment_made = defined('DB::PAYMENTS_MADE') ? DB::PAYMENTS_MADE : $tbl_name;
-                        $mysqli->query("INSERT INTO `$tbl_payment_made`(payment_status, vendor_id, total_amount_paid, bank_charges, payment_date, payment_method, paid_from, reference_no) VALUES ('" . $payment_status . "', '" . $vendor_id . "', '" . $total_amount_paid . "', '" . $bank_charges . "', '" . $payment_date . "', '" . $payment_method . "', '" . $paid_from . "', '" . $reference_no . "'); ");
+                        $mysqli->query("INSERT INTO `$tbl_payment_made`(payment_status, vendor_id, total_amount_paid, bank_charges, payment_date, payment_method, paid_from, reference_no, organization_id) VALUES ('" . $payment_status . "', '" . $vendor_id . "', '" . $total_amount_paid . "', '" . $bank_charges . "', '" . $payment_date . "', '" . $payment_method . "', '" . $paid_from . "', '" . $reference_no . "', '" . (int)$activeOrganizationId . "'); ");
 
                         $id = $mysqli->insert_id;
                         fp__($tbl_payment_made, $id);
@@ -325,7 +360,7 @@ if ($action == "update_$module" && !empty($id)) {
                     // SAVE ITEMS
                     $tbl_payment_made_items = DB::table('payment_made_items');
                     $item_amount_paid_on_formatted = !empty($item_amount_paid_on) ? processDateDtoY($item_amount_paid_on) : NULL;
-                    $insert_row = $mysqli->query("INSERT INTO `$tbl_payment_made_items`(payment_id, purchase_id, amount_paid_on, amount_paid) VALUES ('" . $payment_id . "', '" . $item_id . "', '" . $item_amount_paid_on_formatted . "', '" . $item_amount_paid . "'); ");
+                    $insert_row = $mysqli->query("INSERT INTO `$tbl_payment_made_items`(payment_id, purchase_id, amount_paid_on, amount_paid, organization_id) VALUES ('" . $payment_id . "', '" . $item_id . "', '" . $item_amount_paid_on_formatted . "', '" . $item_amount_paid . "', '" . (int)$activeOrganizationId . "'); ");
 
                     if ($insert_row) $inserted_row++;
                     fp__($tbl_payment_made_items, $mysqli->insert_id);
@@ -336,6 +371,7 @@ if ($action == "update_$module" && !empty($id)) {
             // CHECK IF AT LEAST ONE ITEM IS ADDED
             if ($inserted_row == 0) {
                 $error_message = "No items added. Please add at least one item.";
+                flash_error($error_message);
             } else {
                 // JOURNAL ENTRY
                 $journal_table = DB::JOURNALS;
@@ -346,36 +382,48 @@ if ($action == "update_$module" && !empty($id)) {
                     $ap_account = $mysqli->query("SELECT id FROM `{$accounts_table}` WHERE account_code IN ('2100', '2110', '2000') OR account_name LIKE '%Payable%' LIMIT 1")->fetch_assoc();
 
                     if (!empty($paid_from) && !empty($ap_account['id'])) {
-                        $journal = new JournalService();
                         $vendor_name = getTableAttr('display_name', DB::VENDORS, $vendor_id);
 
                         $journal_entries = array(
                             array(
                                 'account' => (int)$ap_account['id'],
-                                'amount'  => (float)$total_amount_paid,
-                                'type'    => 'debit'
+                                'debit'   => (float)$total_amount_paid,
+                                'credit'  => 0.0
                             ),
                             array(
                                 'account' => (int)$paid_from,
-                                'amount'  => (float)$total_amount_paid,
-                                'type'    => 'credit'
+                                'debit'   => 0.0,
+                                'credit'  => (float)$total_amount_paid
                             )
                         );
 
-                        $journal->createJournalEntry(
-                            array(
-                                'reference_type'   => 'payment_made',
-                                'reference_id'     => $payment_id,
-                                'reference_no'     => $reference_no,
-                                'journal_date'     => $payment_date,
-                                'description'      => 'Payment Made #' . $payment_id . ' - ' . $vendor_name,
-                                'currency'         => 'AED',
-                                'grand_subtotal'   => $total_amount_paid,
-                                'grand_total'      => $total_amount_paid,
-                                'reporting_method' => 'cash'
-                            ),
-                            $journal_entries
-                        );
+                        try {
+                            $journalManager = \App\Core\Container::getInstance()->get(JournalService::class);
+                            $journalManager->createJournal(
+                                array(
+                                    'journal_date'     => $payment_date,
+                                    'journal_status'   => 'posted',
+                                    'reference_no'     => $reference_no,
+                                    'notes'            => 'Payment Made #' . $payment_id . ' - ' . $vendor_name,
+                                    'reporting_method' => 'cash',
+                                    'reference_type'   => 'payment_made',
+                                    'reference_id'     => (int)$payment_id,
+                                    'currency'         => 'AED',
+                                    'warehouse_id'     => 0
+                                ),
+                                $journal_entries,
+                                (int)$activeOrganizationId,
+                                (int)Session::userId()
+                            );
+                        } catch (\Throwable $e) {
+                            log_error('Payment Made journal creation failed: ' . $e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
+                                'module' => $module,
+                                'module_slug' => $module,
+                                'payment_id' => $payment_id ?? null,
+                            ]));
+                            $error_message = 'Payment saved but journal entry could not be created.';
+                            flash_error($error_message);
+                        }
                     }
                 }
 
@@ -402,7 +450,7 @@ if (
     (!empty($id) && Session::userId() == $created_by)
 ) {
 
-    $result = $mysqli->query("SELECT * FROM `$tbl_payment_made` WHERE id=$id");
+    $result = $mysqli->query("SELECT * FROM `$tbl_payment_made` WHERE id=$id AND organization_id = " . (int)$activeOrganizationId);
     $row = $result->fetch_array();
 
     $vendor_id                  = s__($row['vendor_id']);
@@ -425,6 +473,7 @@ if (
         while ($row_payment_items = $result_payment_items->fetch_array()) {
 
             array_push($item_id_arr,                $row_payment_items['id']);
+            array_push($purchase_id_arr,            $row_payment_items['purchase_id']);
             array_push($amount_paid_on_arr,         $row_payment_items['amount_paid_on']);
             array_push($amount_paid_arr,            $row_payment_items['amount_paid']);
         }
@@ -467,6 +516,7 @@ if (
                 <input type="hidden" name="post_purchase_id" id="post_purchase_id" value="<?php echo $post_purchase_id; ?>" />
                 <input type="hidden" name="payment_status" id="payment_status" value="" />
                 <input type="hidden" name="save_and_send" id="save_and_send" value="" />
+                <input type="hidden" name="csrf_token" id="csrf_token" value="<?php echo csrf_token(); ?>" />
 
                 <?php if (($action == "edit_payments_made" || $action == "update_payments_made") && !empty($id)) { ?>
                     <input type="hidden" name="action" id="action" value="update_payments_made" />
@@ -495,7 +545,7 @@ if (
                                                 <select name="vendor_id" id="vendor_id" class="form-control select" onchange="if(this.value > 0) { window.location.href='?mod=payments_made&vendor_id=' + this.value; }">
                                                     <option value='0'>Please select</option>
                                                     <?php
-                                                    $result = $mysqli->query("SELECT * FROM `" . DB::VENDORS  . "` ORDER BY id DESC");
+                                                    $result = $mysqli->query("SELECT * FROM `" . DB::VENDORS  . "` WHERE is_active=1 AND organization_id = " . (int)$activeOrganizationId . " ORDER BY id DESC");
                                                     while ($rows = $result->fetch_array()) {
                                                         $display_name           = $rows["display_name"];
                                                     ?>
@@ -543,7 +593,7 @@ if (
                                         <div class="col-lg-9">
                                             <select class="form-select" name="payment_method" id="payment_method">
                                                 <?php
-                                                $result = $mysqli->query("SELECT * FROM `" . DB::PAYMENT_METHODS  . "` WHERE is_active=1 ORDER BY payment_method");
+                                                $result = $mysqli->query("SELECT * FROM `" . DB::PAYMENT_METHODS  . "` WHERE is_active=1 AND organization_id = " . (int)$activeOrganizationId . " ORDER BY payment_method");
                                                 while ($rows = $result->fetch_array()) {
                                                 ?>
                                                     <option value="<?php echo $rows['id']; ?>" <?php if ($action == "edit_$module" && $rows['id'] == $payment_method) { ?>selected <?php } else if ($rows['id'] == $payment_method) { ?>selected <?php } ?>>
@@ -630,6 +680,7 @@ if (
                                             SELECT *
                                             FROM `" . DB::PURCHASES . "`
                                             WHERE vendor_id = " . intval($vendor_id) . "
+                                            AND organization_id = " . (int)$activeOrganizationId . "
                                             AND purchase_status NOT IN ('draft', 'declined', 'expired')
                                             ORDER BY id DESC
                                         ");
@@ -662,14 +713,18 @@ if (
                                             $amount_paid_row = $row_amount_paid['total_paid'];
                                             $amount_due_row = round($purchase_grand_total - $amount_paid_row, 2);
 
-                                            $item_index = array_search($purchase_id_row, $item_id_arr);
+                                            $item_index = array_search($purchase_id_row, $purchase_id_arr);
+
+                                            $item_id_value      = (($item_index !== false) ? $item_id_arr[$item_index] : $purchase_id_row);
+                                            $amount_paid_on_value = (($item_index !== false) ? $amount_paid_on_arr[$item_index] : '');
+                                            $amount_paid_value    = (($item_index !== false) ? $amount_paid_arr[$item_index] : '');
 
                                     ?>
 
                                             <div class="row mb-2">
 
                                                 <div class="col-lg-2">
-                                                    <input type="hidden" name="item_id[]" value="<?php echo (($item_index !== false) ? $item_id_arr[$item_index] : $purchase_id_row); ?>" />
+                                                    <input type="hidden" name="item_id[]" value="<?php echo $item_id_value; ?>" />
                                                     <input type="text" readonly class="form-control form-control-sm text-muted" value="<?php echo processDateYtoD($purchase_date_row); ?>" />
                                                 </div>
 
@@ -686,11 +741,11 @@ if (
                                                 </div>
 
                                                 <div class="col-lg-2 text-end">
-                                                    <input type="text" class="form-control form-control-sm amount_paid_on_date" name="amount_paid_on[]" value="<?php echo (($item_index !== false) ? $amount_paid_on_arr[$item_index] : ''); ?>" />
+                                                    <input type="text" class="form-control form-control-sm amount_paid_on_date" name="amount_paid_on[]" value="<?php echo $amount_paid_on_value; ?>" />
                                                 </div>
 
                                                 <div class="col-lg-2 text-end pe-4">
-                                                    <input type="number" class="form-control form-control-sm text-end fw-semibold" step="0.01" min="0" max="<?php echo $amount_due_row; ?>" name="amount_paid[]" value="<?php echo (($item_index !== false) ? $amount_paid_arr[$item_index] : ''); ?>" onchange="calculateTotalAmount();" />
+                                                    <input type="number" class="form-control form-control-sm text-end fw-semibold" step="0.01" min="0" max="<?php echo $amount_due_row; ?>" name="amount_paid[]" value="<?php echo $amount_paid_value; ?>" onchange="calculateTotalAmount();" />
                                                 </div>
 
                                             </div>

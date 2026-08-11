@@ -64,7 +64,8 @@ class DocumentCategoryController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("document_categories.php?id=$id&action=edit_document_categories");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("DocumentCategoryController::handleUpdate error: " . $e->getMessage());
             flash_error('The Document Category could not be updated.');
             return Response::redirect("document_categories.php?id=$id&action=edit_document_categories");
         }
@@ -83,7 +84,8 @@ class DocumentCategoryController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("document_categories.php");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("DocumentCategoryController::handleCreate error: " . $e->getMessage());
             flash_error('The Document Category could not be saved.');
             return Response::redirect("document_categories.php");
         }

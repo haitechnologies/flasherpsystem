@@ -1,5 +1,7 @@
 <?php
 
+use App\Core\DB;
+use App\Core\Session;
 include('admin_elements/admin_header.php');
 
 $module = 'purchases';
@@ -15,6 +17,8 @@ $success_message = '';
 |
 */
 include('admin_elements/permissions.php');
+
+$activeOrganizationId = dashboardRequireActiveOrganization();
 
 
 // print_r($_REQUEST);
@@ -34,7 +38,7 @@ if (empty($purchase_id) && isset($_REQUEST['id'])) $purchase_id = e_s__($_REQUES
 
 // ------------------ CHECK IF EXISTS ----------------
 //VERIFY IF IS VALID 
-$rs_valid     = $mysqli->query("SELECT id FROM `" . tbl_purchases . "` WHERE id='" . $purchase_id . "'");
+$rs_valid     = $mysqli->query("SELECT id FROM `" . tbl_purchases . "` WHERE id='" . $purchase_id . "' AND organization_id='" . (int)$activeOrganizationId . "'");
 if ($rs_valid->num_rows == 0) {
     flash_error('Invalid Record in the database.');
     header("Location:listing_purchases.php");
@@ -108,14 +112,14 @@ if (($action == "convert_$module" && !empty($purchase_id))) {
 
 
     // -- purchase
-    $result = $mysqli->query("INSERT INTO `" . tbl_purchases . "` (vendor_id, warehouse_id, subject, reference_no, purchase_date, expiry_date, grand_subtotal, grand_discount_type, grand_discount_type_value, grand_discount_amount, grand_after_discount, grand_tax, grand_total, vendor_notes, terms_and_conditions, purchase_status, is_active, created_at, updated_at)
-    SELECT vendor_id, warehouse_id, subject, reference_no, NOW(), NOW(), grand_subtotal, grand_discount_type, grand_discount_type_value, grand_discount_amount, grand_after_discount, grand_tax, grand_total, vendor_notes, terms_and_conditions, 'draft', is_active, NOW(), NOW() FROM `" . tbl_purchases . "` WHERE id = $purchase_id;");
+    $result = $mysqli->query("INSERT INTO `" . tbl_purchases . "` (vendor_id, warehouse_id, subject, reference_no, purchase_date, expiry_date, grand_subtotal, grand_discount_type, grand_discount_type_value, grand_discount_amount, grand_after_discount, grand_tax, grand_total, vendor_notes, terms_and_conditions, purchase_status, is_active, organization_id, created_at, updated_at)
+    SELECT vendor_id, warehouse_id, subject, reference_no, NOW(), NOW(), grand_subtotal, grand_discount_type, grand_discount_type_value, grand_discount_amount, grand_after_discount, grand_tax, grand_total, vendor_notes, terms_and_conditions, 'draft', is_active, organization_id, NOW(), NOW() FROM `" . tbl_purchases . "` WHERE id = $purchase_id;");
 
     $new_purchase_id = $mysqli->insert_id;
     fp__($tbl_name, $new_purchase_id);
 
     // Update purchase no
-    $mysqli->query("UPDATE `" . tbl_purchases . "` SET purchase_no = '" . $purchase_no . "', purchase_id = $purchase_id WHERE id=$new_purchase_id");
+    $mysqli->query("UPDATE `" . tbl_purchases . "` SET purchase_no = '" . $purchase_no . "', purchase_order_id = $purchase_id WHERE id=$new_purchase_id");
 
     // -- purchase Items
     $result = $mysqli->query("INSERT INTO `" . tbl_purchase_items . "` ( purchase_id, service, description, qty, rate, discount_type, discount_type_value, discount_amount, tax, tax_amount, sub_total, total, created_at, updated_at, created_by) 
@@ -126,8 +130,8 @@ if (($action == "convert_$module" && !empty($purchase_id))) {
 
     $success_message = 'This Purchase Order has been Converted to Purchase Successfully. Please click here to view. <a href="purchase_overview.php?purchase_id=' . $new_purchase_id . '"> ' . $purchase_no . '</a>';
 
-    // CHANGE STATUS OF QUOATION TO PURCHASED
-    $mysqli->query("UPDATE `" . tbl_purchases . "` SET purchase_id = $new_purchase_id,  purchase_status = 'purchased' WHERE id=$purchase_id");
+    // CHANGE STATUS OF PURCHASE TO PURCHASED
+    $mysqli->query("UPDATE `" . tbl_purchases . "` SET purchase_order_id = $new_purchase_id,  purchase_status = 'purchased' WHERE id=$purchase_id");
 
 
 
@@ -164,8 +168,8 @@ if (($action == "convert_$module" && !empty($purchase_id))) {
 
 
     // -- Purchase order
-    $result = $mysqli->query("INSERT INTO `" . tbl_purchases . "` (vendor_id, warehouse_id, purchase_no, subject, reference_no, purchase_date, expiry_date, grand_subtotal, grand_discount_type, grand_discount_type_value, grand_discount_amount, grand_after_discount, grand_tax, grand_total, vendor_notes, terms_and_conditions, purchase_status, is_active, created_at, updated_at)
-    SELECT vendor_id, warehouse_id, '" . $purchase_no . "', subject, reference_no, NOW(), NOW(), grand_subtotal, grand_discount_type, grand_discount_type_value, grand_discount_amount, grand_after_discount, grand_tax, grand_total, vendor_notes, terms_and_conditions, 'draft', is_active, NOW(), NOW() FROM `" . tbl_purchases . "` WHERE id = $purchase_id;");
+    $result = $mysqli->query("INSERT INTO `" . tbl_purchases . "` (vendor_id, warehouse_id, purchase_no, subject, reference_no, purchase_date, expiry_date, grand_subtotal, grand_discount_type, grand_discount_type_value, grand_discount_amount, grand_after_discount, grand_tax, grand_total, vendor_notes, terms_and_conditions, purchase_status, is_active, organization_id, created_at, updated_at)
+    SELECT vendor_id, warehouse_id, '" . $purchase_no . "', subject, reference_no, NOW(), NOW(), grand_subtotal, grand_discount_type, grand_discount_type_value, grand_discount_amount, grand_after_discount, grand_tax, grand_total, vendor_notes, terms_and_conditions, 'draft', is_active, organization_id, NOW(), NOW() FROM `" . tbl_purchases . "` WHERE id = $purchase_id;");
 
     $new_cloned_id = $mysqli->insert_id;
     fp__($tbl_name, $new_cloned_id);
@@ -191,7 +195,7 @@ if (($action == "convert_$module" && !empty($purchase_id))) {
 */
 } else if (($action == "update_$module" && !empty($purchase_id) && !empty($purchase_status))) {
 
-    $result = $mysqli->query("UPDATE `$tbl_name` SET purchase_status = '" . $purchase_status . "' WHERE id=$purchase_id");
+    $result = $mysqli->query("UPDATE `$tbl_name` SET purchase_status = '" . $purchase_status . "' WHERE id=$purchase_id AND organization_id='" . (int)$activeOrganizationId . "'");
 
     if ($result) {
         $success_message = "The $module_caption status has been updated successfully.";
@@ -304,7 +308,7 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
                 */
             if (!empty($purchase_id)) {
 
-                $result = $mysqli->query("SELECT * FROM `$tbl_name` WHERE id=$purchase_id");
+                $result = $mysqli->query("SELECT * FROM `$tbl_name` WHERE id=$purchase_id AND organization_id='" . (int)$activeOrganizationId . "'");
                 $row = $result->fetch_array();
 
                 $vendor_id                  = s__($row['vendor_id']);
@@ -361,7 +365,7 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
                 $trn                    = s__($row_vendor['trn']);
 
                 // Vendor Billing Address 
-                $rs_billing     = $mysqli->query("SELECT * FROM `" . tbl_vendor_addresses . "` WHERE vendor_id=$vendor_id AND type='billing' ");
+                $rs_billing     = $mysqli->query("SELECT * FROM `" . DB::VENDOR_ADDRESSES . "` WHERE addressable_type='Vendor' AND addressable_id=$vendor_id AND type='billing' ");
                 $row_billing    = $rs_billing->fetch_array();
 
                 $billing_attention      = (!empty($row_billing['attention']) ? s__($row_billing['attention']) : '');
@@ -375,8 +379,8 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
                 $billing_fax            = (!empty($row_billing['fax']) ? s__($row_billing['fax']) : '');
 
 
-                $purchase_date      = processDateYtoD($purchase_date);
-                $expiry_date        = ($expiry_date == '1970-01-01') ? '' : processDateDtoY($expiry_date);
+                $purchase_date      = ddm_($purchase_date);
+                $expiry_date        = ($expiry_date == '1970-01-01' || empty($expiry_date)) ? '' : ddm_($expiry_date);
 
 
                 // ------------------ TOTAL PURCHASE ORDER ITEMS ------------------

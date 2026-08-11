@@ -99,6 +99,7 @@ if (($action == "delete_$module" && !empty($id)) && $hasDeletePermission) {
 $listingConfig = [
     'module' => $module,
     'module_caption' => $module_caption,
+    'disable_add_button' => true,
     'columns' => [
         ['data' => 0],
         ['data' => 1],

@@ -63,7 +63,8 @@ class PayrollRunController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("listing_period_starts.php");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("PayrollRunController::handleUpdate error: " . $e->getMessage());
             flash_error('The Payroll Run could not be updated.');
             return Response::redirect("listing_period_starts.php");
         }
@@ -82,7 +83,8 @@ class PayrollRunController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("listing_period_starts.php");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("PayrollRunController::handleCreate error: " . $e->getMessage());
             flash_error('The Payroll Run could not be saved.');
             return Response::redirect("listing_period_starts.php");
         }

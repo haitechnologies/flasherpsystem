@@ -24,6 +24,8 @@ $success_message = '';
 */
 include('admin_elements/permissions.php');
 
+$activeOrganizationId = dashboardRequireActiveOrganization();
+
 /*
 |--------------------------------------------------------------------------
 | 	GET ALL VARIABLES ADD/UPDATE
@@ -108,11 +110,19 @@ if (!empty($filter_by) && $filter_by !== '0') {
 }
 
 // Process dates
-$date_from_ymd = processDateDtoY($date_from);
-$date_to_ymd = processDateDtoY($date_to);
+if (!function_exists('normalizeDateToYmd')) {
+    function normalizeDateToYmd($date)
+    {
+        if (empty($date)) return '';
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) return $date;
+        return processDateDtoY($date);
+    }
+}
+$date_from_ymd = normalizeDateToYmd($date_from);
+$date_to_ymd = normalizeDateToYmd($date_to);
 
 // Build query conditions
-$search_query = "WHERE j.id > 0";
+$search_query = "WHERE j.id > 0 AND j.organization_id = " . (int)$activeOrganizationId;
 
 if (!empty($date_from_ymd)) {
     $search_query .= " AND j.journal_date >= '" . $date_from_ymd . "'";
@@ -172,7 +182,7 @@ $accounts_report_category_name  = getTableAttr('category_name', tbl_accounts_rep
                     <div class="col-lg-6">
                         <div class="text-muted"><?php echo $accounts_report_category_name; ?></div>
                         <div class="mb-0">
-                            <span class="fw-semibold">Account Transactions</span> - <span class="small">From <?php echo dd_($date_from); ?> To <?php echo dd_($date_to); ?></span>
+                            <span class="fw-semibold">Account Transactions</span> - <span class="small">From <?php echo ddm_($date_from); ?> To <?php echo ddm_($date_to); ?></span>
                         </div>
                     </div>
 
@@ -265,7 +275,7 @@ $accounts_report_category_name  = getTableAttr('category_name', tbl_accounts_rep
                                             <select name="account_id" id="account_id" class="form-select">
                                                 <option value=''>All Accounts</option>
                                                 <?php
-                                                $result_accounts = $mysqli->query("SELECT id, account_name, account_code FROM `" . tbl_accounts . "` WHERE parent_id IS NOT NULL ORDER BY account_name ASC");
+                                                $result_accounts = $mysqli->query("SELECT id, account_name, account_code FROM `" . tbl_accounts . "` WHERE parent_id IS NOT NULL AND organization_id = " . (int)$activeOrganizationId . " ORDER BY account_name ASC");
                                                 while ($row_acc = $result_accounts->fetch_array()) {
                                                 ?>
                                                     <option value="<?php echo $row_acc['id']; ?>" <?php echo (($account_id == $row_acc['id']) ? 'selected' : '') ?>><?php echo s__($row_acc['account_name']); ?> (<?php echo s__($row_acc['account_code']); ?>)</option>
@@ -302,7 +312,7 @@ $accounts_report_category_name  = getTableAttr('category_name', tbl_accounts_rep
                 <p class="text-muted">Flash Logistics FZC</p>
                 <h5 class="mb-0">Account Transactions</h5>
                 <p class="small"><span class="text-muted">Basis</span> : <?php echo ucfirst($report_basis); ?></p>
-                <p class="small"><span class="text-muted">From</span> <?php echo dd_($date_from); ?> <span class="text-muted">To</span> <?php echo dd_($date_to); ?></p>
+                <p class="small"><span class="text-muted">From</span> <?php echo ddm_($date_from); ?> <span class="text-muted">To</span> <?php echo ddm_($date_to); ?></p>
             </div>
 
             <div class="table-responsive">
@@ -324,7 +334,7 @@ $accounts_report_category_name  = getTableAttr('category_name', tbl_accounts_rep
                             $running_balance += ($row['debit'] - $row['credit']);
                         ?>
                             <tr>
-                                <td><?php echo processDateYtoD($row['journal_date']); ?></td>
+                                <td><?php echo ddm_($row['journal_date']); ?></td>
                                 <td><?php echo s__($row['account_name']); ?> (<?php echo s__($row['account_code']); ?>)</td>
                                 <td><?php echo s__($row['transaction_details']); ?></td>
                                 <td><?php echo s__($row['journal_id']); ?></td>

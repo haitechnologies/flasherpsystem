@@ -76,21 +76,23 @@ class ExpensesDataTable extends BaseDataTable
     protected function formatRow($row, $requestData = [])
     {
         $id = (int)($row['id'] ?? 0);
+        $date = (string)($row['expense_date'] ?? '');
         $vendorId = (int)($row['vendor_id'] ?? 0);
         $customerId = (int)($row['customer_id'] ?? 0);
         $paidThroughId = (int)($row['paid_through'] ?? 0);
         $status = trim((string)($row['expense_status'] ?? ''));
         $statusBadge = $status !== '' ? BadgeHelper::info(htmlspecialchars($status)) : BadgeHelper::secondary('Draft');
+        $currencyCode = defined('BASE_CURRENCY') ? BASE_CURRENCY['code'] : 'AED';
 
         return [
-            htmlspecialchars((string)($row['expense_date'] ?? '')),
-            htmlspecialchars((string)($this->relatedDataCache['expense_accounts'][$id] ?? '')),
+            $this->formatDate($date) ?: '-',
+            '<a href="expense_overview.php?id=' . $id . '" class="text-decoration-none">' . htmlspecialchars((string)($this->relatedDataCache['expense_accounts'][$id] ?? '')) . '</a>',
             '<a href="expense_overview.php?id=' . $id . '" class="text-decoration-none">' . htmlspecialchars((string)($row['reference_no'] ?? '')) . '</a>',
             htmlspecialchars((string)($this->relatedDataCache['vendors'][$vendorId] ?? '')),
             htmlspecialchars((string)($this->relatedDataCache['accounts'][$paidThroughId] ?? '')),
             htmlspecialchars((string)($this->relatedDataCache['customers'][$customerId] ?? '')),
             $statusBadge,
-            htmlspecialchars(number_format((float)($row['grand_total'] ?? 0), 2)),
+            $currencyCode . ' ' . number_format((float)($row['grand_total'] ?? 0), 2),
         ];
     }
 

@@ -37,7 +37,7 @@ $result = $mysqli->query("SELECT DATE_FORMAT(i.invoice_date, '%Y-%m') AS period,
                                   COALESCE(SUM(i.grand_total), 0) AS revenue,
                                   CASE WHEN COUNT(DISTINCT i.id) > 0 THEN COALESCE(SUM(i.grand_total), 0) / COUNT(DISTINCT i.id) ELSE 0 END AS avg_order_value
                            FROM `" . $tbl_prefix . "invoices` i
-                           WHERE i.customer_id > 0
+                           WHERE i.customer_id > 0 AND i.organization_id = " . (int)$activeOrganizationId . "
                            GROUP BY DATE_FORMAT(i.invoice_date, '%Y-%m')
                            ORDER BY period DESC");
 if ($result) {

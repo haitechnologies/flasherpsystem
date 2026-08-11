@@ -7,12 +7,13 @@ namespace App\DataTable;
 use App\Core\DB;
 use App\Helper\BadgeHelper;
 use App\Helper\ActionButtonHelper;
+use App\Core\ErrorCapture;
 
 class PurchaseOrdersDataTable extends BaseDataTable
 {
     protected $table = DB::PURCHASE_ORDERS;
     protected $searchFields = ['purchase_order_no', 'reference_no'];
-    protected $sortableColumns = [0 => 'id', 1 => 'purchase_order_date', 2 => 'purchase_order_no', 3 => 'reference_no', 4 => 'vendor_id', 5 => 'purchase_order_status', 6 => 'grand_total', 7 => 'id'];
+    protected $sortableColumns = [0 => 'purchase_order_date', 1 => 'purchase_order_no', 2 => 'reference_no', 3 => 'vendor_id', 4 => 'purchase_order_status', 5 => 'grand_total'];
 
     protected function prepareRelatedData(array $rows, array $requestData = []): void
     {
@@ -25,7 +26,7 @@ class PurchaseOrdersDataTable extends BaseDataTable
                     $this->relatedDataCache['vendors'][(int)$row['id']] = $row['display_name'];
                 }
             } catch (\Throwable $e) {
-                error_log("PurchaseOrdersDataTable::prepareRelatedData error: " . $e->getMessage());
+                ErrorCapture::record("PurchaseOrdersDataTable::prepareRelatedData error: " . $e->getMessage());
             }
         }
     }
@@ -38,18 +39,17 @@ class PurchaseOrdersDataTable extends BaseDataTable
         $ref        = (string)($row['reference_no'] ?? '');
         $vendorId   = (int)($row['vendor_id'] ?? 0);
         $status     = (string)($row['purchase_order_status'] ?? '');
-        $total      = (string)($row['grand_total'] ?? '0');
+        $total      = (float)($row['grand_total'] ?? 0);
         $vendorName = $this->relatedDataCache['vendors'][$vendorId] ?? '';
         $badge      = BadgeHelper::info(htmlspecialchars($status));
+        $currencyCode = defined('BASE_CURRENCY') ? BASE_CURRENCY['code'] : 'AED';
         return [
-            $this->rowNumber,
-            htmlspecialchars($date),
+            $this->formatDate($date) ?: '-',
             '<a href="purchase_order_overview.php?id=' . $id . '" class="text-decoration-none">' . htmlspecialchars($no) . '</a>',
             htmlspecialchars($ref),
             htmlspecialchars($vendorName),
             $badge,
-            htmlspecialchars(number_format((float)$total, 2)),
-            $this->getActionButtons($id, 'purchase_orders'),
+            $currencyCode . ' ' . number_format($total, 2),
         ];
     }
 

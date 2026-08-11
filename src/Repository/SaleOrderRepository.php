@@ -12,8 +12,8 @@ use App\Model\SaleOrderItem;
 /**
  * SaleOrder Repository
  *
- * Handles PDO-based data access for erp_sale_orders and erp_sale_order_items
- * tables with strict tenant isolation.
+ * Handles PDO-based data access for erp_sale_orders, erp_sale_order_items,
+ * and erp_dimension_items tables with strict tenant isolation.
  */
 class SaleOrderRepository
 {
@@ -24,9 +24,7 @@ class SaleOrderRepository
         $this->db = $db;
     }
 
-    /**
-     * Find sale order by ID and organization
-     */
+    /** Find sale order by ID and organization */
     public function find(int $id, int $orgId): ?SaleOrder
     {
         $sql = "SELECT * FROM `{DB::SALE_ORDERS}` WHERE id = :id AND organization_id = :org_id";
@@ -37,9 +35,7 @@ class SaleOrderRepository
         return $this->mapRowToSaleOrder($row);
     }
 
-    /**
-     * Find sale order items by sale order ID and organization
-     */
+    /** Find sale order items by sale order ID and organization */
     public function findItemsBySaleOrder(int $saleOrderId, int $orgId): array
     {
         $sql = "SELECT * FROM `{DB::SALE_ORDER_ITEMS}` WHERE sale_order_id = :sale_order_id AND organization_id = :org_id ORDER BY id ASC";
@@ -51,9 +47,7 @@ class SaleOrderRepository
         return $items;
     }
 
-    /**
-     * Get the last sale order number for a given monthly prefix and organization
-     */
+    /** Get the last sale order number for a given monthly prefix */
     public function getLastSaleOrderNoForMonth(string $prefix, int $orgId): ?string
     {
         $sql = "SELECT sale_order_no FROM `{DB::SALE_ORDERS}` 
@@ -63,9 +57,7 @@ class SaleOrderRepository
         return $row !== null ? (string)$row['sale_order_no'] : null;
     }
 
-    /**
-     * Find all sale orders in an organization
-     */
+    /** Find all sale orders */
     public function findAll(int $orgId): array
     {
         $sql = "SELECT * FROM `{DB::SALE_ORDERS}` WHERE organization_id = :org_id ORDER BY id DESC";
@@ -77,9 +69,7 @@ class SaleOrderRepository
         return $saleOrders;
     }
 
-    /**
-     * Save SaleOrder (Insert or Update)
-     */
+    /** Save SaleOrder (Insert or Update) */
     public function save(SaleOrder $saleOrder): SaleOrder
     {
         if ($saleOrder->id === null) {
@@ -93,19 +83,23 @@ class SaleOrderRepository
         $sql = "INSERT INTO `{DB::SALE_ORDERS}` (
                     organization_id, sale_order_no, customer_id, sale_order_status, sale_order_date, expiry_date,
                     reference_no, warehouse_id, expected_shipment_date, payment_term, shipment_type,
-                    sales_person, job_reference_no, master_awb_no, shipper, consignee, origin,
-                    destination, no_of_packs, gross_weight, chargeable_weight, volume,
+                    sales_person, job_reference_no, master_awb_no, mawb_bol, hwb_hbol,
+                    shipper_id, consignee_id, origin_port, origin_country, destination_port, destination_country,
+                    no_of_packs, gross_weight, chargeable_weight, volume, cbm,
                     terms_and_conditions, grand_subtotal, grand_discount_type, grand_discount_type_value,
                     grand_discount_amount, grand_after_discount, customer_notes, grand_tax, grand_total,
-                    publish, is_active, created_at, updated_at, updated_by, created_by, pdf
+                    publish, is_active, invoice_id, quotation_id,
+                    created_at, updated_at, updated_by, created_by, pdf
                 ) VALUES (
                     :organization_id, :sale_order_no, :customer_id, :sale_order_status, :sale_order_date, :expiry_date,
                     :reference_no, :warehouse_id, :expected_shipment_date, :payment_term, :shipment_type,
-                    :sales_person, :job_reference_no, :master_awb_no, :shipper, :consignee, :origin,
-                    :destination, :no_of_packs, :gross_weight, :chargeable_weight, :volume,
+                    :sales_person, :job_reference_no, :master_awb_no, :mawb_bol, :hwb_hbol,
+                    :shipper_id, :consignee_id, :origin_port, :origin_country, :destination_port, :destination_country,
+                    :no_of_packs, :gross_weight, :chargeable_weight, :volume, :cbm,
                     :terms_and_conditions, :grand_subtotal, :grand_discount_type, :grand_discount_type_value,
                     :grand_discount_amount, :grand_after_discount, :customer_notes, :grand_tax, :grand_total,
-                    :publish, :is_active, NOW(), NOW(), :updated_by, :created_by, :pdf
+                    :publish, :is_active, :invoice_id, :quotation_id,
+                    NOW(), NOW(), :updated_by, :created_by, :pdf
                 )";
 
         $params = $saleOrder->toArray();
@@ -140,14 +134,19 @@ class SaleOrderRepository
                     sales_person = :sales_person,
                     job_reference_no = :job_reference_no,
                     master_awb_no = :master_awb_no,
-                    shipper = :shipper,
-                    consignee = :consignee,
-                    origin = :origin,
-                    destination = :destination,
+                    mawb_bol = :mawb_bol,
+                    hwb_hbol = :hwb_hbol,
+                    shipper_id = :shipper_id,
+                    consignee_id = :consignee_id,
+                    origin_port = :origin_port,
+                    origin_country = :origin_country,
+                    destination_port = :destination_port,
+                    destination_country = :destination_country,
                     no_of_packs = :no_of_packs,
                     gross_weight = :gross_weight,
                     chargeable_weight = :chargeable_weight,
                     volume = :volume,
+                    cbm = :cbm,
                     terms_and_conditions = :terms_and_conditions,
                     grand_subtotal = :grand_subtotal,
                     grand_discount_type = :grand_discount_type,
@@ -159,6 +158,8 @@ class SaleOrderRepository
                     grand_total = :grand_total,
                     publish = :publish,
                     is_active = :is_active,
+                    invoice_id = :invoice_id,
+                    quotation_id = :quotation_id,
                     updated_at = NOW(),
                     updated_by = :updated_by,
                     pdf = :pdf
@@ -180,9 +181,7 @@ class SaleOrderRepository
         return $updated;
     }
 
-    /**
-     * Save SaleOrderItem (Insert or Update)
-     */
+    /** Save SaleOrderItem (Insert or Update) */
     public function saveItem(SaleOrderItem $item): SaleOrderItem
     {
         if ($item->id === null) {
@@ -248,9 +247,7 @@ class SaleOrderRepository
         return $updated;
     }
 
-    /**
-     * Find a single SaleOrderItem by ID and organization
-     */
+    /** Find a single SaleOrderItem by ID and organization */
     public function findItem(int $id, int $orgId): ?SaleOrderItem
     {
         $sql = "SELECT * FROM `{DB::SALE_ORDER_ITEMS}` WHERE id = :id AND organization_id = :org_id";
@@ -261,9 +258,7 @@ class SaleOrderRepository
         return $this->mapRowToSaleOrderItem($row);
     }
 
-    /**
-     * Delete a sale order and its associated items
-     */
+    /** Delete a sale order and its associated items */
     public function delete(int $id, int $orgId): bool
     {
         $this->deleteItemsBySaleOrder($id, $orgId);
@@ -272,9 +267,7 @@ class SaleOrderRepository
         return $stmt->rowCount() > 0;
     }
 
-    /**
-     * Delete all items for a specific sale order
-     */
+    /** Delete all items for a specific sale order */
     public function deleteItemsBySaleOrder(int $saleOrderId, int $orgId): bool
     {
         $sql = "DELETE FROM `{DB::SALE_ORDER_ITEMS}` WHERE sale_order_id = :sale_order_id AND organization_id = :org_id";
@@ -282,9 +275,7 @@ class SaleOrderRepository
         return true;
     }
 
-    /**
-     * Delete specific sale order items by IDs
-     */
+    /** Delete specific sale order items by IDs */
     public function deleteItemsByIds(array $ids, int $saleOrderId, int $orgId): void
     {
         if (empty($ids)) {
@@ -303,9 +294,7 @@ class SaleOrderRepository
         $this->db->execute($sql, $params);
     }
 
-    /**
-     * Update sale order status
-     */
+    /** Update sale order status */
     public function updateStatus(int $id, string $status, int $orgId): bool
     {
         $sql = "UPDATE `{DB::SALE_ORDERS}` SET sale_order_status = :status, updated_at = NOW() 
@@ -314,9 +303,7 @@ class SaleOrderRepository
         return $stmt->rowCount() > 0;
     }
 
-    /**
-     * Update sale order PDF path
-     */
+    /** Update sale order PDF path */
     public function updatePdf(int $id, string $pdfFilename, int $orgId): bool
     {
         $sql = "UPDATE `{DB::SALE_ORDERS}` SET pdf = :pdf, updated_at = NOW() 
@@ -325,9 +312,103 @@ class SaleOrderRepository
         return $stmt->rowCount() > 0;
     }
 
-    /**
-     * Map database row to SaleOrder DTO
-     */
+    // =========================================================================
+    // Dimension Items
+    // =========================================================================
+
+    /** Find dimension items for a sale order */
+    public function findDimensionItemsBySaleOrder(int $saleOrderId, int $orgId): array
+    {
+        $sql = "SELECT * FROM `{DB::DIMENSION_ITEMS}` 
+                WHERE module_type = 'sale_orders' AND record_id = :record_id AND organization_id = :org_id 
+                ORDER BY id ASC";
+        return $this->db->fetchAll($sql, ['record_id' => $saleOrderId, 'org_id' => $orgId]);
+    }
+
+    /** Upsert a single dimension item row */
+    public function saveDimensionItem(array $dimData, int $orgId, int $userId): int
+    {
+        if (!empty($dimData['id'])) {
+            $sql = "UPDATE `{DB::DIMENSION_ITEMS}` SET
+                        pcs = :pcs, unit = :unit, length = :length, width = :width,
+                        height = :height, formula = :formula, cbm = :cbm, volume = :volume,
+                        updated_by = :updated_by, updated_at = NOW()
+                    WHERE id = :id AND organization_id = :org_id";
+            $this->db->execute($sql, [
+                'id' => (int)$dimData['id'],
+                'org_id' => $orgId,
+                'pcs' => (int)($dimData['pcs'] ?? 0),
+                'unit' => ($dimData['unit'] ?? 'cm'),
+                'length' => (float)($dimData['length'] ?? 0),
+                'width' => (float)($dimData['width'] ?? 0),
+                'height' => (float)($dimData['height'] ?? 0),
+                'formula' => (int)($dimData['formula'] ?? 6000),
+                'cbm' => (float)($dimData['cbm'] ?? 0),
+                'volume' => (float)($dimData['volume'] ?? 0),
+                'updated_by' => $userId,
+            ]);
+            return (int)$dimData['id'];
+        }
+
+        $sql = "INSERT INTO `{DB::DIMENSION_ITEMS}` (
+                    organization_id, quotation_id, module_type, record_id,
+                    pcs, unit, length, width, height, formula, cbm, volume,
+                    created_by, updated_by, created_at, updated_at
+                ) VALUES (
+                    :org_id, :quotation_id, :module_type, :record_id,
+                    :pcs, :unit, :length, :width, :height, :formula, :cbm, :volume,
+                    :created_by, :updated_by, NOW(), NOW()
+                )";
+        $insertId = (int)$this->db->insert($sql, [
+            'org_id' => $orgId,
+            'quotation_id' => ($dimData['module_type'] ?? 'sale_orders') === 'quotations' ? (int)$dimData['record_id'] : null,
+            'module_type' => $dimData['module_type'] ?? 'sale_orders',
+            'record_id' => (int)$dimData['record_id'],
+            'pcs' => (int)($dimData['pcs'] ?? 0),
+            'unit' => $dimData['unit'] ?? 'cm',
+            'length' => (float)($dimData['length'] ?? 0),
+            'width' => (float)($dimData['width'] ?? 0),
+            'height' => (float)($dimData['height'] ?? 0),
+            'formula' => (int)($dimData['formula'] ?? 6000),
+            'cbm' => (float)($dimData['cbm'] ?? 0),
+            'volume' => (float)($dimData['volume'] ?? 0),
+            'created_by' => $userId,
+            'updated_by' => $userId,
+        ]);
+        return $insertId;
+    }
+
+    /** Delete a single dimension item */
+    public function deleteDimensionItem(int $dimId, int $orgId): bool
+    {
+        $sql = "DELETE FROM `{DB::DIMENSION_ITEMS}` WHERE id = :id AND organization_id = :org_id";
+        $stmt = $this->db->execute($sql, ['id' => $dimId, 'org_id' => $orgId]);
+        return $stmt->rowCount() > 0;
+    }
+
+    /** Delete all dimension items for a sale order */
+    public function deleteDimensionItemsByRecord(int $recordId, string $moduleType, int $orgId): bool
+    {
+        $sql = "DELETE FROM `{DB::DIMENSION_ITEMS}` 
+                WHERE module_type = :module_type AND record_id = :record_id AND organization_id = :org_id";
+        $this->db->execute($sql, ['module_type' => $moduleType, 'record_id' => $recordId, 'org_id' => $orgId]);
+        return true;
+    }
+
+    /** Get last invoice no for monthly prefix */
+    public function getLastInvoiceNoForMonth(string $prefix, int $orgId): ?string
+    {
+        $sql = "SELECT invoice_no FROM `{DB::INVOICES}` 
+                WHERE invoice_no LIKE :prefix AND organization_id = :org_id 
+                ORDER BY invoice_no DESC LIMIT 1";
+        $row = $this->db->fetchOne($sql, ['prefix' => $prefix . '-%', 'org_id' => $orgId]);
+        return $row !== null ? (string)$row['invoice_no'] : null;
+    }
+
+    // =========================================================================
+    // Mappers
+    // =========================================================================
+
     private function mapRowToSaleOrder(array $row): SaleOrder
     {
         return new SaleOrder(
@@ -346,14 +427,19 @@ class SaleOrderRepository
             salesPerson: (int)($row['sales_person'] ?? 0),
             jobReferenceNo: $row['job_reference_no'] !== null ? (string)$row['job_reference_no'] : null,
             masterAwbNo: $row['master_awb_no'] !== null ? (string)$row['master_awb_no'] : null,
-            shipper: (int)($row['shipper'] ?? 0),
-            consignee: (int)($row['consignee'] ?? 0),
-            origin: (int)($row['origin'] ?? 0),
-            destination: (int)($row['destination'] ?? 0),
+            mawbBol: $row['mawb_bol'] !== null ? (string)$row['mawb_bol'] : null,
+            hwbHbol: $row['hwb_hbol'] !== null ? (string)$row['hwb_hbol'] : null,
+            shipperId: (int)($row['shipper_id'] ?? 0),
+            consigneeId: (int)($row['consignee_id'] ?? 0),
+            originPort: (int)($row['origin_port'] ?? 0),
+            originCountry: (int)($row['origin_country'] ?? 0),
+            destinationPort: (int)($row['destination_port'] ?? 0),
+            destinationCountry: (int)($row['destination_country'] ?? 0),
             noOfPacks: (int)($row['no_of_packs'] ?? 0),
             grossWeight: (float)($row['gross_weight'] ?? 0.0),
             chargeableWeight: (float)($row['chargeable_weight'] ?? 0.0),
             volume: (float)($row['volume'] ?? 0.0),
+            cbm: (float)($row['cbm'] ?? 0.0),
             termsAndConditions: $row['terms_and_conditions'] !== null ? (string)$row['terms_and_conditions'] : null,
             grandSubtotal: (float)($row['grand_subtotal'] ?? 0.0),
             grandDiscountType: (string)($row['grand_discount_type'] ?? '0.00'),
@@ -369,13 +455,12 @@ class SaleOrderRepository
             updatedAt: $row['updated_at'] !== null ? (string)$row['updated_at'] : null,
             updatedBy: $row['updated_by'] !== null ? (int)$row['updated_by'] : null,
             createdBy: (int)($row['created_by'] ?? 0),
-            pdf: $row['pdf'] !== null ? (string)$row['pdf'] : null
+            pdf: $row['pdf'] !== null ? (string)$row['pdf'] : null,
+            invoiceId: $row['invoice_id'] !== null ? (int)$row['invoice_id'] : null,
+            quotationId: $row['quotation_id'] !== null ? (int)$row['quotation_id'] : null,
         );
     }
 
-    /**
-     * Map database row to SaleOrderItem DTO
-     */
     private function mapRowToSaleOrderItem(array $row): SaleOrderItem
     {
         return new SaleOrderItem(

@@ -10,6 +10,7 @@ use App\Model\Purchase;
 use App\Model\PurchaseItem;
 use App\Repository\PurchaseRepository;
 use App\Repository\VendorRepository;
+use App\Repository\JournalRepository;
 use App\Exception\NotFoundException;
 use App\Exception\ValidationException;
 use App\Helper\DateHelper;
@@ -18,12 +19,16 @@ class PurchaseService
 {
     private PurchaseRepository $purchaseRepo;
     private VendorRepository $vendorRepo;
+    private JournalRepository $journalRepo;
+    private JournalService $journalService;
     private Database $db;
 
-    public function __construct(PurchaseRepository $purchaseRepo, VendorRepository $vendorRepo, Database $db)
+    public function __construct(PurchaseRepository $purchaseRepo, VendorRepository $vendorRepo, JournalRepository $journalRepo, JournalService $journalService, Database $db)
     {
         $this->purchaseRepo = $purchaseRepo;
         $this->vendorRepo = $vendorRepo;
+        $this->journalRepo = $journalRepo;
+        $this->journalService = $journalService;
         $this->db = $db;
     }
 
@@ -36,14 +41,14 @@ class PurchaseService
         return $purchase;
     }
 
-    public function getPurchaseItems(int $purchaseId, int $orgId): array
+    public function getPurchaseItems(int $purchaseId): array
     {
-        return $this->purchaseRepo->findItemsByPurchase($purchaseId, $orgId);
+        return $this->purchaseRepo->findItemsByPurchase($purchaseId);
     }
 
     public function createPurchase(array $data, array $itemsData, int $orgId, int $userId): Purchase
     {
-        $this->validatePurchaseData($data);
+        $this->validatePurchaseData($data, $orgId);
 
         if (empty($itemsData)) {
             throw new ValidationException(['items' => "No items added. Please add at least one item."]);
@@ -58,6 +63,7 @@ class PurchaseService
                 organizationId: $orgId,
                 purchaseDate: $purchaseDate,
                 vendorId: (int)($data['vendor_id'] ?? 0),
+                purchaseNo: $this->purchaseRepo->generatePurchaseNo($orgId),
                 purchaseStatus: !empty($data['purchase_status']) ? trim((string)$data['purchase_status']) : 'draft',
                 referenceNo: !empty($data['reference_no']) ? trim((string)$data['reference_no']) : null,
                 subject: !empty($data['subject']) ? trim((string)$data['subject']) : null,
@@ -93,6 +99,9 @@ class PurchaseService
                     description: !empty($itemData['description']) ? trim((string)$itemData['description']) : null,
                     qty: (float)($itemData['qty'] ?? 1.0),
                     rate: (float)($itemData['rate'] ?? 0.0),
+                    discountType: !empty($itemData['discount_type']) ? trim((string)$itemData['discount_type']) : null,
+                    discountTypeValue: (float)($itemData['discount_type_value'] ?? 0.0),
+                    discountAmount: (float)($itemData['discount_amount'] ?? 0.0),
                     subTotal: (float)($itemData['sub_total'] ?? 0.0),
                     tax: (float)($itemData['tax'] ?? 0.0),
                     taxAmount: (float)($itemData['tax_amount'] ?? 0.0),
@@ -101,6 +110,8 @@ class PurchaseService
                 );
                 $this->purchaseRepo->saveItem($item);
             }
+
+            $this->createPurchaseJournal($purchaseId, $purchaseDate, $orgId);
 
             $this->db->commit();
 
@@ -114,7 +125,7 @@ class PurchaseService
     public function updatePurchase(int $id, array $data, array $itemsData, int $orgId, int $userId): Purchase
     {
         $purchase = $this->getPurchase($id, $orgId);
-        $this->validatePurchaseData($data);
+        $this->validatePurchaseData($data, $orgId);
 
         $this->db->beginTransaction();
         try {
@@ -125,6 +136,7 @@ class PurchaseService
                 organizationId: $purchase->organizationId,
                 purchaseDate: $purchaseDate,
                 vendorId: isset($data['vendor_id']) ? (int)$data['vendor_id'] : $purchase->vendorId,
+                purchaseNo: $purchase->purchaseNo,
                 purchaseStatus: isset($data['purchase_status']) ? (!empty($data['purchase_status']) ? trim((string)$data['purchase_status']) : 'draft') : $purchase->purchaseStatus,
                 referenceNo: isset($data['reference_no']) ? (!empty($data['reference_no']) ? trim((string)$data['reference_no']) : null) : $purchase->referenceNo,
                 subject: isset($data['subject']) ? (!empty($data['subject']) ? trim((string)$data['subject']) : null) : $purchase->subject,
@@ -145,7 +157,7 @@ class PurchaseService
 
             $savedPurchase = $this->purchaseRepo->save($updatedPurchase);
 
-            $existingItems = $this->purchaseRepo->findItemsByPurchase($id, $orgId);
+            $existingItems = $this->purchaseRepo->findItemsByPurchase($id);
             $existingIds = array_map(fn($item) => $item->id, $existingItems);
             $incomingIds = [];
 
@@ -170,6 +182,9 @@ class PurchaseService
                     description: !empty($itemData['description']) ? trim((string)$itemData['description']) : null,
                     qty: (float)($itemData['qty'] ?? 1.0),
                     rate: (float)($itemData['rate'] ?? 0.0),
+                    discountType: !empty($itemData['discount_type']) ? trim((string)$itemData['discount_type']) : null,
+                    discountTypeValue: (float)($itemData['discount_type_value'] ?? 0.0),
+                    discountAmount: (float)($itemData['discount_amount'] ?? 0.0),
                     subTotal: (float)($itemData['sub_total'] ?? 0.0),
                     tax: (float)($itemData['tax'] ?? 0.0),
                     taxAmount: (float)($itemData['tax_amount'] ?? 0.0),
@@ -181,8 +196,11 @@ class PurchaseService
 
             $deletedIds = array_diff($existingIds, $incomingIds);
             if (!empty($deletedIds)) {
-                $this->purchaseRepo->deleteItemsByIds($deletedIds, $id, $orgId);
+                $this->purchaseRepo->deleteItemsByIds($deletedIds, $id);
             }
+
+            $this->deletePurchaseJournal($id);
+            $this->createPurchaseJournal($id, $purchaseDate, $orgId);
 
             $this->db->commit();
 
@@ -199,6 +217,7 @@ class PurchaseService
 
         $this->db->beginTransaction();
         try {
+            $this->deletePurchaseJournal($id);
             $result = $this->purchaseRepo->delete($id, $orgId);
             $this->db->commit();
             return $result;
@@ -208,18 +227,21 @@ class PurchaseService
         }
     }
 
-    private function validatePurchaseData(array $data): void
+    private function validatePurchaseData(array $data, int $orgId): void
     {
         if (empty($data['vendor_id']) || (int)$data['vendor_id'] <= 0) {
             throw new ValidationException(['vendor_id' => "Please select Vendor."]);
         }
         // Verify vendor exists
-        $vendor = $this->vendorRepo->find((int)$data['vendor_id']);
+        $vendor = $this->vendorRepo->find((int)$data['vendor_id'], $orgId);
         if ($vendor === null) {
             throw new ValidationException(['vendor_id' => "Selected vendor does not exist."]);
         }
         if (empty($data['purchase_date'])) {
             throw new ValidationException(['purchase_date' => "Please select Purchase Date."]);
+        }
+        if (empty($data['warehouse_id']) || $data['warehouse_id'] === 'Please select') {
+            throw new ValidationException(['warehouse_id' => "Please select Warehouse."]);
         }
     }
 
@@ -235,5 +257,73 @@ class PurchaseService
             }
         }
         return DateHelper::toDbDate($date) ?: $date;
+    }
+
+    private function deletePurchaseJournal(int $purchaseId): void
+    {
+        $journalId = $this->db->fetchOne(
+            "SELECT id FROM `{DB::JOURNALS}` WHERE reference_type = 'purchase' AND reference_id = :ref_id LIMIT 1",
+            ['ref_id' => $purchaseId]
+        );
+
+        if ($journalId !== null) {
+            $jid = (int)$journalId['id'];
+            $this->db->execute("DELETE FROM `{DB::JOURNAL_ITEMS}` WHERE journal_id = :jid", ['jid' => $jid]);
+            $this->db->execute("DELETE FROM `{DB::JOURNALS}` WHERE id = :jid", ['jid' => $jid]);
+        }
+    }
+
+    private function createPurchaseJournal(int $purchaseId, string $purchaseDate, int $orgId): void
+    {
+        $purchase = $this->getPurchase($purchaseId, $orgId);
+        if ($purchase->grandTotal <= 0) {
+            return;
+        }
+
+        $ap = $this->db->fetchOne(
+            "SELECT id FROM `{DB::ACCOUNTS}` WHERE account_code IN ('2100','2110','2200') OR account_name LIKE '%Payable%' OR account_name LIKE '%Liability%' LIMIT 1"
+        );
+        $expense = $this->db->fetchOne(
+            "SELECT id FROM `{DB::ACCOUNTS}` WHERE account_code IN ('5100','5200','5000') OR account_name LIKE '%Purchases%' OR account_name LIKE '%Expense%' LIMIT 1"
+        );
+
+        if ($ap === null || $expense === null) {
+            return;
+        }
+
+        $vendorName = 'Vendor ID: ' . $purchase->vendorId;
+        if ($purchase->vendorId > 0) {
+            $vRow = $this->db->fetchOne(
+                "SELECT display_name FROM `{DB::VENDORS}` WHERE id = :id LIMIT 1",
+                ['id' => $purchase->vendorId]
+            );
+            if ($vRow !== null) {
+                $vendorName = (string)$vRow['display_name'];
+            }
+        }
+
+        $journalItems = [
+            ['account' => (int)$expense['id'], 'debit' => $purchase->grandTotal, 'credit' => 0.0, 'description' => 'Purchase #' . $purchase->purchaseNo],
+            ['account' => (int)$ap['id'], 'debit' => 0.0, 'credit' => $purchase->grandTotal, 'description' => 'Purchase #' . $purchase->purchaseNo . ' - ' . $vendorName],
+        ];
+
+        $this->journalService->createJournal(
+            [
+                'reference_type' => 'purchase',
+                'reference_id' => $purchaseId,
+                'reference_no' => $purchase->purchaseNo,
+                'journal_date' => $purchaseDate,
+                'notes' => 'Purchase #' . $purchase->purchaseNo . ' - ' . $vendorName,
+                'currency' => 'AED',
+                'journal_status' => 'posted',
+                'reporting_method' => 'accrual',
+                'warehouse_id' => $purchase->warehouseId,
+                'grand_subtotal' => $purchase->grandTotal,
+                'grand_total' => $purchase->grandTotal,
+            ],
+            $journalItems,
+            $orgId,
+            0
+        );
     }
 }

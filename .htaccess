@@ -1,4 +1,4 @@
-﻿# Generate Error Logs and keep in file error_log.txt
+# Generate Error Logs and keep in file error_log.txt
 php_flag log_errors on
 php_value error_reporting 32767
 php_value error_log "error_log.txt"
@@ -84,7 +84,7 @@ Options -Indexes
     Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" env=HTTPS
     
     # CSP: Protect against XSS, clickjacking, and code injection
-    Header set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdn.ampproject.org https://www.googletagmanager.com https://www.google-analytics.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com https://cdn.datatables.net; img-src 'self' data: https:; font-src 'self' data: https://cdn.jsdelivr.net https://fonts.gstatic.com; connect-src 'self' https: https://www.google-analytics.com https://analytics.google.com https://stats.g.doubleclick.net; frame-src 'self' https://maps.google.com https://www.google.com; worker-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'; form-action 'self';     report-uri /csp-report;"
+    Header set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdn.ampproject.org https://www.googletagmanager.com https://www.google-analytics.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com https://cdn.datatables.net https://www.gstatic.com; img-src 'self' data: https:; font-src 'self' data: https://cdn.jsdelivr.net https://fonts.gstatic.com; connect-src 'self' https: https://www.google-analytics.com https://analytics.google.com https://stats.g.doubleclick.net; frame-src 'self' https://maps.google.com https://www.google.com; worker-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'; form-action 'self';     report-uri /csp-report;"
     
     # X-Frame-Options: Prevent clickjacking (redundant with CSP frame-ancestors but kept for older browsers)
     Header always set X-Frame-Options "DENY"

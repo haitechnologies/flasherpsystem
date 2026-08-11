@@ -64,7 +64,8 @@ class ConsigneeController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("consignee_names.php?id=$id&action=edit_consignee_names");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("ConsigneeController::handleUpdate error: " . $e->getMessage());
             flash_error('The Consignee could not be updated.');
             return Response::redirect("consignee_names.php?id=$id&action=edit_consignee_names");
         }
@@ -84,7 +85,8 @@ class ConsigneeController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("consignee_names.php");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("ConsigneeController::handleCreate error: " . $e->getMessage());
             flash_error('The Consignee could not be saved.');
             return Response::redirect("consignee_names.php");
         }

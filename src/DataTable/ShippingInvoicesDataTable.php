@@ -7,6 +7,7 @@ namespace App\DataTable;
 use App\Core\DB;
 use App\Helper\BadgeHelper;
 use App\Helper\ActionButtonHelper;
+use App\Core\ErrorCapture;
 
 class ShippingInvoicesDataTable extends BaseDataTable
 {
@@ -61,7 +62,7 @@ class ShippingInvoicesDataTable extends BaseDataTable
                 $this->relatedDataCache['customers'][(int)$cRow['id']] = (string)($cRow['display_name'] ?? '');
             }
         } catch (\Throwable $e) {
-            error_log("ShippingInvoicesDataTable::prepareRelatedData error: " . $e->getMessage());
+            ErrorCapture::record("ShippingInvoicesDataTable::prepareRelatedData error: " . $e->getMessage());
         }
     }
 

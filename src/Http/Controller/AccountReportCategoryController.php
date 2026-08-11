@@ -64,7 +64,8 @@ class AccountReportCategoryController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("category_names.php?id=$id&action=edit_category_names");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("AccountReportCategoryController::handleUpdate error: " . $e->getMessage());
             flash_error('The Account Report Category could not be updated.');
             return Response::redirect("category_names.php?id=$id&action=edit_category_names");
         }
@@ -84,7 +85,8 @@ class AccountReportCategoryController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("category_names.php");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("AccountReportCategoryController::handleCreate error: " . $e->getMessage());
             flash_error('The Account Report Category could not be saved.');
             return Response::redirect("category_names.php");
         }

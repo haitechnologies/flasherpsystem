@@ -39,7 +39,7 @@ $result = $mysqli->query("SELECT ii.service AS item_name,
                                   CASE WHEN COALESCE(SUM(ii.total), 0) > 0 THEN ROUND((COALESCE(SUM(ii.total), 0) - COALESCE(SUM(ii.total * 0.7), 0)) / COALESCE(SUM(ii.total), 0) * 100, 2) ELSE 0 END AS profit_margin
                            FROM `" . $tbl_prefix . "invoice_items` ii
                            LEFT JOIN `" . $tbl_prefix . "invoices` i ON i.id = ii.invoice_id
-                           WHERE LENGTH(ii.service) > 0
+                           WHERE LENGTH(ii.service) > 0 AND i.organization_id = " . (int)$activeOrganizationId . "
                            GROUP BY ii.service
                            ORDER BY revenue DESC");
 if ($result) {

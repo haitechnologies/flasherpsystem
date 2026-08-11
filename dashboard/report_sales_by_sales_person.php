@@ -16,6 +16,7 @@ $success_message = '';
 */
 include('admin_elements/permissions.php');
 
+$activeOrganizationId = dashboardRequireActiveOrganization();
 
 /*
 |--------------------------------------------------------------------------
@@ -24,11 +25,12 @@ include('admin_elements/permissions.php');
 |
 */
 
-function getSalesBySalesPerson($mysqli, $date_from_ymd, $date_to_ymd) {
+function getSalesBySalesPerson($mysqli, $date_from_ymd, $date_to_ymd, $activeOrganizationId) {
     $date_condition = "";
     if (!empty($date_from_ymd) && !empty($date_to_ymd)) {
         $date_condition = " AND i.invoice_date >= '" . $date_from_ymd . "' AND i.invoice_date <= '" . $date_to_ymd . "'";
     }
+    $date_condition .= " AND i.organization_id = " . (int)$activeOrganizationId;
     
     $sql = "SELECT i.sales_person, 
                    COALESCE(u.full_name, '') AS full_name,
@@ -36,8 +38,8 @@ function getSalesBySalesPerson($mysqli, $date_from_ymd, $date_to_ymd) {
                    COALESCE(SUM(i.grand_total), 0) AS total_sales,
                    CASE WHEN COUNT(i.id) > 0 THEN COALESCE(SUM(i.grand_total), 0) / COUNT(i.id) ELSE 0 END AS average_invoice_value
             FROM `fls_invoices` i
-            LEFT JOIN `fls_users` u ON u.id = i.sales_person" . $date_condition . "
-            WHERE i.sales_person > 0
+            LEFT JOIN `fls_users` u ON u.id = i.sales_person
+            WHERE i.sales_person > 0" . $date_condition . "
             GROUP BY i.sales_person, u.full_name
             ORDER BY total_sales DESC";
     
@@ -148,7 +150,7 @@ $date_from_ymd = processDateDtoY($date_from);
 $date_to_ymd = processDateDtoY($date_to);
 
 // Get sales data
-$sales_data = getSalesBySalesPerson($mysqli, $date_from_ymd, $date_to_ymd);
+$sales_data = getSalesBySalesPerson($mysqli, $date_from_ymd, $date_to_ymd, $activeOrganizationId);
 
 // UPDATES LAST VISITED
 $accounts_report_subcategory_id = getTableAttrv("id", "fls_accounts_report_subcategories", " slug = 'sales_by_sales_person'");
@@ -165,7 +167,7 @@ if ($accounts_report_subcategory_id > 0) {
 
 ?>
 
-<script src="reports_filterby.js"></script>
+<script src="<?php echo $base_url; ?>/dashboard/js/reports_filterby.js"></script>
 
 
 <div class="content-wrapper">
@@ -178,7 +180,7 @@ if ($accounts_report_subcategory_id > 0) {
                     <div class="col-lg-6">
                         <div class="text-muted">Sales Analysis</div>
                         <div class="mb-0">
-                            <span class="fw-semibold">Sales by Sales Person</span> - <span class="small">From <?php echo processDateYtoD($date_from_ymd); ?> To <?php echo processDateYtoD($date_to_ymd); ?></span>
+                            <span class="fw-semibold">Sales by Sales Person</span> - <span class="small">From <?php echo ddm_($date_from_ymd); ?> To <?php echo ddm_($date_to_ymd); ?></span>
                         </div>
                     </div>
 
@@ -278,7 +280,7 @@ if ($accounts_report_subcategory_id > 0) {
             <div class="card-header text-center">
                 <p>Flash Logistics FZC</p>
                 <h5 class="mb-0">Sales by Sales Person</h5>
-                <p><span class="text-muted">From</span> <?php echo processDateYtoD($date_from_ymd); ?> <span class="text-muted">To</span> <?php echo processDateYtoD($date_to_ymd); ?></p>
+                <p><span class="text-muted">From</span> <?php echo ddm_($date_from_ymd); ?> <span class="text-muted">To</span> <?php echo ddm_($date_to_ymd); ?></p>
             </div>
 
             <div class="table-responsive">

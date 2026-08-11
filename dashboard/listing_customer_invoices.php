@@ -298,8 +298,8 @@ $result_customer_invoices = $db->fetchAll(
                                                 $created_at             = s__($row['created_at']);
                                                 $is_active = s__($row['is_active']);
 
-                                                $invoice_date       = processDateYtoD($invoice_date);
-                                                $expiry_date        = ($expiry_date == '1970-01-01' ? '' : processDateDtoY($expiry_date));
+                                                $invoice_date       = ddm_($invoice_date);
+                                                $expiry_date        = ($expiry_date == '1970-01-01' || empty($expiry_date)) ? '' : ddm_($expiry_date);
 
                                                 $created_at     = dd__($created_at);
 

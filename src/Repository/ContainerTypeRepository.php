@@ -7,6 +7,7 @@ namespace App\Repository;
 use App\Core\Database;
 use App\Core\DB;
 use App\Model\ContainerType;
+use App\Core\ErrorCapture;
 
 class ContainerTypeRepository
 {
@@ -68,7 +69,7 @@ class ContainerTypeRepository
             $this->db->execute($sql, $params);
             return true;
         } catch (\Throwable $e) {
-            error_log("ContainerTypeRepository: Update failed: " . $e->getMessage());
+            ErrorCapture::record("ContainerTypeRepository: Update failed: " . $e->getMessage());
             return false;
         }
     }

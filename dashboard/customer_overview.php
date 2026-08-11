@@ -80,95 +80,125 @@ if (!empty($contact_id)) {
 | ACTION HANDLING
 |--------------------------------------------------------------------------
 */
-if ($action == "approved" && !empty($customer_id)) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($action)) {
+    if (!validate_csrf_token($_POST['csrf_token'] ?? '')) {
+        flash_error('Invalid security token. Please refresh the page and try again.');
+        log_error('CSRF token validation failed in customer_overview.php', 'WARNING', __FILE__, __LINE__);
+        header("Location:customer_overview.php?customer_id=$customer_id");
+        exit;
+    }
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action == "approved" && !empty($customer_id)) {
     if (!Roles::hasFullAccess(Session::roleId()) && !Roles::isAccounts(Session::roleId())) {
-        $error_message = 'Only Accounts or Admin can approve customers.';
+        flash_error('Only Accounts or Admin can approve customers.');
+        header("Location:customer_overview.php?customer_id=$customer_id");
+        exit;
     } else {
         try {
             $customerService->approveCustomer((int)$customer_id, $activeOrganizationId, Session::userId());
             $success_message = 'This Customer is Approved.';
+            updateCustomerLogs((int)$customer_id, 'customer', 'approved', (int)$customer_id);
             flash_success($success_message);
             header("Location:customer_overview.php?customer_id=$customer_id");
             exit;
         } catch (\Throwable $e) {
-            $error_message = $e->getMessage();
+            flash_error($e->getMessage());
+            header("Location:customer_overview.php?customer_id=$customer_id");
+            exit;
         }
     }
-} else if ($action == "disapproved" && !empty($customer_id)) {
+} else if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action == "disapproved" && !empty($customer_id)) {
     if (!Roles::hasFullAccess(Session::roleId()) && !Roles::isAccounts(Session::roleId())) {
-        $error_message = 'Only Accounts or Admin can disapprove customers.';
+        flash_error('Only Accounts or Admin can disapprove customers.');
+        header("Location:customer_overview.php?customer_id=$customer_id");
+        exit;
     } else {
         try {
             $customerService->disapproveCustomer((int)$customer_id, $activeOrganizationId, Session::userId());
             $success_message = 'This Customer is Dis-Approved.';
+            updateCustomerLogs((int)$customer_id, 'customer', 'disapproved', (int)$customer_id);
             flash_success($success_message);
             header("Location:customer_overview.php?customer_id=$customer_id");
             exit;
         } catch (\Throwable $e) {
-            $error_message = $e->getMessage();
+            flash_error($e->getMessage());
+            header("Location:customer_overview.php?customer_id=$customer_id");
+            exit;
         }
     }
 } else if ($action == "update_opening_balance" && !empty($customer_id) && $_SERVER['REQUEST_METHOD'] == 'POST') {
-    // INPUT VALIDATION: Validate opening_balance
-    if (!validate_csrf_token($_POST['csrf_token'] ?? '')) {
-        $error_message = 'Invalid security token. Please refresh the page and try again.';
-        log_error('CSRF token validation failed in customer_overview.php', 'WARNING', __FILE__, __LINE__);
+    $balanceResult = InputValidator::float($_POST['opening_balance'] ?? 0, 0, 9999999.99, 2);
+    if (!$balanceResult['valid']) {
+        flash_error('Invalid opening balance: ' . $balanceResult['error']);
+        header("Location:customer_overview.php?customer_id=$customer_id");
+        exit;
     } else {
-        $balanceResult = InputValidator::float($_POST['opening_balance'] ?? 0, 0, 9999999.99, 2);
-        if (!$balanceResult['valid']) {
-            $error_message = 'Invalid opening balance: ' . $balanceResult['error'];
-        } else {
-            try {
-                $customerService->updateOpeningBalance((int)$customer_id, (float)$balanceResult['value'], $activeOrganizationId, Session::userId());
-                $success_message = 'Opening balance has been updated successfully.';
-                flash_success($success_message);
-                header("Location:customer_overview.php?customer_id=$customer_id");
-                exit;
-            } catch (\Throwable $e) {
-                $error_message = $e->getMessage();
-            }
+        try {
+            $customerService->updateOpeningBalance((int)$customer_id, (float)$balanceResult['value'], $activeOrganizationId, Session::userId());
+            $success_message = 'Opening balance has been updated successfully.';
+            updateCustomerLogs((int)$customer_id, 'customer', 'opening_balance', (int)$customer_id);
+            flash_success($success_message);
+            header("Location:customer_overview.php?customer_id=$customer_id");
+            exit;
+        } catch (\Throwable $e) {
+            flash_error($e->getMessage());
+            header("Location:customer_overview.php?customer_id=$customer_id");
+            exit;
         }
     }
-} else if ($action == "clone_customers" && !empty($customer_id)) {
+} else if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action == "clone_customers" && !empty($customer_id)) {
     try {
         $newCloned = $customerService->cloneCustomer((int)$customer_id, $activeOrganizationId, Session::userId());
         $new_cloned_id = $newCloned->id;
-        $success_message = 'Customer has been cloned Successfully. Please click here to view. <a href="customer_overview.php?customer_id=' . $new_cloned_id . '"> Customer ID: ' . $new_cloned_id . '</a>';
+        $success_message = 'Customer has been cloned successfully. Customer ID: ' . $new_cloned_id;
+        updateCustomerLogs((int)$customer_id, 'customer', 'clone', $new_cloned_id);
         flash_success($success_message);
         header("Location:customer_overview.php?customer_id=$customer_id");
         exit;
     } catch (\Throwable $e) {
-        $error_message = $e->getMessage();
+        flash_error($e->getMessage());
+        header("Location:customer_overview.php?customer_id=$customer_id");
+        exit;
     }
-} else if ($action == "mark_as_active" && !empty($customer_id)) {
+} else if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action == "mark_as_active" && !empty($customer_id)) {
     try {
         $customerService->markAsActive((int)$customer_id, $activeOrganizationId, Session::userId());
         $success_message = 'Customer has marked as Active';
+        updateCustomerLogs((int)$customer_id, 'customer', 'active', (int)$customer_id);
         flash_success($success_message);
         header("Location:customer_overview.php?customer_id=$customer_id");
         exit;
     } catch (\Throwable $e) {
-        $error_message = $e->getMessage();
+        flash_error($e->getMessage());
+        header("Location:customer_overview.php?customer_id=$customer_id");
+        exit;
     }
-} else if ($action == "mark_as_inactive" && !empty($customer_id)) {
+} else if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action == "mark_as_inactive" && !empty($customer_id)) {
     try {
         $customerService->markAsInactive((int)$customer_id, $activeOrganizationId, Session::userId());
         $success_message = 'Customer has marked as Inactive';
+        updateCustomerLogs((int)$customer_id, 'customer', 'inactive', (int)$customer_id);
         flash_success($success_message);
         header("Location:customer_overview.php?customer_id=$customer_id");
         exit;
     } catch (\Throwable $e) {
-        $error_message = $e->getMessage();
+        flash_error($e->getMessage());
+        header("Location:customer_overview.php?customer_id=$customer_id");
+        exit;
     }
-} else if ($action == "mark_as_primary" && !empty($contact_id) && !empty($customer_id)) {
+} else if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action == "mark_as_primary" && !empty($contact_id) && !empty($customer_id)) {
     try {
         $customerService->markContactAsPrimary((int)$contact_id, (int)$customer_id, $activeOrganizationId);
         $success_message = 'Contact Person is Set as Primary';
+        updateCustomerLogs((int)$customer_id, 'contact', 'primary', (int)$contact_id);
         flash_success($success_message);
         header("Location:customer_overview.php?customer_id=$customer_id");
         exit;
     } catch (\Throwable $e) {
-        $error_message = $e->getMessage();
+        flash_error($e->getMessage());
+        header("Location:customer_overview.php?customer_id=$customer_id");
+        exit;
     }
 }
 
@@ -197,7 +227,7 @@ $trn                        = s__($customerObj->trn);
 $corporate_tax_number       = s__($customerObj->corporateTaxNumber);
 $license_number             = s__($customerObj->licenseNumber);
 $license_expiry             = s__($customerObj->licenseExpiry);
-$license_expiry             = ($license_expiry == '1970-01-01' ? '' : processDateYtoD($license_expiry));
+$license_expiry             = ($license_expiry == '1970-01-01' || empty($license_expiry) ? '' : ddm_($license_expiry));
 
 $currency                   = s__($customerObj->currency);
 $exchange_rate              = s__($customerObj->exchangeRate);
@@ -209,7 +239,7 @@ $lead_category              = s__($customerObj->leadCategory);
 $rating                     = s__($customerObj->rating);
 
 $contacted_date             = s__($customerObj->contactedDate);
-$contacted_date             = ($contacted_date == '1970-01-01 00:00:00' || empty($contacted_date) ? '' : dd_($contacted_date, 'd M Y g:ia'));
+$contacted_date             = ($contacted_date == '1970-01-01 00:00:00' || empty($contacted_date) ? '' : ddm_($contacted_date));
 
 $description                = s__($customerObj->description);
 
@@ -238,6 +268,8 @@ $approved_at                = s__($customerObj->approvedAt);
 $is_active                  = s__($customerObj->isActive);
 $created_at                 = s__($customerObj->createdAt);
 $created_by                 = s__($customerObj->createdBy);
+
+$timelineEntries = $customerService->getActivityTimeline((int)$customer_id, $activeOrganizationId);
 
 // Render the view template
 require __DIR__ . '/views/customer_overview.view.php';

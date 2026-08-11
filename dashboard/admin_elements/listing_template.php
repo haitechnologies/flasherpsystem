@@ -46,6 +46,7 @@ $_ltHideAdd    = $listingConfig['hide_add_button'] ?? false;
 $_ltBtnText    = $listingConfig['button_text'] ?? 'New';
 $_ltExtraHdr   = $listingConfig['extra_header'] ?? '';
 $_ltBeforeTbl  = $listingConfig['before_table'] ?? '';
+$_ltDisableAdd = $listingConfig['disable_add_button'] ?? false;
 $_ltAfterCard  = $listingConfig['after_card'] ?? '';
 $_ltTableCls   = $listingConfig['table_classes'] ?? 'custom_datatables datatable-professional display responsive no-wrap table-hover';
 $_ltDtOptions  = $listingConfig['dt_options'] ?? [];
@@ -68,7 +69,11 @@ $_ltGridId     = 'grid-' . $_ltModule;
             </div>
 
             <div class="my-1">
-                <?php if (!$_ltHideAdd && isset($module_id) && isset($_ltModule) && granted('create', $module_id)): ?>
+                <?php if ($_ltDisableAdd): ?>
+                    <button type="button" class="btn btn-primary btn-sm d-inline-flex align-items-center" disabled>
+                        <i class="ph-plus ph-sm me-2 opacity-75"></i><?php echo htmlspecialchars($_ltBtnText); ?>
+                    </button>
+                <?php elseif (!$_ltHideAdd && isset($module_id) && isset($_ltModule) && granted('create', $module_id)): ?>
                     <a href="<?php echo htmlspecialchars($_ltModule); ?>.php" class="btn btn-primary btn-sm d-inline-flex align-items-center">
                         <i class="ph-plus ph-sm me-2 opacity-75"></i><?php echo htmlspecialchars($_ltBtnText); ?>
                     </a>

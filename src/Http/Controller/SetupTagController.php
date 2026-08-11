@@ -68,6 +68,7 @@ class SetupTagController extends BaseController
             flash_error($error);
             return Response::redirect("setup_tags.php?id=$id&action=edit_setup_tags");
         } catch (\Throwable $e) {
+            $this->logError("SetupTagController::handleUpdate error: " . $e->getMessage());
             flash_error('The Tag could not be updated.');
             return Response::redirect("setup_tags.php?id=$id&action=edit_setup_tags");
         }
@@ -90,6 +91,7 @@ class SetupTagController extends BaseController
             flash_error($error);
             return Response::redirect("setup_tags.php");
         } catch (\Throwable $e) {
+            $this->logError("SetupTagController::handleCreate error: " . $e->getMessage());
             flash_error('The Tag could not be saved.');
             return Response::redirect("setup_tags.php");
         }

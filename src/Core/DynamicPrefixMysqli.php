@@ -16,6 +16,23 @@ use mysqli_stmt;
 class DynamicPrefixMysqli extends mysqli
 {
     /**
+     * Enable strict/exception reporting so every query failure surfaces as a
+     * mysqli_sql_exception (caught by the dashboard error handler and written
+     * to erp_backend_error_logs) instead of silently returning false.
+     */
+    public function __construct(
+        ?string $hostname = null,
+        ?string $username = null,
+        ?string $password = null,
+        ?string $database = null,
+        ?int $port = null,
+        ?string $socket = null
+    ) {
+        mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+        parent::__construct($hostname, $username, $password, $database, $port, $socket);
+    }
+
+    /**
      * @param string $query
      * @param int $resultMode
      * @return mysqli_result|bool

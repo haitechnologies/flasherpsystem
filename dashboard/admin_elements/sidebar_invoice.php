@@ -140,7 +140,7 @@ $payment_term_cache = [];
                         
                         // Calculate display info
                         $display_due_days = '';
-                        $formatted_date = dd_($row['invoice_date']);
+                        $formatted_date = ddm_($row['invoice_date']);
                         $formatted_amount = BASE_CURRENCY['code'] . number_format($row['grand_total'], 2);
                         
                         // Status text color

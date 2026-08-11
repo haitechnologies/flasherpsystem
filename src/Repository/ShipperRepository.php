@@ -7,6 +7,7 @@ namespace App\Repository;
 use App\Core\Database;
 use App\Core\DB;
 use App\Model\Shipper;
+use App\Core\ErrorCapture;
 
 class ShipperRepository
 {
@@ -67,7 +68,7 @@ class ShipperRepository
             $this->db->execute($sql, $params);
             return true;
         } catch (\Throwable $e) {
-            error_log("ShipperRepository: Update failed: " . $e->getMessage());
+            ErrorCapture::record("ShipperRepository: Update failed: " . $e->getMessage());
             return false;
         }
     }

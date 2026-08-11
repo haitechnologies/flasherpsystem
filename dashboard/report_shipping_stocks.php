@@ -8,7 +8,7 @@ require '../vendor/autoload.php';
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
-$module = 'shipping_advices';
+$module = 'shipping_stocks';
 $module_caption = 'Shipping Invoice';
 $tbl_name = DB::SHIPPING_STOCKS;
 $error_message = '';
@@ -60,6 +60,11 @@ $value                  = ((isset($_REQUEST['value']) && !empty($_REQUEST['value
 $weight                 = ((isset($_REQUEST['weight']) && !empty($_REQUEST['weight'])) ? e_s__($_REQUEST['weight']) : '');
 $invoice_no             = ((isset($_REQUEST['invoice_no']) && !empty($_REQUEST['invoice_no'])) ? e_s__($_REQUEST['invoice_no']) : '');
 $admin_id               = (isset($_REQUEST['admin_id']) ? e_s__($_REQUEST['admin_id']) : '');
+$action                 = (isset($_REQUEST['action']) ? e_s__($_REQUEST['action']) : '');
+$agent_id               = (isset($_REQUEST['agent_id']) && !empty($_REQUEST['agent_id']) ? e_s__($_REQUEST['agent_id']) : '');
+$vehicle_type           = (isset($_REQUEST['vehicle_type']) && !empty($_REQUEST['vehicle_type']) ? e_s__($_REQUEST['vehicle_type']) : '');
+$driver_assigned        = (isset($_REQUEST['driver_assigned']) && !empty($_REQUEST['driver_assigned']) ? e_s__($_REQUEST['driver_assigned']) : '');
+$invoice_status         = (isset($_REQUEST['invoice_status']) && !empty($_REQUEST['invoice_status']) ? e_s__($_REQUEST['invoice_status']) : '');
 
 
 /*
@@ -133,6 +138,8 @@ if (!empty($invoice_status)) {
 if (!empty($admin_id)) {
     $search_query .= " AND created_by = '" . $admin_id . "'";
 }
+
+$search_query .= " AND organization_id = " . (int)$activeOrganizationId;
 
 
 /*

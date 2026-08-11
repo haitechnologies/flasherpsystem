@@ -23,6 +23,7 @@ class Database
     private string $user;
     private string $password;
     private string $charset;
+    private int $savepointDepth = 0;
 
     /**
      * Initialize connection settings from environment or fallback database configs
@@ -150,10 +151,20 @@ class Database
     /**
      * Start a new transaction
      *
+     * Supports nesting via SAVEPOINTs so services that begin their own
+     * transactions may safely call others (e.g. JournalService::createJournal)
+     * which also begin transactions.
+     *
      * @return bool
      */
     public function beginTransaction(): bool
     {
+        if ($this->getConnection()->inTransaction()) {
+            $this->savepointDepth++;
+            $savepoint = 'sp' . $this->savepointDepth;
+            $this->getConnection()->exec("SAVEPOINT {$savepoint}");
+            return true;
+        }
         return $this->getConnection()->beginTransaction();
     }
 
@@ -164,6 +175,12 @@ class Database
      */
     public function commit(): bool
     {
+        if ($this->savepointDepth > 0) {
+            $savepoint = 'sp' . $this->savepointDepth;
+            $this->getConnection()->exec("RELEASE SAVEPOINT {$savepoint}");
+            $this->savepointDepth--;
+            return true;
+        }
         return $this->getConnection()->commit();
     }
 
@@ -174,6 +191,13 @@ class Database
      */
     public function rollBack(): bool
     {
+        if ($this->savepointDepth > 0) {
+            $savepoint = 'sp' . $this->savepointDepth;
+            $this->getConnection()->exec("ROLLBACK TO SAVEPOINT {$savepoint}");
+            $this->getConnection()->exec("RELEASE SAVEPOINT {$savepoint}");
+            $this->savepointDepth--;
+            return true;
+        }
         return $this->getConnection()->rollBack();
     }
 

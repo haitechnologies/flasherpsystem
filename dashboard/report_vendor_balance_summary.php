@@ -10,7 +10,7 @@ require '../vendor/autoload.php';
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
-$module = 'customers';
+$module = 'vendors';
 $module_caption = 'Vendor Balance Summary';
 $tbl_name = $tbl_prefix . $module;
 $error_message = '';
@@ -24,6 +24,7 @@ $success_message = '';
 */
 include('admin_elements/permissions.php');
 
+$activeOrganizationId = dashboardRequireActiveOrganization();
 
 $limit              = 50;
 $stages             = 2;
@@ -198,8 +199,8 @@ $mysqli->query("UPDATE `" . tbl_accounts_report_subcategories . "` SET last_visi
                             <span class="fw-semibold">Vendor Balance Summary</span>
                             <?php if (!empty($date_from) || !empty($date_to)) { ?>
                                 - <span class="fw-normal">
-                                    <?php if (!empty($date_from)) echo 'From ' . dd_($date_from); ?>
-                                    <?php if (!empty($date_to)) echo ' To ' . dd_($date_to); ?>
+                                    <?php if (!empty($date_from)) echo 'From ' . ddm_($date_from); ?>
+                                    <?php if (!empty($date_to)) echo ' To ' . ddm_($date_to); ?>
                                 </span>
                             <?php } ?>
                         </div>
@@ -323,8 +324,8 @@ $mysqli->query("UPDATE `" . tbl_accounts_report_subcategories . "` SET last_visi
                 <h5 class="mb-0">Vendor Balance Summary</h5>
                 <?php if (!empty($date_from) || !empty($date_to)) { ?>
                     <p>
-                        <?php if (!empty($date_from)) { ?><span class="text-muted">From</span> <?php echo dd_($date_from); ?><?php } ?>
-                        <?php if (!empty($date_to)) { ?> <span class="text-muted">To</span> <?php echo dd_($date_to); ?><?php } ?>
+                        <?php if (!empty($date_from)) { ?><span class="text-muted">From</span> <?php echo ddm_($date_from); ?><?php } ?>
+                        <?php if (!empty($date_to)) { ?> <span class="text-muted">To</span> <?php echo ddm_($date_to); ?><?php } ?>
                     </p>
                 <?php } ?>
             </div>
@@ -351,14 +352,15 @@ $mysqli->query("UPDATE `" . tbl_accounts_report_subcategories . "` SET last_visi
                         if (!empty($date_to_ymd)) {
                             $purchase_date_filter .= " AND purchase_date <= '" . $date_to_ymd . "'";
                         }
+                        $purchase_date_filter .= " AND p.organization_id = " . (int)$activeOrganizationId;
 
                         // Count total vendors for pagination
-                        $count_result = $mysqli->query("SELECT COUNT(*) as total FROM `" . tbl_vendors . "` WHERE id > 0");
+                        $count_result = $mysqli->query("SELECT COUNT(*) as total FROM `" . tbl_vendors . "` WHERE id > 0 AND organization_id = " . (int)$activeOrganizationId);
                         $count_row = $count_result->fetch_array();
                         $total_rows = $count_row['total'];
 
                         // Get vendors with pagination
-                        $result_vendors = $mysqli->query("SELECT * FROM `" . tbl_vendors . "` WHERE id > 0 ORDER BY display_name ASC LIMIT $start, $limit");
+                        $result_vendors = $mysqli->query("SELECT * FROM `" . tbl_vendors . "` WHERE id > 0 AND organization_id = " . (int)$activeOrganizationId . " ORDER BY display_name ASC LIMIT $start, $limit");
 
                         while ($row_vendors = $result_vendors->fetch_array()) {
                             $vendor_id = $row_vendors['id'];

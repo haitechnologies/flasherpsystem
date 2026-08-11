@@ -28,7 +28,7 @@ class CustomerCommentsDataTable extends BaseDataTable
      * Searchable fields
      */
     protected $searchFields = [
-        'cc.comments',
+        'cc.notes',
         'c.display_name',
         'c.email'
     ];
@@ -39,7 +39,7 @@ class CustomerCommentsDataTable extends BaseDataTable
     protected $sortableColumns = [
         0 => 'cc.id',
         1 => 'c.display_name',
-        2 => 'cc.comments',
+        2 => 'cc.notes',
         3 => 'cc.created_at',
         4 => 'cc.id'
     ];

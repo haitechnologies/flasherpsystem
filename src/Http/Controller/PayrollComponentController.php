@@ -63,7 +63,8 @@ class PayrollComponentController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("listing_component_names.php");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("PayrollComponentController::handleUpdate error: " . $e->getMessage());
             flash_error('The Payroll Component could not be updated.');
             return Response::redirect("listing_component_names.php");
         }
@@ -82,7 +83,8 @@ class PayrollComponentController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("listing_component_names.php");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("PayrollComponentController::handleCreate error: " . $e->getMessage());
             flash_error('The Payroll Component could not be saved.');
             return Response::redirect("listing_component_names.php");
         }

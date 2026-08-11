@@ -74,6 +74,7 @@ class AirTicketController extends BaseController
             flash_error($e->getMessage());
             return Response::redirect("air_tickets.php?id=$id&action=edit_air_ticket");
         } catch (\Throwable $e) {
+            $this->logError("AirTicketController::handleUpdate error: " . $e->getMessage());
             flash_error('The Air Ticket could not be updated.');
             return Response::redirect("air_tickets.php?id=$id&action=edit_air_ticket");
         }
@@ -100,6 +101,7 @@ class AirTicketController extends BaseController
             flash_error($error);
             return Response::redirect('air_tickets.php');
         } catch (\Throwable $e) {
+            $this->logError("AirTicketController::handleCreate error: " . $e->getMessage());
             flash_error('The Air Ticket could not be saved.');
             return Response::redirect('air_tickets.php');
         }
@@ -128,6 +130,7 @@ class AirTicketController extends BaseController
 
             return Response::redirect('listing_air_tickets.php');
         } catch (\Throwable $e) {
+            $this->logError("AirTicketController::handleBulkGenerate error: " . $e->getMessage());
             flash_error('Air Ticket generation failed: ' . $e->getMessage());
             return Response::redirect('listing_air_tickets.php');
         }

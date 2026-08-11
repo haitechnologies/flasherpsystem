@@ -72,7 +72,8 @@ class SubcategoryController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("subcategories.php?id=$id&action=edit_subcategories");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("SubcategoryController::handleUpdate error: " . $e->getMessage());
             flash_error('The Subcategory could not be updated.');
             return Response::redirect("subcategories.php?id=$id&action=edit_subcategories");
         }
@@ -96,7 +97,8 @@ class SubcategoryController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("subcategories.php");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("SubcategoryController::handleCreate error: " . $e->getMessage());
             flash_error('The Subcategory could not be saved.');
             return Response::redirect("subcategories.php");
         }

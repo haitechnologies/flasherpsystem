@@ -7,6 +7,7 @@ namespace App\DataTable;
 use App\Core\DB;
 use App\Helper\BadgeHelper;
 use App\Helper\ActionButtonHelper;
+use App\Core\ErrorCapture;
 
 class DebitNotesDataTable extends BaseDataTable
 {
@@ -25,7 +26,7 @@ class DebitNotesDataTable extends BaseDataTable
                     $this->relatedDataCache['vendors'][(int)$row['id']] = $row['display_name'];
                 }
             } catch (\Throwable $e) {
-                error_log("DebitNotesDataTable::prepareRelatedData error: " . $e->getMessage());
+                ErrorCapture::record("DebitNotesDataTable::prepareRelatedData error: " . $e->getMessage());
             }
         }
     }
@@ -37,16 +38,17 @@ class DebitNotesDataTable extends BaseDataTable
         $ref        = (string)($row['reference_no'] ?? '');
         $vendorId   = (int)($row['vendor_id'] ?? 0);
         $status     = (string)($row['debit_note_status'] ?? '');
-        $total      = (string)($row['grand_total'] ?? '0');
+        $total      = (float)($row['grand_total'] ?? 0);
         $vendorName = $this->relatedDataCache['vendors'][$vendorId] ?? '';
         $badge      = BadgeHelper::info(htmlspecialchars($status));
+        $currencyCode = defined('BASE_CURRENCY') ? BASE_CURRENCY['code'] : 'AED';
         return [
-            htmlspecialchars($date),
+            $this->formatDate($date) ?: '-',
             '<a href="debit_note_overview.php?id=' . (int)($row['id'] ?? 0) . '" class="text-decoration-none">' . htmlspecialchars($no) . '</a>',
             htmlspecialchars($ref),
             htmlspecialchars($vendorName),
             $badge,
-            htmlspecialchars(number_format((float)$total, 2)),
+            $currencyCode . ' ' . number_format($total, 2),
         ];
     }
 }

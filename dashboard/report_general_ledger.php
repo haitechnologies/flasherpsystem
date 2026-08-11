@@ -103,8 +103,17 @@ if (!empty($filter_by) && $filter_by !== '0') {
 }
 
 // Process dates
-$date_from_ymd = processDateDtoY($date_from);
-$date_to_ymd = processDateDtoY($date_to);
+if (!function_exists('normalizeDateToYmd')) {
+    function normalizeDateToYmd($date)
+    {
+        if (empty($date)) return '';
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) return $date;
+        if (!preg_match('/^\d{1,2}\-\d{1,2}\-\d{4}$/', $date)) return '';
+        return processDateDtoY($date);
+    }
+}
+$date_from_ymd = normalizeDateToYmd($date_from);
+$date_to_ymd = normalizeDateToYmd($date_to);
 
 // Build query conditions for period transactions
 $period_condition_j2 = '';
@@ -117,6 +126,9 @@ if (!empty($date_to_ymd)) {
 if (!empty($report_basis)) {
     $period_condition_j2 .= " AND j2.reporting_method = '" . e_s__($report_basis) . "'";
 }
+if (!empty($activeOrganizationId)) {
+    $period_condition_j2 .= " AND j2.organization_id = " . (int)$activeOrganizationId;
+}
 
 // Build query conditions for opening balance (before period start)
 $opening_condition_j1 = '';
@@ -125,6 +137,9 @@ if (!empty($date_from_ymd)) {
 }
 if (!empty($report_basis)) {
     $opening_condition_j1 .= " AND j1.reporting_method = '" . e_s__($report_basis) . "'";
+}
+if (!empty($activeOrganizationId)) {
+    $opening_condition_j1 .= " AND j1.organization_id = " . (int)$activeOrganizationId;
 }
 
 // Get all accounts and calculate balances
@@ -198,7 +213,7 @@ $accounts_report_category_name  = getTableAttr('category_name', DB::ACCOUNTS_REP
                     <div class="col-lg-6">
                         <div class="text-muted"><?php echo $accounts_report_category_name; ?></div>
                         <div class="mb-0">
-                            <span class="fw-semibold">General Ledger</span> - <span class="small">From <?php echo dd_($date_from); ?> To <?php echo dd_($date_to); ?></span>
+                            <span class="fw-semibold">General Ledger</span> - <span class="small">From <?php echo ddm_($date_from); ?> To <?php echo ddm_($date_to); ?></span>
                         </div>
                     </div>
 
@@ -313,7 +328,7 @@ $accounts_report_category_name  = getTableAttr('category_name', DB::ACCOUNTS_REP
                 <p class="text-muted">Flash Logistics FZC</p>
                 <h5 class="mb-0">General Ledger</h5>
                 <p class="small"><span class="text-muted">Basis</span> : <?php echo ucfirst($report_basis); ?></p>
-                <p class="small"><span class="text-muted">From</span> <?php echo dd_($date_from); ?> <span class="text-muted">To</span> <?php echo dd_($date_to); ?></p>
+                <p class="small"><span class="text-muted">From</span> <?php echo ddm_($date_from); ?> <span class="text-muted">To</span> <?php echo ddm_($date_to); ?></p>
             </div>
 
             <div class="table-responsive">

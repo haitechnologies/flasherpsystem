@@ -124,6 +124,7 @@ class LeaveRequestController extends BaseController
             flash_error($e->getMessage());
             return Response::redirect("leave_requests.php?id=$id&action=edit_leave_requests");
         } catch (\Throwable $e) {
+            $this->logError("LeaveRequestController::handleUpdate error: " . $e->getMessage());
             flash_error('The Leave Request could not be updated.');
             return Response::redirect("leave_requests.php?id=$id&action=edit_leave_requests");
         }
@@ -139,6 +140,7 @@ class LeaveRequestController extends BaseController
                 }
             }
         } catch (\Throwable $e) {
+            $this->logError("LeaveRequestController::getSickLeaveTypeId error: " . $e->getMessage());
         }
         return 0;
     }
@@ -181,6 +183,7 @@ class LeaveRequestController extends BaseController
             flash_error($error);
             return Response::redirect("leave_requests.php");
         } catch (\Throwable $e) {
+            $this->logError("LeaveRequestController::handleCreate error: " . $e->getMessage());
             flash_error('The Leave Request could not be saved.');
             return Response::redirect("leave_requests.php");
         }

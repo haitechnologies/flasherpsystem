@@ -11,6 +11,7 @@ namespace App\DataTable;
 use App\Core\DB;
 use App\Helper\BadgeHelper;
 use App\Helper\ActionButtonHelper;
+use App\Core\ErrorCapture;
 
 class RolesDataTable extends BaseDataTable
 {
@@ -48,7 +49,7 @@ class RolesDataTable extends BaseDataTable
                 $this->relatedDataCache['users'][(int)$row['role_id']] = (int)$row['cnt'];
             }
         } catch (\Throwable $e) {
-            error_log("RolesDataTable::prepareRelatedData error: " . $e->getMessage());
+            ErrorCapture::record("RolesDataTable::prepareRelatedData error: " . $e->getMessage());
         }
     }
 

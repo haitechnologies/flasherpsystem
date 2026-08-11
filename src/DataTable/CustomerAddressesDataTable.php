@@ -7,6 +7,7 @@ namespace App\DataTable;
 use App\Core\DB;
 use App\Helper\BadgeHelper;
 use App\Helper\ActionButtonHelper;
+use App\Core\ErrorCapture;
 
 class CustomerAddressesDataTable extends BaseDataTable
 {
@@ -86,7 +87,7 @@ class CustomerAddressesDataTable extends BaseDataTable
                 $this->relatedDataCache['countries'][(int)$cRow['id']] = $cRow['country_name'] ?? '-';
             }
         } catch (\Throwable $e) {
-            error_log("CustomerAddressesDataTable::prepareRelatedData countries error: " . $e->getMessage());
+            ErrorCapture::record("CustomerAddressesDataTable::prepareRelatedData countries error: " . $e->getMessage());
         }
     }
 

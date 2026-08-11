@@ -4,6 +4,7 @@ namespace App\Repository;
 use App\Core\Database;
 use App\Core\DB;
 use App\Model\StorageSubtype;
+use App\Core\ErrorCapture;
 class StorageSubtypeRepository
 {
     private Database $db;
@@ -44,7 +45,7 @@ class StorageSubtypeRepository
         foreach ($data as $col => $val) { $key = 'u_' . str_replace('.', '_', $col); $sets[] = "`{$col}` = :{$key}"; $params[$key] = $val; }
         $params['id'] = $id;
         $sql = "UPDATE `" . DB::STORAGE_SUBTYPES . "` SET " . implode(', ', $sets) . " WHERE id = :id";
-        try { $this->db->execute($sql, $params); return true; } catch (\Throwable $e) { error_log("StorageSubtypeRepository: Update failed: " . $e->getMessage()); return false; }
+        try { $this->db->execute($sql, $params); return true; } catch (\Throwable $e) { ErrorCapture::record("StorageSubtypeRepository: Update failed: " . $e->getMessage()); return false; }
     }
     public function delete(int $id): bool { $this->db->execute("DELETE FROM `" . DB::STORAGE_SUBTYPES . "` WHERE id = :id", ['id' => $id]); return true; }
     private function mapRowToDto(array $row): StorageSubtype

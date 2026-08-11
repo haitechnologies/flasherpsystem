@@ -20,6 +20,8 @@ $success_message = '';
 */
 include('admin_elements/permissions.php');
 
+$activeOrganizationId = dashboardRequireActiveOrganization();
+
 /*
 |--------------------------------------------------------------------------
 | 	GET ALL VARIABLES ADD/UPDATE
@@ -118,6 +120,7 @@ if (!empty($date_to_ymd)) {
 if (!empty($report_basis)) {
     $period_condition .= " AND j.reporting_method = '" . e_s__($report_basis) . "'";
 }
+$period_condition .= " AND j.organization_id = " . (int)$activeOrganizationId;
 
 // Build query for opening balances (before period start)
 $opening_condition = '';
@@ -127,6 +130,7 @@ if (!empty($date_from_ymd)) {
 if (!empty($report_basis)) {
     $opening_condition .= " AND j.reporting_method = '" . e_s__($report_basis) . "'";
 }
+$opening_condition .= " AND j.organization_id = " . (int)$activeOrganizationId;
 
 // Get all accounts
 $account_where = "WHERE a.parent_id IS NOT NULL";
@@ -209,7 +213,7 @@ $accounts_report_category_name  = getTableAttr('category_name', tbl_accounts_rep
                     <div class="col-lg-6">
                         <div class="text-muted"><?php echo $accounts_report_category_name; ?></div>
                         <div class="mb-0">
-                            <span class="fw-semibold">Detailed General Ledger</span> - <span class="small">From <?php echo dd_($date_from); ?> To <?php echo dd_($date_to); ?></span>
+                            <span class="fw-semibold">Detailed General Ledger</span> - <span class="small">From <?php echo ddm_($date_from); ?> To <?php echo ddm_($date_to); ?></span>
                         </div>
                     </div>
 
@@ -302,7 +306,7 @@ $accounts_report_category_name  = getTableAttr('category_name', tbl_accounts_rep
                                             <select name="account_filter" id="account_filter" class="form-select">
                                                 <option value=''>All Accounts</option>
                                                 <?php
-                                                $result_all_accounts = $mysqli->query("SELECT id, account_name, account_code FROM `" . tbl_accounts . "` WHERE parent_id IS NOT NULL ORDER BY account_name ASC");
+                                                $result_all_accounts = $mysqli->query("SELECT id, account_name, account_code FROM `" . tbl_accounts . "` WHERE parent_id IS NOT NULL AND organization_id = " . (int)$activeOrganizationId . " ORDER BY account_name ASC");
                                                 while ($row_acc = $result_all_accounts->fetch_array()) {
                                                 ?>
                                                     <option value="<?php echo $row_acc['id']; ?>" <?php echo (($account_filter == $row_acc['id']) ? 'selected' : '') ?>><?php echo s__($row_acc['account_name']); ?> (<?php echo s__($row_acc['account_code']); ?>)</option>
@@ -339,7 +343,7 @@ $accounts_report_category_name  = getTableAttr('category_name', tbl_accounts_rep
                 <p class="text-muted">Flash Logistics FZC</p>
                 <h5 class="mb-0">Detailed General Ledger</h5>
                 <p class="small"><span class="text-muted">Basis</span> : <?php echo ucfirst($report_basis); ?></p>
-                <p class="small"><span class="text-muted">From</span> <?php echo dd_($date_from); ?> <span class="text-muted">To</span> <?php echo dd_($date_to); ?></p>
+                <p class="small"><span class="text-muted">From</span> <?php echo ddm_($date_from); ?> <span class="text-muted">To</span> <?php echo ddm_($date_to); ?></p>
             </div>
         </div>
 
@@ -412,7 +416,7 @@ $accounts_report_category_name  = getTableAttr('category_name', tbl_accounts_rep
                             $account_total_credit += $credit;
                         ?>
                         <tr>
-                            <td><?php echo processDateYtoD($trans['journal_date']); ?></td>
+                            <td><?php echo ddm_($trans['journal_date']); ?></td>
                             <td><?php echo s__($trans['description']); ?></td>
                             <td class="text-end"><?php echo ($debit > 0) ? dec_($debit, BASE_CURRENCY['code']) : '-'; ?></td>
                             <td class="text-end"><?php echo ($credit > 0) ? dec_($credit, BASE_CURRENCY['code']) : '-'; ?></td>

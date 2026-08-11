@@ -6,6 +6,7 @@ namespace App\Security;
 
 use App\Core\Database;
 use App\Core\DB;
+use App\Core\ErrorCapture;
 
 /**
  * IP-Based Rate Limiting for Public Pages
@@ -120,7 +121,7 @@ class IpRateLimiter
                 'reset_in' => $allowed ? 0 : $resetIn
             ];
         } catch (\Throwable $e) {
-            error_log("Rate limiter check failed: " . $e->getMessage());
+            ErrorCapture::record("Rate limiter check failed: " . $e->getMessage());
             return ['allowed' => true, 'remaining' => $maxRequests, 'reset_in' => 0]; // Fail open on DB error
         }
     }
@@ -196,7 +197,7 @@ class IpRateLimiter
         try {
             self::$db->execute($sql);
         } catch (\Throwable $e) {
-            error_log("Failed to create rate limit table: " . $e->getMessage());
+            ErrorCapture::record("Failed to create rate limit table: " . $e->getMessage());
         }
     }
 
@@ -219,7 +220,7 @@ class IpRateLimiter
                 'action' => $action
             ]) ?? [];
         } catch (\Throwable $e) {
-            error_log("Rate limiter getStats failed: " . $e->getMessage());
+            ErrorCapture::record("Rate limiter getStats failed: " . $e->getMessage());
             return [];
         }
     }

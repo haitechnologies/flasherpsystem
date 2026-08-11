@@ -86,6 +86,7 @@ foreach ($customersList as $c) {
                 <?php else: ?>
                     <input type="hidden" name="action" id="action" value="add_<?php echo $module; ?>" />
                 <?php endif; ?>
+                <input type="hidden" name="csrf_token" value="<?php echo csrf_token(); ?>">
 
                 <div class="col-xl-12">
                     <div class="row">

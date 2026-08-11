@@ -70,6 +70,12 @@ class DebitNoteController extends BaseController
             flash_error($error);
             return Response::redirect("debit_notes.php?id=$id&action=edit_debit_notes");
         } catch (\Throwable $e) {
+            log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
+                'module' => 'debit_notes',
+                'module_slug' => 'debit_notes',
+                'stack_trace' => $e->getTraceAsString(),
+                'error_code' => (string)$e->getCode(),
+            ]));
             flash_error($e->getMessage());
             return Response::redirect("debit_notes.php?id=$id&action=edit_debit_notes");
         }
@@ -94,6 +100,12 @@ class DebitNoteController extends BaseController
             flash_error($error);
             return Response::redirect("debit_notes.php");
         } catch (\Throwable $e) {
+            log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
+                'module' => 'debit_notes',
+                'module_slug' => 'debit_notes',
+                'stack_trace' => $e->getTraceAsString(),
+                'error_code' => (string)$e->getCode(),
+            ]));
             flash_error($e->getMessage());
             return Response::redirect("debit_notes.php");
         }
@@ -158,12 +170,7 @@ class DebitNoteController extends BaseController
         $moduleId = $this->moduleId;
         $session_user_id = $this->userId;
         $session_role_id = $this->roleId;
-        $error_message = $request->getString('error_message');
-        if (empty($error_message)) {
-            foreach (\App\Core\FlashMessage::all() as $fm) {
-                if ($fm['type'] === 'danger') { $error_message = $fm['message']; break; }
-            }
-        }
+        $error_message = '';
         $action = $request->getString('action');
 
         $debit_note_no = '';
@@ -230,7 +237,7 @@ class DebitNoteController extends BaseController
                     $grand_total = (string)$debitNote->grandTotal;
                     $is_active = $debitNote->isActive ? 1 : 0;
 
-                    $items = $this->debitNoteService->getDebitNoteItems($id, $this->orgId);
+                    $items = $this->debitNoteService->getDebitNoteItems($id);
                     $total_rows = count($items);
 
                     foreach ($items as $item) {
@@ -245,6 +252,12 @@ class DebitNoteController extends BaseController
                         $total_arr[] = $item->total;
                     }
                 } catch (\Throwable $e) {
+                    log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
+                        'module' => 'debit_notes',
+                        'module_slug' => 'debit_notes',
+                        'stack_trace' => $e->getTraceAsString(),
+                        'error_code' => (string)$e->getCode(),
+                    ]));
                     $error_message = $e->getMessage();
                 }
             }
@@ -258,15 +271,15 @@ class DebitNoteController extends BaseController
         $warehousesList = [];
         $itemsList = [];
         try {
-            $vendorsList = $this->db->fetchAll("SELECT id, display_name FROM `" . DB::VENDORS . "` ORDER BY id DESC");
+            $vendorsList = $this->db->fetchAll("SELECT id, display_name FROM `" . DB::VENDORS . "` WHERE is_active=1 AND organization_id=:org_id ORDER BY id DESC", ['org_id' => $this->orgId]);
         } catch (\Throwable $e) {
         }
         try {
-            $warehousesList = $this->db->fetchAll("SELECT id, warehouse_name FROM `" . DB::WAREHOUSES . "` WHERE is_active=1");
+            $warehousesList = $this->db->fetchAll("SELECT id, warehouse_name FROM `" . DB::WAREHOUSES . "` WHERE is_active=1 ORDER BY warehouse_name");
         } catch (\Throwable $e) {
         }
         try {
-            $itemsList = $this->db->fetchAll("SELECT id, item_name FROM `" . DB::ITEMS . "` WHERE is_active=1 AND item_type='services' ORDER BY item_name");
+            $itemsList = $this->db->fetchAll("SELECT id, item_name FROM `" . DB::ITEMS . "` WHERE is_active=1 AND item_type='services' AND organization_id=:org_id ORDER BY item_name", ['org_id' => $this->orgId]);
         } catch (\Throwable $e) {
         }
 

@@ -16,6 +16,8 @@ $success_message = '';
 */
 include('admin_elements/permissions.php');
 
+$activeOrganizationId = dashboardRequireActiveOrganization();
+
 /*
 |--------------------------------------------------------------------------
 | 	GET ALL VARIABLES ADD/UPDATE
@@ -127,7 +129,8 @@ foreach ($account_types as $type) {
             LEFT JOIN `" . tbl_journal_items . "` ji ON ji.account = a.id
             LEFT JOIN `" . tbl_journals . "` j ON j.id = ji.journal_id
             WHERE a.account_type = '" . e_s__($type) . "'
-            AND a.parent_id IS NOT NULL" . $date_condition;
+            AND a.parent_id IS NOT NULL
+            AND j.organization_id = " . (int)$activeOrganizationId . "" . $date_condition;
 
     $result = $mysqli->query($sql);
     $row = $result->fetch_array();
@@ -168,7 +171,7 @@ $accounts_report_category_name  = getTableAttr('category_name', tbl_accounts_rep
                     <div class="col-lg-6">
                         <div class="text-muted"><?php echo $accounts_report_category_name; ?></div>
                         <div class="mb-0">
-                            <span class="fw-semibold">Account Type Summary</span> - <span class="small">From <?php echo dd_($date_from); ?> To <?php echo dd_($date_to); ?></span>
+                            <span class="fw-semibold">Account Type Summary</span> - <span class="small">From <?php echo ddm_($date_from); ?> To <?php echo ddm_($date_to); ?></span>
                         </div>
                     </div>
 
@@ -283,7 +286,7 @@ $accounts_report_category_name  = getTableAttr('category_name', tbl_accounts_rep
                 <p class="text-muted">Flash Logistics FZC</p>
                 <h5 class="mb-0">Account Type Summary</h5>
                 <p class="small"><span class="text-muted">Basis</span> : <?php echo ucfirst($report_basis); ?></p>
-                <p class="small"><span class="text-muted">From</span> <?php echo dd_($date_from); ?> <span class="text-muted">To</span> <?php echo dd_($date_to); ?></p>
+                <p class="small"><span class="text-muted">From</span> <?php echo ddm_($date_from); ?> <span class="text-muted">To</span> <?php echo ddm_($date_to); ?></p>
             </div>
 
             <div class="table-responsive">

@@ -10,6 +10,9 @@ include_once('../config/globals.php');
 include_once('../config/database.php');
 include_once('admin_elements/error_logger.php');
 
+require_once __DIR__ . '/../config/session.php';
+startDashboardSession();
+
 // Register custom error/exception/shutdown handlers for AJAX (returning JSON on exceptions/fatals)
 if (function_exists('custom_error_handler')) {
     set_error_handler('custom_error_handler');
@@ -65,7 +68,7 @@ if (isset($_REQUEST['ajax_action']) && !empty($_REQUEST['ajax_action'])) {
 	$ajax_action = e_s__($_REQUEST['ajax_action']);
 }
 
-$csrf_write_actions = ['add_shipper', 'add_consignee'];
+$csrf_write_actions = ['add_shipper', 'add_consignee', 'save_dimensions', 'delete_dimension_item'];
 if (in_array($ajax_action, $csrf_write_actions)) {
 	if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 		echo json_encode(['success' => false, 'error' => 'Invalid request method.']);
@@ -443,6 +446,73 @@ switch ($ajax_action) {
 
 	/*
 	|--------------------------------------------------------------------------
+	| 	SELECT2 PORTS (Select2 AJAX search for port dropdowns)
+	|--------------------------------------------------------------------------
+	*/
+	case 'select2_ports':
+
+		$searchTerm = isset($_POST['q']) ? s__((string)$_POST['q']) : '';
+		$countryId  = isset($_POST['country_id']) ? (int)s__((string)$_POST['country_id']) : 0;
+
+		$results = [];
+
+		$where  = "WHERE publish = 1 AND is_active = 1";
+		$types  = '';
+		$params = [];
+
+		if ($countryId > 0) {
+			$where   .= " AND country_id = ?";
+			$types   .= 'i';
+			$params[] = $countryId;
+		}
+
+		if ($searchTerm !== '') {
+			$like    = '%' . addcslashes($searchTerm, '%_\\') . '%';
+			$where  .= " AND (port_name LIKE ? OR port_code LIKE ?)";
+			$types  .= 'ss';
+			$params[] = $like;
+			$params[] = $like;
+		}
+
+		$query = "SELECT id, port_name, port_code
+		          FROM `" . tbl_ports . "`
+		          " . $where . "
+		          ORDER BY port_name ASC
+		          LIMIT 50";
+
+		$stmt = $mysqli->prepare($query);
+
+		if ($stmt) {
+			if ($types !== '') {
+				$stmt->bind_param($types, ...$params);
+			}
+			$stmt->execute();
+			$result = $stmt->get_result();
+
+			if ($result && $result->num_rows > 0) {
+				while ($row = $result->fetch_assoc()) {
+					$label = s__($row['port_name']);
+					if (!empty($row['port_code'])) {
+						$label .= ' (' . s__($row['port_code']) . ')';
+					}
+					$results[] = [
+						'id'   => s__($row['id']),
+						'text' => $label
+					];
+				}
+			}
+			$stmt->close();
+		}
+
+		echo json_encode([
+			'results'    => $results,
+			'pagination' => ['more' => false]
+		]);
+		break;
+
+
+	/*
+	|--------------------------------------------------------------------------
 	| 	Get Subcategories by Category ID
 	|--------------------------------------------------------------------------
 	|
@@ -474,5 +544,112 @@ switch ($ajax_action) {
 
 		break;
 
+
+	/*
+	|--------------------------------------------------------------------------
+	| 	Save Dimensions
+	|--------------------------------------------------------------------------
+	|
+	*/
+	case 'save_dimensions':
+
+		$response = ['status' => '', 'saved_rows' => 0, 'item_ids' => [], 'error_message' => ''];
+		$orgId = \App\Core\Session::orgId();
+		$userId = \App\Core\Session::userId();
+		$db = new \App\Core\Database();
+		$dimensions = $_POST['dimensions'] ?? [];
+
+		if (!empty($dimensions)) {
+			foreach ($dimensions as $idx => $dim) {
+				$module_type = $dim['module_type'] ?? 'sale_orders';
+				$record_id = (int)($dim['record_id'] ?? $dim['sale_order_id'] ?? 0);
+				$item_id = (int)($dim['item_id'] ?? 0);
+				$pcs = (float)($dim['pcs'] ?? 0);
+				$unit = $dim['unit'] ?? 'cm';
+				$length = (float)($dim['length'] ?? 0);
+				$width = (float)($dim['width'] ?? 0);
+				$height = (float)($dim['height'] ?? 0);
+				$formula = (int)($dim['formula'] ?? 6000);
+				$cbm = (float)($dim['cbm'] ?? 0);
+				$volume = (float)($dim['volume'] ?? 0);
+				$row_no = $dim['row_no'] ?? $idx;
+
+				if ($record_id > 0 && $pcs > 0 && $length > 0 && $width > 0 && $height > 0) {
+					if ($item_id > 0) {
+						$db->execute(
+							"UPDATE `" . DB::DIMENSION_ITEMS . "` 
+							 SET module_type = :module_type, record_id = :record_id,
+							     pcs = :pcs, unit = :unit, length = :length, width = :width,
+							     height = :height, formula = :formula, cbm = :cbm, volume = :volume,
+							     updated_by = :updated_by, updated_at = NOW()
+							 WHERE id = :id AND organization_id = :org_id",
+							[
+								'module_type' => $module_type, 'record_id' => $record_id,
+								'pcs' => $pcs, 'unit' => $unit, 'length' => $length,
+								'width' => $width, 'height' => $height, 'formula' => $formula,
+								'cbm' => $cbm, 'volume' => $volume, 'updated_by' => $userId,
+								'id' => $item_id, 'org_id' => $orgId,
+							]
+						);
+						$response['item_ids'][] = ['row_no' => $row_no, 'id' => $item_id];
+					} else {
+						$newId = (int)$db->insert(
+							"INSERT INTO `" . DB::DIMENSION_ITEMS . "` 
+							 (organization_id, quotation_id, module_type, record_id,
+							  pcs, unit, length, width, height, formula, cbm, volume,
+							  created_by, updated_by, created_at, updated_at)
+							 VALUES (:org_id, :quotation_id, :module_type, :record_id,
+							         :pcs, :unit, :length, :width, :height, :formula, :cbm, :volume,
+							         :created_by, :updated_by, NOW(), NOW())",
+							[
+								'org_id' => $orgId, 'quotation_id' => null,
+								'module_type' => $module_type, 'record_id' => $record_id,
+								'pcs' => $pcs, 'unit' => $unit, 'length' => $length,
+								'width' => $width, 'height' => $height, 'formula' => $formula,
+								'cbm' => $cbm, 'volume' => $volume,
+								'created_by' => $userId, 'updated_by' => $userId,
+							]
+						);
+						$response['item_ids'][] = ['row_no' => $row_no, 'id' => $newId];
+					}
+					$response['saved_rows']++;
+				}
+			}
+		}
+
+		$response['status'] = $response['saved_rows'] > 0 ? 'success' : 'no_data';
+		echo json_encode($response);
+		break;
+
+	/*
+	|--------------------------------------------------------------------------
+	| 	Delete Dimension Item
+	|--------------------------------------------------------------------------
+	|
+	*/
+	case 'delete_dimension_item':
+
+		$response = ['status' => '', 'id' => 0, 'row_no' => 0];
+		$orgId = \App\Core\Session::orgId();
+
+		$dim_id = (int)($_POST['id'] ?? 0);
+		$row_no = $_POST['row_no'] ?? '';
+
+		if ($dim_id > 0) {
+			$db = new \App\Core\Database();
+			$db->execute(
+				"DELETE FROM `" . DB::DIMENSION_ITEMS . "` WHERE id = :id AND organization_id = :org_id",
+				['id' => $dim_id, 'org_id' => $orgId]
+			);
+			$response['status'] = 'success';
+			$response['id'] = $dim_id;
+			$response['row_no'] = $row_no;
+		} else {
+			$response['status'] = 'error';
+			$response['error_message'] = 'Invalid dimension ID';
+		}
+
+		echo json_encode($response);
+		break;
 
 }//switch

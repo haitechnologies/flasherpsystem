@@ -7,6 +7,7 @@ namespace App\Service;
 use App\Core\Container;
 use App\Core\Database;
 use App\Core\DB;
+use App\Core\ErrorCapture;
 use Throwable;
 
 class SubscriptionTier
@@ -124,7 +125,7 @@ class SubscriptionTier
                 ['id' => $userId]
             );
         } catch (Throwable $e) {
-            error_log("SubscriptionTier::getUserTier() - Fallback to registered tier: " . $e->getMessage());
+            ErrorCapture::record("SubscriptionTier::getUserTier() - Fallback to registered tier: " . $e->getMessage());
             return self::TIER_REGISTERED;
         }
 
@@ -148,7 +149,7 @@ class SubscriptionTier
     {
         $normalizedTier = self::normalizeTier($newTier);
         if ($normalizedTier === self::TIER_REGISTERED && !in_array($newTier, [self::TIER_REGISTERED, 'registered'], true)) {
-            error_log("SubscriptionTier::setUserTier() - Invalid tier: $newTier");
+            ErrorCapture::record("SubscriptionTier::setUserTier() - Invalid tier: $newTier");
             return false;
         }
 
@@ -176,7 +177,7 @@ class SubscriptionTier
 
             return true;
         } catch (Throwable $e) {
-            error_log("SubscriptionTier::setUserTier() - Update error: " . $e->getMessage());
+            ErrorCapture::record("SubscriptionTier::setUserTier() - Update error: " . $e->getMessage());
             return false;
         }
     }
@@ -284,7 +285,7 @@ class SubscriptionTier
                 ]
             );
         } catch (Throwable $e) {
-            error_log("SubscriptionTier::logTierChange() - Error logging tier change: " . $e->getMessage());
+            ErrorCapture::record("SubscriptionTier::logTierChange() - Error logging tier change: " . $e->getMessage());
         }
     }
 

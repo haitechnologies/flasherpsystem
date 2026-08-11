@@ -87,6 +87,7 @@ try {
     $vendor_id = intval($_POST['vendor_id']);
     $basis = $_POST['basis'];
     $months_json = $_POST['months'];
+    $active_org_id = isset($_SESSION[$project_pre]['DASHBOARD']['organization_id']) ? intval($_SESSION[$project_pre]['DASHBOARD']['organization_id']) : 0;
 
     if ($vendor_id <= 0) {
         throw new Exception('Invalid vendor ID: ' . $vendor_id);
@@ -103,11 +104,7 @@ try {
         throw new Exception('Invalid months data: ' . json_last_error_msg());
     }
 
-    if (!defined('DB::PURCHASES')) {
-        throw new Exception('Table constant DB::PURCHASES not defined');
-    }
-
-    $months_result = [];
+	$months_result = [];
 
     foreach ($months as $month_info) {
         $start_date = $month_info['start'];
@@ -128,6 +125,7 @@ try {
                 WHERE vendor_id = " . $vendor_id . "
                 AND DATE(purchase_date) BETWEEN '" . $mysqli->real_escape_string($start_date) . "' AND '" . $mysqli->real_escape_string($end_date) . "'
                 AND purchase_status NOT IN ('draft', 'declined', 'expired')
+                AND organization_id = " . $active_org_id . "
             ";
 
             $rs_purchases = $mysqli->query($query_purchases);

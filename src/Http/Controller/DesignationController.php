@@ -67,7 +67,7 @@ class DesignationController extends BaseController
             flash_error($e->getMessage());
             return Response::redirect("designations.php?id=$id&action=edit_designations");
         } catch (\Throwable $e) {
-            error_log("DesignationController update error: " . $e->getMessage());
+            $this->logError("DesignationController update error: " . $e->getMessage());
             flash_error($e->getMessage());
             return Response::redirect("designations.php?id=$id&action=edit_designations");
         }
@@ -86,6 +86,7 @@ class DesignationController extends BaseController
             flash_error($error);
             return Response::redirect("designations.php");
         } catch (\Throwable $e) {
+            $this->logError("DesignationController create error: " . $e->getMessage());
             flash_error('The Designation could not be saved.');
             return Response::redirect("designations.php");
         }

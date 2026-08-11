@@ -64,7 +64,8 @@ class ExitPointController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("exit_points.php?id=$id&action=edit_exit_points");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("ExitPointController::handleUpdate error: " . $e->getMessage());
             flash_error('The Exit Point could not be updated.');
             return Response::redirect("exit_points.php?id=$id&action=edit_exit_points");
         }
@@ -84,7 +85,8 @@ class ExitPointController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("exit_points.php");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("ExitPointController::handleCreate error: " . $e->getMessage());
             flash_error('The Exit Point could not be saved.');
             return Response::redirect("exit_points.php");
         }

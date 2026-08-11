@@ -6,9 +6,12 @@ require '../vendor/autoload.php';
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
-$module = 'customers';
+$module = 'expenses';
 $module_caption = 'Expense Details';
 $tbl_name = $tbl_prefix . $module;
+// Fix: {$TBL_EXPENSES}/{$TBL_VENDORS} are PHP constants that need variable interpolation in SQL
+$TBL_EXPENSES = \App\Core\DB::EXPENSES;
+$TBL_VENDORS = \App\Core\DB::VENDORS;
 $error_message = '';
 $success_message = '';
 
@@ -20,6 +23,7 @@ $success_message = '';
 */
 include('admin_elements/permissions.php');
 
+$activeOrganizationId = dashboardRequireActiveOrganization();
 
 $limit              = 10;
 $stages             = 2;
@@ -47,6 +51,75 @@ $filter_by              = ((isset($_REQUEST['filter_by']) && !empty($_REQUEST['f
 $date_from              = ((isset($_REQUEST['date_from']) && !empty($_REQUEST['date_from'])) ? e_s__($_REQUEST['date_from']) : '');
 $date_to                = ((isset($_REQUEST['date_to']) && !empty($_REQUEST['date_to'])) ? e_s__($_REQUEST['date_to']) : '');
 $report_basis           = ((isset($_REQUEST['report_basis']) && !empty($_REQUEST['report_basis'])) ? e_s__($_REQUEST['report_basis']) : '');
+
+// Handle filter_by quick date selection
+if (!empty($filter_by) && $filter_by != '0') {
+    if (!function_exists('getDateRangeByFilter')) {
+        function getDateRangeByFilter($filter_by) {
+            $today = new DateTimeImmutable('today');
+
+            switch ($filter_by) {
+                case 'today':
+                    $start = $today;
+                    $end = $today;
+                    break;
+                case 'this_week':
+                    $start = $today->modify('monday this week');
+                    $end = $today->modify('sunday this week');
+                    break;
+                case 'this_month':
+                    $start = $today->modify('first day of this month');
+                    $end = $today->modify('last day of this month');
+                    break;
+                case 'this_quarter':
+                    $month = (int)$today->format('n');
+                    $quarter_start_month = (floor(($month - 1) / 3) * 3) + 1;
+                    $start = $today->setDate((int)$today->format('Y'), $quarter_start_month, 1);
+                    $end = $start->modify('+2 months')->modify('last day of this month');
+                    break;
+                case 'this_year':
+                    $start = $today->setDate((int)$today->format('Y'), 1, 1);
+                    $end = $today->setDate((int)$today->format('Y'), 12, 31);
+                    break;
+                case 'yesterday':
+                    $start = $today->modify('-1 day');
+                    $end = $start;
+                    break;
+                case 'previous_week':
+                    $start = $today->modify('monday last week');
+                    $end = $today->modify('sunday last week');
+                    break;
+                case 'previous_month':
+                    $start = $today->modify('first day of last month');
+                    $end = $today->modify('last day of last month');
+                    break;
+                case 'previous_quarter':
+                    $month = (int)$today->format('n');
+                    $quarter_start_month = (floor(($month - 1) / 3) * 3) + 1 - 3;
+                    if ($quarter_start_month < 1) {
+                        $quarter_start_month += 12;
+                        $year = (int)$today->format('Y') - 1;
+                    } else {
+                        $year = (int)$today->format('Y');
+                    }
+                    $start = $today->setDate($year, $quarter_start_month, 1);
+                    $end = $start->modify('+2 months')->modify('last day of this month');
+                    break;
+                case 'previous_year':
+                    $year = (int)$today->format('Y') - 1;
+                    $start = $today->setDate($year, 1, 1);
+                    $end = $today->setDate($year, 12, 31);
+                    break;
+                default:
+                    return [null, null];
+            }
+
+            return [$start->format('d-m-Y'), $end->format('d-m-Y')];
+        }
+    }
+
+    list($date_from, $date_to) = getDateRangeByFilter($filter_by);
+}
 
 
 /*
@@ -77,26 +150,17 @@ if ($page_no) {
 $search_query = '';
 // -------------------
 
-
-$date_from             = processDateDtoY($date_from);
-$date_to               = processDateDtoY($date_to);
-
-// Ensure dates are in YYYY-MM-DD format for MySQL queries
-if (!empty($date_from) && $date_from != '0000-00-00') {
-    // Try to parse the date - if it's DD-MM-YYYY format, convert it
-    if (preg_match('/^\d{2}-\d{2}-\d{4}$/', $date_from)) {
-        $date_parts = explode('-', $date_from);
-        $date_from = $date_parts[2] . '-' . $date_parts[1] . '-' . $date_parts[0];
+if (!function_exists('normalizeDateToYmd')) {
+    function normalizeDateToYmd($date)
+    {
+        if (empty($date)) return '';
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) return $date;
+        if (!preg_match('/^\d{1,2}-\d{1,2}-\d{4}$/', $date)) return '';
+        return processDateDtoY($date);
     }
 }
-
-if (!empty($date_to) && $date_to != '0000-00-00') {
-    // Try to parse the date - if it's DD-MM-YYYY format, convert it
-    if (preg_match('/^\d{2}-\d{2}-\d{4}$/', $date_to)) {
-        $date_parts = explode('-', $date_to);
-        $date_to = $date_parts[2] . '-' . $date_parts[1] . '-' . $date_parts[0];
-    }
-}
+$date_from = normalizeDateToYmd($date_from);
+$date_to = normalizeDateToYmd($date_to);
 
 // ----------------------------------------------------------------------------------------------------
 
@@ -120,10 +184,11 @@ if (!empty($date_from) && $date_from != '0000-00-00') {
 if (!empty($date_to) && $date_to != '0000-00-00') {
     $expense_search_query .= " AND e.expense_date <= '" . $date_to . "'";
 }
+$expense_search_query .= " AND e.organization_id = " . (int)$activeOrganizationId;
 
 //COUNT QUERY - Get expenses with related data
-$result         = $mysqli->query("SELECT e.id FROM `fls_expenses` e 
-                                  LEFT JOIN `fls_vendors` v ON e.vendor_id = v.id 
+$result         = $mysqli->query("SELECT e.id FROM `{$TBL_EXPENSES}` e 
+                                  LEFT JOIN `{$TBL_VENDORS}` v ON e.vendor_id = v.id 
                                   WHERE e.id > 0 " . $expense_search_query);
 $total_rows     = $result->num_rows;
 
@@ -131,8 +196,8 @@ $total_rows     = $result->num_rows;
 $result_expenses  = $mysqli->query("SELECT e.id, e.reference_no, e.expense_date, e.vendor_id, 
                                     e.grand_total as amount, 0 as tax, e.expense_status as status, e.customer_id,
                                     'General' as category_name, COALESCE(v.display_name, 'Internal') as vendor_name
-                                    FROM `fls_expenses` e 
-                                    LEFT JOIN `fls_vendors` v ON e.vendor_id = v.id 
+                                    FROM `{$TBL_EXPENSES}` e 
+                                    LEFT JOIN `{$TBL_VENDORS}` v ON e.vendor_id = v.id 
                                     WHERE e.id > 0 " . $expense_search_query . " 
                                     ORDER BY e.expense_date DESC LIMIT $start, $limit");
 
@@ -140,8 +205,8 @@ $result_expenses  = $mysqli->query("SELECT e.id, e.reference_no, e.expense_date,
 $result_expenses_ = $mysqli->query("SELECT e.id, e.reference_no, e.expense_date, e.vendor_id, 
                                     e.grand_total as amount, 0 as tax, e.expense_status as status, e.customer_id,
                                     'General' as category_name, COALESCE(v.display_name, 'Internal') as vendor_name
-                                    FROM `fls_expenses` e 
-                                    LEFT JOIN `fls_vendors` v ON e.vendor_id = v.id 
+                                    FROM `{$TBL_EXPENSES}` e 
+                                    LEFT JOIN `{$TBL_VENDORS}` v ON e.vendor_id = v.id 
                                     WHERE e.id > 0 " . $expense_search_query . " 
                                     ORDER BY e.expense_date DESC");
 // }
@@ -173,7 +238,7 @@ $mysqli->query("UPDATE `" . tbl_accounts_report_subcategories . "` SET last_visi
                     <div class="col-lg-6">
                         <div class="text-muted">Purchases and Expenses</div>
                         <div class="mb-0">
-                            <span class="fw-semibold">Expense Details</span> - <span class="small">From <?php echo dd_($date_from); ?> To <?php echo dd_($date_to); ?></span>
+                            <span class="fw-semibold">Expense Details</span> - <span class="small">From <?php echo ddm_($date_from); ?> To <?php echo ddm_($date_to); ?></span>
                         </div>
                     </div>
 
@@ -294,7 +359,7 @@ $mysqli->query("UPDATE `" . tbl_accounts_report_subcategories . "` SET last_visi
             <div class="card-header text-center">
                 <p class="text-muted">Flash Logistics FZC</p>
                 <h5 class="mb-0">Expense Details</h5>
-                <p class="small"><span class="text-muted">From</span> <?php echo dd_($date_from); ?> <span class="text-muted">To</span> <?php echo dd_($date_to); ?></p>
+                <p class="small"><span class="text-muted">From</span> <?php echo ddm_($date_from); ?> <span class="text-muted">To</span> <?php echo ddm_($date_to); ?></p>
             </div>
 
             <div class="table-responsive">

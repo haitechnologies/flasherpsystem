@@ -231,7 +231,7 @@ if (isset($_REQUEST['type']) && !empty($_REQUEST['type'])) {
 														if ($txn_result && $txn_result->num_rows > 0) {
 															$txn_row = $txn_result->fetch_array(MYSQLI_ASSOC);
 															if (!empty($txn_row['last_date']) && $txn_row['last_date'] != '0000-00-00') {
-																$last_transaction_date = 'Last transaction on ' . processDateYtoD($txn_row['last_date']);
+																$last_transaction_date = 'Last transaction on ' . ddm_($txn_row['last_date']);
 																$has_transactions = true;
 															}
 														}

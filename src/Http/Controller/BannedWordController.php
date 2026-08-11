@@ -64,7 +64,8 @@ class BannedWordController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("words.php?id=$id&action=edit_words");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("BannedWordController::handleUpdate error: " . $e->getMessage());
             flash_error('The Banned Word could not be updated.');
             return Response::redirect("words.php?id=$id&action=edit_words");
         }
@@ -84,7 +85,8 @@ class BannedWordController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("words.php");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("BannedWordController::handleCreate error: " . $e->getMessage());
             flash_error('The Banned Word could not be saved.');
             return Response::redirect("words.php");
         }

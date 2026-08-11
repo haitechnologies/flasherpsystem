@@ -23,6 +23,15 @@ class DateHelper
         return $ts !== false ? date('d/m/Y', $ts) : '';
     }
 
+    public static function toInputDate(?string $dateStr): string
+    {
+        if ($dateStr === null || $dateStr === '') {
+            return '';
+        }
+        $ts = strtotime($dateStr);
+        return $ts !== false ? date('d-m-Y', $ts) : '';
+    }
+
     public static function toDbDateTime(?string $dateStr): string
     {
         if ($dateStr === null || $dateStr === '') {

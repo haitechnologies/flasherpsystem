@@ -67,7 +67,8 @@ class CategoryController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("categories.php?id=$id&action=edit_categories");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("CategoryController::handleUpdate error: " . $e->getMessage());
             flash_error('The Category could not be updated.');
             return Response::redirect("categories.php?id=$id&action=edit_categories");
         }
@@ -90,7 +91,8 @@ class CategoryController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("categories.php");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("CategoryController::handleCreate error: " . $e->getMessage());
             flash_error('The Category could not be saved.');
             return Response::redirect("categories.php");
         }

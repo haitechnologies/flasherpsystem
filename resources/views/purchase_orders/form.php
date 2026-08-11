@@ -10,6 +10,7 @@ declare(strict_types=1);
  * @var int $session_role_id
  * @var string $error_message
  * @var string $vendor_id
+ * @var string $purchase_order_no
  * @var string $purchase_order_status
  * @var string $purchase_order_date
  * @var string $reference_no
@@ -59,6 +60,9 @@ foreach ($warehouseOptions as $w) {
         <div class="page-header-content border-top py-2 px-3 carriers-page-header-content">
             <div class="my-1 d-flex align-items-center gap-2">
                 <h5 class="mb-0"><?php echo ($id > 0) ? 'Edit' : 'New'; ?> <?php echo $moduleCaption; ?></h5>
+                <?php if ($id > 0 && !empty($purchase_order_no)): ?>
+                    <span class="badge bg-light text-black border ms-2"><?php echo s__($purchase_order_no); ?></span>
+                <?php endif; ?>
                 <span class="badge bg-light text-primary border-primary ms-2"><?php echo ((!empty($purchase_order_status)) ? ucwords($purchase_order_status) : ''); ?></span>
             </div>
             <div class="my-1">
@@ -91,6 +95,7 @@ foreach ($warehouseOptions as $w) {
                     <input type="hidden" name="action" id="action" value="add_<?php echo $module; ?>" />
                 <?php endif; ?>
                 <input type="hidden" name="purchase_order_status" id="purchase_order_status" value="<?php echo $purchase_order_status; ?>" />
+                <input type="hidden" name="csrf_token" value="<?php echo csrf_token(); ?>">
 
                 <div class="col-xl-12">
                     <div class="row">
@@ -172,7 +177,7 @@ foreach ($warehouseOptions as $w) {
                                                     <div class="row">
                                                         <input type="hidden" name="item_id[]" id="item_id<?php echo $row_i; ?>" value="<?php echo $item_id_val; ?>">
                                                         <div class="col-lg-2">
-                                                            <select class="form-select" name="service[]" id="service<?php echo $row_i; ?>" onchange="calculateItemAmount('<?php echo $row_i; ?>');">
+                                                             <select class="form-select" name="service[]" id="service<?php echo $row_i; ?>" onchange="setItemPrice('<?php echo $row_i; ?>'); calculateItemAmount('<?php echo $row_i; ?>');">
                                                                 <option value="0">Please select</option>
                                                                 <?php foreach ($itemsList as $item): ?>
                                                                     <option value="<?php echo $item['id']; ?>" <?php echo ((string)$item['id'] === (string)$service_val) ? 'selected="selected"' : ''; ?>>
@@ -228,6 +233,19 @@ foreach ($warehouseOptions as $w) {
                                 </div>
 
                                 <script>
+                                    window.itemPrices = {
+                                        <?php foreach ($itemsList as $item): ?>
+                                        <?php echo $item['id']; ?>: <?php echo (float)($item['cost_price'] ?? 0); ?>,
+                                        <?php endforeach; ?>
+                                    };
+                                    function setItemPrice(rowNo) {
+                                        var svc = document.getElementById('service' + rowNo);
+                                        if (!svc) return;
+                                        var itemId = svc.value;
+                                        if (window.itemPrices[itemId] && parseFloat(window.itemPrices[itemId]) > 0) {
+                                            document.getElementById('rate' + rowNo).value = window.itemPrices[itemId];
+                                        }
+                                    }
                                     function add_item_row() {
                                         var total_rows = document.getElementById('total_rows').value;
                                         total_rows++;
@@ -236,7 +254,7 @@ foreach ($warehouseOptions as $w) {
                                         new_row += "<div class=\"row mb-3 pb-3\" id=\"row_" + total_rows + "\">";
                                         new_row += "<input type=\"hidden\" name=\"item_id[]\" id=\"item_id" + total_rows + "\">";
                                         new_row += "<div class=\"col-lg-2\">";
-                                        new_row += "<select class=\"form-select\" name=\"service[]\" id=\"service" + total_rows + "\" onchange=\"calculateItemAmount('" + total_rows + "');\">";
+                                        new_row += "<select class=\"form-select\" name=\"service[]\" id=\"service" + total_rows + "\" onchange=\"setItemPrice('" + total_rows + "'); calculateItemAmount('" + total_rows + "');\">";
                                         new_row += "<option value=\"0\">Please select</option>";
                                         <?php foreach ($itemsList as $item): ?>
                                         new_row += "<option value=\"<?php echo $item['id']; ?>\"><?php echo s__((string)$item['item_name']); ?></option>";

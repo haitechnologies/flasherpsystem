@@ -9,6 +9,7 @@ use App\Model\QuotationItem;
 use App\Repository\QuotationRepository;
 use App\Repository\CustomerRepository;
 use App\Core\Database;
+use App\Core\DB;
 use App\Exception\NotFoundException;
 use App\Exception\ValidationException;
 
@@ -163,6 +164,7 @@ class QuotationService
                 grossWeight: !empty($data['gross_weight']) ? (float)$data['gross_weight'] : 0.0,
                 chargeableWeight: !empty($data['chargeable_weight']) ? (float)$data['chargeable_weight'] : 0.0,
                 volume: !empty($data['volume']) ? (float)$data['volume'] : 0.0,
+                cbm: !empty($data['cbm']) ? (float)$data['cbm'] : 0.0,
                 termsAndConditions: !empty($data['terms_and_conditions']) ? trim((string)$data['terms_and_conditions']) : null,
                 grandSubtotal: $grandSubtotal,
                 grandDiscountType: !empty($data['grand_discount_type']) ? trim((string)$data['grand_discount_type']) : '0.00',
@@ -321,6 +323,7 @@ class QuotationService
                 grossWeight: isset($data['gross_weight']) ? (float)$data['gross_weight'] : $quotation->grossWeight,
                 chargeableWeight: isset($data['chargeable_weight']) ? (float)$data['chargeable_weight'] : $quotation->chargeableWeight,
                 volume: isset($data['volume']) ? (float)$data['volume'] : $quotation->volume,
+                cbm: isset($data['cbm']) ? (float)$data['cbm'] : $quotation->cbm,
                 termsAndConditions: isset($data['terms_and_conditions']) ? (!empty($data['terms_and_conditions']) ? trim((string)$data['terms_and_conditions']) : null) : $quotation->termsAndConditions,
                 grandSubtotal: $grandSubtotal,
                 grandDiscountType: isset($data['grand_discount_type']) ? trim((string)$data['grand_discount_type']) : $quotation->grandDiscountType,
@@ -466,6 +469,7 @@ class QuotationService
                 grossWeight: $quotation->grossWeight,
                 chargeableWeight: $quotation->chargeableWeight,
                 volume: $quotation->volume,
+                cbm: $quotation->cbm,
                 termsAndConditions: $quotation->termsAndConditions,
                 grandSubtotal: $quotation->grandSubtotal,
                 grandDiscountType: $quotation->grandDiscountType,
@@ -561,6 +565,18 @@ class QuotationService
             $customer = $this->customerRepo->find($customerId, $orgId);
             if ($customer === null) {
                 throw new ValidationException(['customer_id' => "Selected customer does not exist in your organization."]);
+            }
+        }
+
+        // Verify lead exists and is active if provided
+        if (!empty($data['lead_id']) && $data['lead_id'] !== '0') {
+            $leadId = (int)$data['lead_id'];
+            $lead = $this->db->fetchOne(
+                "SELECT id FROM `" . DB::LEADS . "` WHERE id = :id AND organization_id = :org_id AND is_active = 1",
+                ['id' => $leadId, 'org_id' => $orgId]
+            );
+            if ($lead === null) {
+                throw new ValidationException(['lead_id' => "Selected lead does not exist or is inactive."]);
             }
         }
     }

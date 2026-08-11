@@ -9,6 +9,7 @@ use App\Model\DebitNote;
 use App\Model\DebitNoteItem;
 use App\Repository\DebitNoteRepository;
 use App\Repository\VendorRepository;
+use App\Repository\JournalRepository;
 use App\Exception\NotFoundException;
 use App\Exception\ValidationException;
 use App\Helper\DateHelper;
@@ -17,12 +18,16 @@ class DebitNoteService
 {
     private DebitNoteRepository $debitNoteRepo;
     private VendorRepository $vendorRepo;
+    private JournalRepository $journalRepo;
+    private JournalService $journalService;
     private Database $db;
 
-    public function __construct(DebitNoteRepository $debitNoteRepo, VendorRepository $vendorRepo, Database $db)
+    public function __construct(DebitNoteRepository $debitNoteRepo, VendorRepository $vendorRepo, JournalRepository $journalRepo, JournalService $journalService, Database $db)
     {
         $this->debitNoteRepo = $debitNoteRepo;
         $this->vendorRepo = $vendorRepo;
+        $this->journalRepo = $journalRepo;
+        $this->journalService = $journalService;
         $this->db = $db;
     }
 
@@ -35,9 +40,9 @@ class DebitNoteService
         return $debitNote;
     }
 
-    public function getDebitNoteItems(int $debitNoteId, int $orgId): array
+    public function getDebitNoteItems(int $debitNoteId): array
     {
-        return $this->debitNoteRepo->findItems($debitNoteId, $orgId);
+        return $this->debitNoteRepo->findItems($debitNoteId);
     }
 
     public function createNote(array $data, array $itemsData, int $orgId, int $userId): DebitNote
@@ -115,6 +120,42 @@ class DebitNoteService
                 $this->debitNoteRepo->saveItem($item);
             }
 
+            $debitNoteStatus = $debitNote->debitNoteStatus;
+            if ($debitNoteStatus === 'open' && $debitNote->grandTotal > 0) {
+                $existing = $this->journalRepo->findByReference('debit_note', $debitNoteId, $orgId);
+                if (empty($existing)) {
+                    $purchaseReturns = $this->db->fetchOne(
+                        "SELECT id FROM `{DB::ACCOUNTS}` WHERE account_code IN ('4160','4170') OR account_name LIKE '%Returns%' OR account_name LIKE '%Allowances%' ORDER BY (account_code='4160') DESC LIMIT 1"
+                    );
+                    $ap = $this->db->fetchOne(
+                        "SELECT id FROM `{DB::ACCOUNTS}` WHERE account_code IN ('2100','2110','2200') OR account_name LIKE '%Payable%' LIMIT 1"
+                    );
+                    if ($purchaseReturns !== null && $ap !== null) {
+                        $this->journalService->createJournal(
+                            [
+                                'journal_date' => $debitNote->debitNoteDate,
+                                'journal_status' => 'posted',
+                                'reference_no' => $debitNote->debitNoteNo,
+                                'notes' => 'Debit Note #' . $debitNote->debitNoteNo . ' - Vendor ID: ' . $debitNote->vendorId,
+                                'reporting_method' => 'accrual',
+                                'reference_type' => 'debit_note',
+                                'reference_id' => $debitNoteId,
+                                'currency' => 'AED',
+                                'warehouse_id' => $debitNote->warehouseId,
+                                'grand_subtotal' => $debitNote->grandSubtotal,
+                                'grand_total' => $debitNote->grandTotal,
+                            ],
+                            [
+                                ['account' => (int)$ap['id'], 'debit' => $debitNote->grandTotal, 'credit' => 0.0, 'description' => 'Debit Note #' . $debitNote->debitNoteNo],
+                                ['account' => (int)$purchaseReturns['id'], 'debit' => 0.0, 'credit' => $debitNote->grandTotal, 'description' => 'Debit Note #' . $debitNote->debitNoteNo],
+                            ],
+                            $orgId,
+                            $userId
+                        );
+                    }
+                }
+            }
+
             $this->db->commit();
 
             return $savedDebitNote;
@@ -162,7 +203,7 @@ class DebitNoteService
 
             $savedDebitNote = $this->debitNoteRepo->save($updatedDebitNote);
 
-            $existingItems = $this->debitNoteRepo->findItems($id, $orgId);
+            $existingItems = $this->debitNoteRepo->findItems($id);
             $existingIds = array_map(fn($item) => $item->id, $existingItems);
             $incomingIds = [];
 
@@ -194,7 +235,7 @@ class DebitNoteService
 
             $deletedIds = array_diff($existingIds, $incomingIds);
             if (!empty($deletedIds)) {
-                $this->debitNoteRepo->deleteItemsByIds($deletedIds, $id, $orgId);
+                $this->debitNoteRepo->deleteItemsByIds($deletedIds, $id);
             }
 
             $this->db->commit();
@@ -212,6 +253,7 @@ class DebitNoteService
 
         $this->db->beginTransaction();
         try {
+            $this->deleteDebitNoteJournal($id);
             $result = $this->debitNoteRepo->delete($id, $orgId);
             $this->db->commit();
             return $result;
@@ -228,6 +270,9 @@ class DebitNoteService
         }
         if (empty($data['debit_note_date'])) {
             throw new ValidationException(['debit_note_date' => "Please select Debit Note Date."]);
+        }
+        if (empty($data['warehouse_id']) || $data['warehouse_id'] === 'Please select') {
+            throw new ValidationException(['warehouse_id' => "Please select Warehouse."]);
         }
 
         $vendorId = (int)$data['vendor_id'];
@@ -249,5 +294,152 @@ class DebitNoteService
             }
         }
         return DateHelper::toDbDate($date) ?: $date;
+    }
+
+    public function updateStatus(int $id, string $status, int $orgId): DebitNote
+    {
+        $debitNote = $this->getDebitNote($id, $orgId);
+        $allowed = ['draft', 'open', 'void', 'cancelled'];
+        if (!in_array($status, $allowed, true)) {
+            throw new ValidationException(['debit_note_status' => "Invalid debit note status."]);
+        }
+
+        $updated = new DebitNote(
+            id: $debitNote->id,
+            organizationId: $debitNote->organizationId,
+            debitNoteNo: $debitNote->debitNoteNo,
+            debitNoteDate: $debitNote->debitNoteDate,
+            debitNoteStatus: $status,
+            referenceNo: $debitNote->referenceNo,
+            vendorId: $debitNote->vendorId,
+            purchaseId: $debitNote->purchaseId,
+            warehouseId: $debitNote->warehouseId,
+            purchasePerson: $debitNote->purchasePerson,
+            vendorNotes: $debitNote->vendorNotes,
+            termsAndConditions: $debitNote->termsAndConditions,
+            grandSubtotal: $debitNote->grandSubtotal,
+            grandDiscountType: $debitNote->grandDiscountType,
+            grandDiscountTypeValue: $debitNote->grandDiscountTypeValue,
+            grandDiscountAmount: $debitNote->grandDiscountAmount,
+            grandAfterDiscount: $debitNote->grandAfterDiscount,
+            grandTax: $debitNote->grandTax,
+            grandTotal: $debitNote->grandTotal,
+            publish: $debitNote->publish,
+            isActive: $debitNote->isActive,
+            createdAt: $debitNote->createdAt,
+            createdBy: $debitNote->createdBy,
+        );
+
+        return $this->debitNoteRepo->save($updated);
+    }
+
+    public function voidNote(int $id, int $orgId, int $userId): DebitNote
+    {
+        $debitNote = $this->getDebitNote($id, $orgId);
+
+        $this->db->beginTransaction();
+        try {
+            $existing = $this->journalRepo->findByReference('debit_note_void', $id, $orgId);
+            if (empty($existing)) {
+                $original = $this->journalRepo->findByReference('debit_note', $id, $orgId);
+                if (!empty($original)) {
+                    $journal = $original[0];
+                    $originalItems = $this->journalRepo->findItemsByJournal($journal->id, $orgId);
+                    $reversalItems = [];
+                    foreach ($originalItems as $ji) {
+                        $reversalItems[] = [
+                            'account' => $ji->account,
+                            'debit' => $ji->credit,
+                            'credit' => $ji->debit,
+                            'description' => 'VOID - Reversal of Debit Note #' . $debitNote->debitNoteNo,
+                        ];
+                    }
+                    $this->journalService->createJournal(
+                        [
+                            'journal_date' => date('Y-m-d'),
+                            'journal_status' => 'posted',
+                            'reference_no' => $debitNote->debitNoteNo . ' (VOID)',
+                            'notes' => 'VOID - Reversal of Debit Note #' . $debitNote->debitNoteNo,
+                            'reporting_method' => 'accrual',
+                            'reference_type' => 'debit_note_void',
+                            'reference_id' => $id,
+                            'currency' => 'AED',
+                            'warehouse_id' => $debitNote->warehouseId,
+                            'grand_subtotal' => -$debitNote->grandSubtotal,
+                            'grand_total' => -$debitNote->grandTotal,
+                        ],
+                        $reversalItems,
+                        $orgId,
+                        $userId
+                    );
+                }
+            }
+
+            $updated = $this->updateStatus($id, 'void', $orgId);
+            $this->db->commit();
+            return $updated;
+        } catch (\Throwable $e) {
+            $this->db->rollBack();
+            throw $e;
+        }
+    }
+
+    public function openNote(int $id, int $orgId, int $userId): DebitNote
+    {
+        return $this->openOrPostDebitNote($id, $orgId, $userId);
+    }
+
+    private function openOrPostDebitNote(int $id, int $orgId, int $userId): DebitNote
+    {
+        $debitNote = $this->getDebitNote($id, $orgId);
+
+        $existing = $this->journalRepo->findByReference('debit_note', $id, $orgId);
+        if (empty($existing) && $debitNote->grandTotal > 0) {
+            $purchaseReturns = $this->db->fetchOne(
+                "SELECT id FROM `{DB::ACCOUNTS}` WHERE account_code IN ('4160','4170') OR account_name LIKE '%Returns%' OR account_name LIKE '%Allowances%' ORDER BY (account_code='4160') DESC LIMIT 1"
+            );
+            $ap = $this->db->fetchOne(
+                "SELECT id FROM `{DB::ACCOUNTS}` WHERE account_code IN ('2100','2110','2200') OR account_name LIKE '%Payable%' LIMIT 1"
+            );
+            if ($purchaseReturns !== null && $ap !== null) {
+                $this->journalService->createJournal(
+                    [
+                        'journal_date' => $debitNote->debitNoteDate,
+                        'journal_status' => 'posted',
+                        'reference_no' => $debitNote->debitNoteNo,
+                        'notes' => 'Debit Note #' . $debitNote->debitNoteNo . ' - Vendor ID: ' . $debitNote->vendorId,
+                        'reporting_method' => 'accrual',
+                        'reference_type' => 'debit_note',
+                        'reference_id' => $id,
+                        'currency' => 'AED',
+                        'warehouse_id' => $debitNote->warehouseId,
+                        'grand_subtotal' => $debitNote->grandSubtotal,
+                        'grand_total' => $debitNote->grandTotal,
+                    ],
+                    [
+                        ['account' => (int)$ap['id'], 'debit' => $debitNote->grandTotal, 'credit' => 0.0, 'description' => 'Debit Note #' . $debitNote->debitNoteNo],
+                        ['account' => (int)$purchaseReturns['id'], 'debit' => 0.0, 'credit' => $debitNote->grandTotal, 'description' => 'Debit Note #' . $debitNote->debitNoteNo],
+                    ],
+                    $orgId,
+                    $userId
+                );
+            }
+        }
+
+        return $this->updateStatus($id, 'open', $orgId);
+    }
+
+    private function deleteDebitNoteJournal(int $debitNoteId): void
+    {
+        $journalId = $this->db->fetchOne(
+            "SELECT id FROM `{DB::JOURNALS}` WHERE reference_type IN ('debit_note', 'debit_note_void') AND reference_id = :ref_id LIMIT 1",
+            ['ref_id' => $debitNoteId]
+        );
+
+        if ($journalId !== null) {
+            $jid = (int)$journalId['id'];
+            $this->db->execute("DELETE FROM `{DB::JOURNAL_ITEMS}` WHERE journal_id = :jid", ['jid' => $jid]);
+            $this->db->execute("DELETE FROM `{DB::JOURNALS}` WHERE id = :jid", ['jid' => $jid]);
+        }
     }
 }

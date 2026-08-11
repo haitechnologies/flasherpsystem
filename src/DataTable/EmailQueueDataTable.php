@@ -12,6 +12,7 @@ namespace App\DataTable;
 use App\Core\DB;
 use App\Helper\BadgeHelper;
 use App\Helper\ActionButtonHelper;
+use App\Core\ErrorCapture;
 
 class EmailQueueDataTable extends BaseDataTable
 {
@@ -52,7 +53,7 @@ class EmailQueueDataTable extends BaseDataTable
                 $this->relatedDataCache[(int)$row['id']] = $row['provider_name'];
             }
         } catch (\Throwable $e) {
-            error_log("EmailQueueDataTable::prepareRelatedData error: " . $e->getMessage());
+            ErrorCapture::record("EmailQueueDataTable::prepareRelatedData error: " . $e->getMessage());
         }
     }
 

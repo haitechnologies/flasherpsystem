@@ -7,6 +7,7 @@ namespace App\Repository;
 use App\Core\Database;
 use App\Core\DB;
 use App\Model\Attendance;
+use App\Core\ErrorCapture;
 
 class AttendanceRepository
 {
@@ -62,7 +63,7 @@ class AttendanceRepository
             $this->db->execute($sql, $params);
             return true;
         } catch (\Throwable $e) {
-            error_log("AttendanceRepository: Update failed: " . $e->getMessage());
+            ErrorCapture::record("AttendanceRepository: Update failed: " . $e->getMessage());
             return false;
         }
     }

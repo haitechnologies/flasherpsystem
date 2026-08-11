@@ -7,6 +7,7 @@ namespace App\Repository;
 use App\Core\Database;
 use App\Core\DB;
 use App\Model\AccountReportCategory;
+use App\Core\ErrorCapture;
 
 class AccountReportCategoryRepository
 {
@@ -19,7 +20,7 @@ class AccountReportCategoryRepository
 
     public function find(int $id): ?AccountReportCategory
     {
-        $sql = "SELECT id, category_name, description, is_active, created_by, created_at
+        $sql = "SELECT id, category_name, publish, is_active, created_by, created_at, updated_at, updated_by
                 FROM `{DB::ACCOUNTS_REPORT_CATEGORIES}` WHERE id = :id";
         $row = $this->db->fetchOne($sql, ['id' => $id]);
         return $row === null ? null : $this->mapRowToDto($row);
@@ -27,7 +28,7 @@ class AccountReportCategoryRepository
 
     public function findAll(): array
     {
-        $sql = "SELECT id, category_name, description, is_active, created_by, created_at
+        $sql = "SELECT id, category_name, publish, is_active, created_by, created_at, updated_at, updated_by
                 FROM `{DB::ACCOUNTS_REPORT_CATEGORIES}` ORDER BY category_name ASC";
         return array_map($this->mapRowToDto(...), $this->db->fetchAll($sql));
     }
@@ -43,11 +44,10 @@ class AccountReportCategoryRepository
 
     public function insert(AccountReportCategory $item): int
     {
-        $sql = "INSERT INTO `{DB::ACCOUNTS_REPORT_CATEGORIES}` (category_name, description, is_active, created_by)
-                VALUES (:category_name, :description, :is_active, :created_by)";
+        $sql = "INSERT INTO `{DB::ACCOUNTS_REPORT_CATEGORIES}` (category_name, is_active, created_by)
+                VALUES (:category_name, :is_active, :created_by)";
         return (int)$this->db->insert($sql, [
             'category_name' => $item->categoryName,
-            'description' => $item->description,
             'is_active' => $item->isActive ? 1 : 0,
             'created_by' => $item->createdBy,
         ]);
@@ -68,7 +68,7 @@ class AccountReportCategoryRepository
             $this->db->execute($sql, $params);
             return true;
         } catch (\Throwable $e) {
-            error_log("AccountReportCategoryRepository: Update failed: " . $e->getMessage());
+            ErrorCapture::record("AccountReportCategoryRepository: Update failed: " . $e->getMessage());
             return false;
         }
     }
@@ -84,10 +84,12 @@ class AccountReportCategoryRepository
         return new AccountReportCategory(
             id: (int)$row['id'],
             categoryName: (string)($row['category_name'] ?? ''),
-            description: (string)($row['description'] ?? ''),
+            publish: (bool)($row['publish'] ?? true),
             isActive: (bool)($row['is_active'] ?? true),
             createdBy: (int)($row['created_by'] ?? 0),
             createdAt: (string)($row['created_at'] ?? ''),
+            updatedAt: (string)($row['updated_at'] ?? ''),
+            updatedBy: (int)($row['updated_by'] ?? 0),
         );
     }
 }

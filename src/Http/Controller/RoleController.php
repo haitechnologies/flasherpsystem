@@ -64,7 +64,8 @@ class RoleController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("role_names.php?id=$id&action=edit_role_names");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("RoleController::handleUpdate error: " . $e->getMessage());
             flash_error('The Role could not be updated.');
             return Response::redirect("role_names.php?id=$id&action=edit_role_names");
         }
@@ -84,7 +85,8 @@ class RoleController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("role_names.php");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("RoleController::handleCreate error: " . $e->getMessage());
             flash_error('The Role could not be saved.');
             return Response::redirect("role_names.php");
         }

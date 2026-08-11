@@ -51,7 +51,7 @@ class DepartmentService
      * @return Department
      * @throws ValidationException
      */
-    public function create(string $name, int $organizationId, int $createdBy): Department
+    public function create(string $name, int $organizationId, int $createdBy, ?string $email = null): Department
     {
         $name = trim($name);
         if ($name === '') {
@@ -67,6 +67,7 @@ class DepartmentService
             organizationId: $organizationId,
             department: $name,
             publish: true,
+            email: $email,
             createdBy: $createdBy
         );
 
@@ -83,7 +84,7 @@ class DepartmentService
      * @throws NotFoundException
      * @throws ValidationException
      */
-    public function update(int $id, string $name, bool $publish): Department
+    public function update(int $id, string $name, bool $publish, ?string $email = null): Department
     {
         $dept = $this->getById($id);
         $name = trim($name);
@@ -101,6 +102,7 @@ class DepartmentService
             organizationId: $dept->organizationId,
             department: $name,
             publish: $publish,
+            email: $email ?? $dept->email,
             createdAt: $dept->createdAt,
             updatedAt: null,
             createdBy: $dept->createdBy

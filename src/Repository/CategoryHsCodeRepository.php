@@ -7,6 +7,7 @@ namespace App\Repository;
 use App\Core\Database;
 use App\Core\DB;
 use App\Model\CategoryHsCode;
+use App\Core\ErrorCapture;
 
 class CategoryHsCodeRepository
 {
@@ -68,7 +69,7 @@ class CategoryHsCodeRepository
             $this->db->execute($sql, $params);
             return true;
         } catch (\Throwable $e) {
-            error_log("CategoryHsCodeRepository: Update failed: " . $e->getMessage());
+            ErrorCapture::record("CategoryHsCodeRepository: Update failed: " . $e->getMessage());
             return false;
         }
     }

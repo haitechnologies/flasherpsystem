@@ -20,6 +20,7 @@ $success_message = '';
 */
 include('admin_elements/permissions.php');
 
+$activeOrganizationId = dashboardRequireActiveOrganization();
 
 $limit              = 50;
 $stages             = 2;
@@ -161,13 +162,15 @@ $search_query = '';
 // $date_from              = processDateDtoY($date_from);
 // $date_to                = processDateDtoY($date_to);
 
+$date_from_ymd = (!empty($date_from)) ? processDateDtoY($date_from) : '';
+$date_to_ymd   = (!empty($date_to))   ? processDateDtoY($date_to)   : '';
 
-if (!empty($date_from)) {
-    $search_query .= " AND journal_date >= '" . processDateDtoY($date_from) . "'";
+if (!empty($date_from_ymd)) {
+    $search_query .= " AND journal_date >= '" . $date_from_ymd . "'";
 }
 
-if (!empty($date_to)) {
-    $search_query .= " AND journal_date <= '" . processDateDtoY($date_to) . "'";
+if (!empty($date_to_ymd)) {
+    $search_query .= " AND journal_date <= '" . $date_to_ymd . "'";
     $max_date = $date_to;
 }
 
@@ -178,6 +181,8 @@ if (!empty($report_basis)) {
     // Default to accrual if not specified
     $search_query .= " AND reporting_method = 'accrual'";
 }
+
+$search_query .= " AND organization_id = " . (int)$activeOrganizationId;
 
 
 // if ($action == "run_report") {
@@ -222,7 +227,7 @@ $accounts_report_category_name  = getTableAttr('category_name', tbl_accounts_rep
                     <div class="col-lg-6">
                         <div class="text-muted"><?php echo $accounts_report_category_name; ?></div>
                         <div class="mb-0">
-                            <span class="fw-semibold">Journal Report</span> - <span class="small">From <?php echo dd_($date_from); ?> To <?php echo dd_($date_to); ?></span>
+                            <span class="fw-semibold">Journal Report</span> - <span class="small">From <?php echo ddm_($date_from); ?> To <?php echo ddm_($date_to); ?></span>
                         </div>
                     </div>
 
@@ -355,7 +360,7 @@ $accounts_report_category_name  = getTableAttr('category_name', tbl_accounts_rep
             <div class="card-header text-center">
                 <p class="text-muted">Flash Logistics FZC</p>
                 <h5 class="mb-0">Journal Report</h5>
-                <p><span class="text-muted">From</span> <?php echo dd_($date_from); ?> <span class="text-muted">To</span> <?php echo dd_($date_to); ?></p>
+                <p><span class="text-muted">From</span> <?php echo ddm_($date_from); ?> <span class="text-muted">To</span> <?php echo ddm_($date_to); ?></p>
                 <p class="small"><span class="text-muted">Basis</span> : <?php echo ucfirst(!empty($report_basis) ? $report_basis : 'Accrual'); ?></p>
             </div>
         </div>
@@ -484,7 +489,7 @@ $accounts_report_category_name  = getTableAttr('category_name', tbl_accounts_rep
                                             <?php } elseif ($is_refund) { ?>
                                                 <span class="badge bg-info me-2">REFUND</span>
                                             <?php } ?>
-                                            <span class="opacity-50"><?php echo dd_($journal_date); ?></span> -
+                                            <span class="opacity-50"><?php echo ddm_($journal_date); ?></span> -
                                             <a href="<?php echo $source_link; ?>" class="fw-semibold"><?php echo strtoupper($source_label); ?></a>
                                             <span class="badge bg-secondary ms-2"><?php echo strtoupper($currency); ?></span>
                                             <?php if (!empty($journal_desc)): ?>

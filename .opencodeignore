@@ -2,6 +2,11 @@
 assets/
 uploads/
 pdfs_invoices/
+pdfs_credit_notes/
+pdfs_payments_received/
+pdfs_quotations/
+pdfs_recurring_invoices/
+pdfs_sale_orders/
 
 # Dependencies (never need context loading)
 vendor/
@@ -20,3 +25,19 @@ logs/
 *.min.js
 *.lock
 
+# Binary / export artifacts (keep out of agent context)
+*.xlsx
+*.pdf
+*.sql
+INVOICE*.xlsx
+
+# Logs & temp
+error_log.txt
+$tmp
+
+# Test scratch / dev scripts (keep context lean)
+tests/
+scripts/
+
+# Root scratch exports
+*.html

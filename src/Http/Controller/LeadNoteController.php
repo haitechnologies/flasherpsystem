@@ -72,8 +72,17 @@ class LeadNoteController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("lead_notes.php?lead_id={$leadId}&action=edit_lead_notes&note_id={$id}");
+        } catch (NotFoundException $e) {
+            flash_error($e->getMessage());
+            return Response::redirect("lead_notes.php?lead_id={$leadId}&action=edit_lead_notes&note_id={$id}");
         } catch (\Throwable $e) {
-            flash_error('The Note could not be updated.');
+            log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
+                'module' => 'lead_notes',
+                'module_slug' => 'lead_notes',
+                'stack_trace' => $e->getTraceAsString(),
+                'error_code' => (string)$e->getCode(),
+            ]));
+            flash_error('The Note could not be updated. ' . $e->getMessage());
             return Response::redirect("lead_notes.php?lead_id={$leadId}&action=edit_lead_notes&note_id={$id}");
         }
     }
@@ -97,8 +106,17 @@ class LeadNoteController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("lead_notes.php?lead_id={$leadId}");
+        } catch (NotFoundException $e) {
+            flash_error($e->getMessage());
+            return Response::redirect("lead_notes.php?lead_id={$leadId}");
         } catch (\Throwable $e) {
-            flash_error('The Note could not be saved.');
+            log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
+                'module' => 'lead_notes',
+                'module_slug' => 'lead_notes',
+                'stack_trace' => $e->getTraceAsString(),
+                'error_code' => (string)$e->getCode(),
+            ]));
+            flash_error('The Note could not be saved. ' . $e->getMessage());
             return Response::redirect("lead_notes.php?lead_id={$leadId}");
         }
     }
@@ -113,6 +131,12 @@ class LeadNoteController extends BaseController
             flash_success('Item deleted successfully.');
             return Response::redirect("lead_notes.php?lead_id={$leadId}");
         } catch (\Throwable $e) {
+            log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
+                'module' => 'lead_notes',
+                'module_slug' => 'lead_notes',
+                'stack_trace' => $e->getTraceAsString(),
+                'error_code' => (string)$e->getCode(),
+            ]));
             flash_error($e->getMessage());
             return Response::redirect("lead_notes.php?lead_id={$leadId}");
         }
@@ -146,6 +170,12 @@ class LeadNoteController extends BaseController
                     $notes = $note->notes ?? '';
                 }
             } catch (\Throwable $e) {
+                log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
+                    'module' => 'lead_notes',
+                    'module_slug' => 'lead_notes',
+                    'stack_trace' => $e->getTraceAsString(),
+                    'error_code' => (string)$e->getCode(),
+                ]));
                 $error_message = $e->getMessage();
             }
         }

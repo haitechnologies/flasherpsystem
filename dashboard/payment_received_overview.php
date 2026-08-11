@@ -1,13 +1,19 @@
 <?php
 
+use App\Core\Container;
+use App\Core\DB;
+use App\Core\Session;
 use App\Service\JournalService;
+
 include('admin_elements/admin_header.php');
 
 $module = 'payments_received';
 $module_caption = 'Payment Received';
-$tbl_name = $tbl_prefix . $module;
+$tbl_name = DB::PAYMENTS_RECEIVED;
 $error_message = '';
 $success_message = '';
+
+$activeOrganizationId = dashboardRequireActiveOrganization();
 
 /*
 |--------------------------------------------------------------------------
@@ -28,16 +34,26 @@ include('admin_elements/permissions.php');
 $payment_id = '';
 if (isset($_REQUEST['payment_id']))        $payment_id     = e_s__($_REQUEST['payment_id']);
 if (isset($_POST['payment_id']))           $payment_id     = e_s__($_POST['payment_id']);
+if (empty($payment_id) && isset($_REQUEST['payment_received_id'])) $payment_id = e_s__($_REQUEST['payment_received_id']);
 if (empty($payment_id) && isset($_REQUEST['id'])) $payment_id = e_s__($_REQUEST['id']);
 
 
 // ------------------ CHECK IF EXISTS ----------------
 //VERIFY IF IS VALID 
-$rs_valid     = $mysqli->query("SELECT id FROM `" . tbl_payments_received . "` WHERE id='" . $payment_id . "'");
+$rs_valid     = $mysqli->query("SELECT id FROM `" . DB::PAYMENTS_RECEIVED . "` WHERE id='" . $payment_id . "'");
 if ($rs_valid->num_rows == 0) {
     flash_error('Invalid Record in the database.');
     header("Location:listing_payments_received.php");
     exit;
+}
+
+// State-change actions are POST + CSRF only
+if (isset($_SERVER['REQUEST_METHOD']) && strtoupper($_SERVER['REQUEST_METHOD']) === 'POST' && !empty($action)) {
+    if (!validate_csrf_token($_POST['csrf_token'] ?? '')) {
+        flash_error('Invalid CSRF token. Please try again.');
+        header("Location:payment_received_overview.php?payment_received_id=$payment_id");
+        exit;
+    }
 }
 
 
@@ -62,7 +78,7 @@ if (isset($_REQUEST['payment_status']) && !empty($_REQUEST['payment_status'])) {
 
 
 // ------------------ IF ID DOES NOT EXIST - REDIRECT TO LISTING ----------------
-$rs_exists     = $mysqli->query("SELECT id FROM `" . tbl_payments_received . "` WHERE id ='" . $id . "' ");
+$rs_exists     = $mysqli->query("SELECT id FROM `" . DB::PAYMENTS_RECEIVED . "` WHERE id ='" . $id . "' ");
 if ($rs_exists->num_rows == 0) {
     // header("Location:listing_$module.php?error_message=You are not Autorized to view the Record you're trying to access.");
 }
@@ -87,6 +103,7 @@ if (isset($_REQUEST['payment_status']) && !empty($_REQUEST['payment_status'])) {
 
 // IF EMPTY ID - EXIT
 if (isset($_REQUEST['payment_id']))     $id     = e_s__($_REQUEST['payment_id']);
+if (empty($id) && isset($_REQUEST['payment_received_id'])) $id = e_s__($_REQUEST['payment_received_id']);
 // if (empty($id)) header("Location:listing_$module.php");;
 
 
@@ -112,11 +129,16 @@ if (($action == "update_$module" && !empty($payment_id))) {
     }
     
     if ($new_payment_status == 'paid') {
+        // Skip if already paid and journal already posted
+        $existing_journal = getTableAttrV('id', DB::JOURNALS, " reference_type='payment_received' AND reference_id='$payment_id' ");
+        if (!empty($existing_journal)) {
+            flash_success('Payment is already marked as paid.');
+            header("Location:payment_received_overview.php?payment_received_id=$payment_id");
+            exit;
+        }
+
         // Update payment status to paid
-        $mysqli->query("UPDATE `$tbl_name` SET payment_status='paid' WHERE id=$payment_id");
-        
-        // Create journal entry for the payment
-        $journalManager = new JournalService();
+        $mysqli->query("UPDATE `$tbl_name` SET payment_status='paid' WHERE id=$payment_id AND organization_id=$activeOrganizationId");
         
         // Get payment details
         $result_payment = $mysqli->query("SELECT * FROM `$tbl_name` WHERE id=$payment_id");
@@ -127,39 +149,30 @@ if (($action == "update_$module" && !empty($payment_id))) {
         $total_amount_received = $row_payment['total_amount_received'];
         $customer_id = $row_payment['customer_id'];
         
-        // Get payment items to create journal entries
-        $journal_entries = array();
+        // Look up Accounts Receivable dynamically
+        $row_ar = $mysqli->query("SELECT id FROM `" . DB::ACCOUNTS . "` WHERE account_code IN ('1200','1210','1100') OR account_name LIKE '%Receivable%' LIMIT 1");
+        $accounts_receivable_id = $row_ar && $row_ar->num_rows > 0 ? $row_ar->fetch_array()['id'] : 0;
         
-        // Debit: Bank/Cash account (Asset ↑)
-        $journal_entries[] = array(
-            'account' => $deposit_to,
-            'amount' => $total_amount_received,
-            'type' => 'debit'
-        );
-        
-        // Credit: Accounts Receivable (Asset ↓)
-        $accounts_receivable_id = 124; // ID from fls_accounts
-        $journal_entries[] = array(
-            'account' => $accounts_receivable_id,
-            'amount' => $total_amount_received,
-            'type' => 'credit'
-        );
-        
-        // Create journal entry
+        $journalManager = Container::getInstance()->get(JournalService::class);
         $journal_data = array(
             'journal_date' => $payment_date,
+            'journal_status' => 'posted',
             'reference_type' => 'payment_received',
-            'reference_id' => $payment_id,
-            'created_by' => Session::userId(),
-            'grand_subtotal' => $total_amount_received,
-            'grand_total' => $total_amount_received,
-            'reporting_method' => 'cash'
+            'reference_id' => (int)$payment_id,
+            'reference_no' => $row_payment['payment_no'] ?? '',
+            'notes' => 'Payment Received #' . $payment_id,
+            'reporting_method' => 'cash',
+            'currency' => 'AED'
+        );
+        $journal_items = array(
+            array('account' => (int)$deposit_to, 'debit' => (float)$total_amount_received, 'credit' => 0.0),
+            array('account' => (int)$accounts_receivable_id, 'debit' => 0.0, 'credit' => (float)$total_amount_received)
         );
         
         try {
-            $journalManager->createJournalEntry($journal_data, $journal_entries);
+            $journalManager->createJournal($journal_data, $journal_items, (int)$activeOrganizationId, (int)Session::userId());
             $success_message = "Payment marked as paid and journal entry created.";
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             $error_message = "Payment marked as paid but journal entry failed: " . $e->getMessage();
         }
         
@@ -192,8 +205,8 @@ if (($action == "convert_$module" && !empty($payment_id))) {
     $warehouse_id = 1; // Default warehouse
     $result_warehouse = $mysqli->query("
         SELECT i.warehouse_id 
-        FROM `" . tbl_invoices . "` i
-        INNER JOIN `" . tbl_payment_received_items . "` pri ON i.id = pri.invoice_id
+        FROM `" . DB::INVOICES . "` i
+        INNER JOIN `" . DB::PAYMENT_RECEIVED_ITEMS . "` pri ON i.id = pri.invoice_id
         WHERE pri.payment_id = $payment_id
         LIMIT 1
     ");
@@ -207,7 +220,7 @@ if (($action == "convert_$module" && !empty($payment_id))) {
     // INVOICE NO Auto Generation System
     // ======================================================
     $prefix = 'FL-IN' . date('ym');
-    $sql = "SELECT invoice_no FROM `" . tbl_invoices . "` WHERE invoice_no LIKE '{$prefix}-%' ORDER BY invoice_no DESC LIMIT 1";
+    $sql = "SELECT invoice_no FROM `" . DB::INVOICES . "` WHERE invoice_no LIKE '{$prefix}-%' ORDER BY invoice_no DESC LIMIT 1";
     $result_invoice_no = $mysqli->query($sql);
     
     if ($row_invoice_no = $result_invoice_no->fetch_assoc()) {
@@ -221,27 +234,24 @@ if (($action == "convert_$module" && !empty($payment_id))) {
     
     // Create new invoice from payment
     $invoice_subject = 'Invoice from Payment #' . $payment_id;
-    $result = $mysqli->query("INSERT INTO `" . tbl_invoices . "` 
-        (customer_id, warehouse_id, subject, reference_no, invoice_date, expiry_date, 
+    $result = $mysqli->query("INSERT INTO `" . DB::INVOICES . "` 
+        (customer_id, warehouse_id, subject, reference_no, invoice_no, invoice_date, expiry_date, 
          grand_subtotal, grand_discount_type, grand_discount_type_value, grand_discount_amount, 
-         grand_after_discount, grand_tax, grand_total, invoice_status, is_active, created_at, updated_at)
+         grand_after_discount, grand_tax, grand_total, invoice_status, is_active, organization_id, created_at, updated_at)
         VALUES 
-        ('$payment_customer_id', '$warehouse_id', '$invoice_subject', '$payment_reference', '$payment_date', '$payment_date',
-         '$payment_amount', 'percentage', '0', '0', '$payment_amount', '0', '$payment_amount', 'draft', '1', NOW(), NOW())");
+        ('$payment_customer_id', '$warehouse_id', '$invoice_subject', '$payment_reference', '$invoice_no', '$payment_date', '$payment_date',
+         '$payment_amount', 'percentage', '0', '0', '$payment_amount', '0', '$payment_amount', 'draft', '1', '" . (int)$activeOrganizationId . "', NOW(), NOW())");
     
     $new_invoice_id = $mysqli->insert_id;
-    fp__(tbl_invoices, $new_invoice_id);
-    
-    // Update invoice with generated number
-    $mysqli->query("UPDATE `" . tbl_invoices . "` SET invoice_no = '" . $invoice_no . "' WHERE id=$new_invoice_id");
+    fp__(DB::INVOICES, $new_invoice_id);
     
     // Create invoice item from payment
-    $result = $mysqli->query("INSERT INTO `" . tbl_invoice_items . "` 
-        (invoice_id, service, description, qty, rate, discount_type, discount_type_value, discount_amount, tax, tax_amount, sub_total, total, created_at, updated_at, created_by)
+    $result = $mysqli->query("INSERT INTO `" . DB::INVOICE_ITEMS . "` 
+        (invoice_id, service, description, qty, rate, discount_type, discount_type_value, discount_amount, tax, tax_amount, sub_total, total, organization_id, created_at, updated_at, created_by)
         VALUES 
-        ('$new_invoice_id', '1', 'Payment Receipt #$payment_id', '1', '$payment_amount', 'percentage', '0', '0', '0', '0', '$payment_amount', '$payment_amount', NOW(), NOW(), '" . Session::userId() . "')");
+        ('$new_invoice_id', '1', 'Payment Receipt #$payment_id', '1', '$payment_amount', 'percentage', '0', '0', '0', '0', '$payment_amount', '$payment_amount', '" . (int)$activeOrganizationId . "', NOW(), NOW(), '" . Session::userId() . "')");
     
-    fp__(tbl_invoice_items, $mysqli->insert_id);
+    fp__(DB::INVOICE_ITEMS, $mysqli->insert_id);
     
     $success_message = 'Payment has been converted to Invoice successfully. <a href="invoice_overview.php?invoice_id=' . $new_invoice_id . '"> ' . $invoice_no . '</a>';
     flash_success($success_message);
@@ -268,44 +278,35 @@ if (($action == "void_$module" && !empty($payment_id))) {
     $total_amount_received = $row_payment['total_amount_received'];
     
     // Check if payment is already paid (has journal entries)
-    $journal_id = getTableAttrV('id', tbl_journals, " reference_type='payment_received' AND reference_id='$payment_id' ");
+    $journal_id = getTableAttrV('id', DB::JOURNALS, " reference_type='payment_received' AND reference_id='$payment_id' ");
     
     if (!empty($journal_id)) {
         // Payment was paid, create reversing journal entry
-        $journalManager = new JournalService();
+        $journalManager = Container::getInstance()->get(JournalService::class);
         
-        // Create reversing journal entries (opposite of original)
-        $journal_entries = array();
+        // Look up Accounts Receivable dynamically
+        $row_ar = $mysqli->query("SELECT id FROM `" . DB::ACCOUNTS . "` WHERE account_code IN ('1200','1210','1100') OR account_name LIKE '%Receivable%' LIMIT 1");
+        $accounts_receivable_id = $row_ar && $row_ar->num_rows > 0 ? $row_ar->fetch_array()['id'] : 0;
         
-        // Credit: Bank/Cash account (Asset ↓ - reversing the debit)
-        $journal_entries[] = array(
-            'account' => $deposit_to,
-            'amount' => $total_amount_received,
-            'type' => 'credit'
+        $journal_items = array(
+            array('account' => (int)$deposit_to, 'debit' => 0.0, 'credit' => (float)$total_amount_received),
+            array('account' => (int)$accounts_receivable_id, 'debit' => (float)$total_amount_received, 'credit' => 0.0)
         );
         
-        // Debit: Accounts Receivable (Asset ↑ - reversing the credit)
-        $accounts_receivable_id = 124; // ID from fls_accounts
-        $journal_entries[] = array(
-            'account' => $accounts_receivable_id,
-            'amount' => $total_amount_received,
-            'type' => 'debit'
-        );
-        
-        // Create reversing journal entry
         $journal_data = array(
             'journal_date' => date('Y-m-d'),
+            'journal_status' => 'posted',
             'reference_type' => 'payment_received_void',
-            'reference_id' => $payment_id,
-            'created_by' => Session::userId(),
-            'grand_subtotal' => $total_amount_received,
-            'grand_total' => $total_amount_received,
-            'reporting_method' => 'cash'
+            'reference_id' => (int)$payment_id,
+            'reference_no' => $row_payment['payment_no'] ?? '',
+            'notes' => 'Payment Voided #' . $payment_id,
+            'reporting_method' => 'cash',
+            'currency' => 'AED'
         );
         
         try {
-            $journalManager->createJournalEntry($journal_data, $journal_entries);
-        } catch (Exception $e) {
+            $journalManager->createJournal($journal_data, $journal_items, (int)$activeOrganizationId, (int)Session::userId());
+        } catch (\Throwable $e) {
             $error_message = "Void failed during journal reversal: " . $e->getMessage();
             flash_error($error_message);
             header("Location:payment_received_overview.php?payment_id=$payment_id");
@@ -314,7 +315,7 @@ if (($action == "void_$module" && !empty($payment_id))) {
     }
     
     // Update payment status to void
-    $mysqli->query("UPDATE `$tbl_name` SET payment_status='void' WHERE id=$payment_id");
+    $mysqli->query("UPDATE `$tbl_name` SET payment_status='void' WHERE id=$payment_id AND organization_id=$activeOrganizationId");
     
     $success_message = "Payment has been voided successfully.";
     flash_success($success_message);
@@ -361,36 +362,37 @@ if (!empty($id)) {
     $row = $result->fetch_array();
 
     // $invoice_id             = s__($row['invoice_id']);
-    // $invoice_no             = getTableAttr('invoice_no', tbl_invoices, $invoice_id);
+    // $invoice_no             = getTableAttr('invoice_no', DB::INVOICES, $invoice_id);
 
-    // $invoice_date           = getTableAttr('invoice_date', tbl_invoices, $invoice_id);
-    $invoice_date               = (!empty($invoice_date) ? dd_($invoice_date) : '');
+    // $invoice_date           = getTableAttr('invoice_date', DB::INVOICES, $invoice_id);
+    $invoice_date               = (!empty($invoice_date) ? ddm_($invoice_date) : '');
 
-    // $invoice_amount         = getTableAttr('grand_total', tbl_invoices, $invoice_id);
+    // $invoice_amount         = getTableAttr('grand_total', DB::INVOICES, $invoice_id);
 
     $total_amount_received      = s__($row['total_amount_received']);
     $payment_date               = s__($row['payment_date']);
     $reference_no               = s__($row['reference_no']);
+    $payment_no                 = s__($row['payment_no'] ?? '');
 
     $payment_method             = s__($row['payment_method']);
-    $payment_method             = getTableAttr('payment_method', tbl_payment_methods, $payment_method);
+    $payment_method             = getTableAttr('payment_method', DB::PAYMENT_METHODS, $payment_method);
 
     // $payment_date           = processDateYtoD($payment_date);
     $payment_date               = s__($row['payment_date']);
-    $payment_date               = dd_($payment_date);
+    $payment_date               = ddm_($payment_date);
 
     $customer_id                = s__($row['customer_id']);
-    $customer_name              = getTableAttr('display_name', tbl_customers, $customer_id);
+    $customer_name              = getTableAttr('display_name', DB::CUSTOMERS, $customer_id);
 
     $deposit_to                 = s__($row['deposit_to']);
-    $deposit_to                 = getTableAttr("account_name", tbl_accounts, $deposit_to);
+    $deposit_to                 = getTableAttr("account_name", DB::ACCOUNTS, $deposit_to);
     
     $payment_status             = s__($row['payment_status']);
     $is_void                    = ($payment_status === 'void');
-    $is_refund                  = ($payment_status === 'refunded');
+    $is_refund                  = ($payment_status === 'refund');
 
     // ------------------ TOTAL ITEMS ------------------
-    // $result_payment_received_items     = $mysqli->query("SELECT * FROM `" . tbl_payments_received . "` WHERE id=$id ORDER BY id");
+    // $result_payment_received_items     = $mysqli->query("SELECT * FROM `" . DB::PAYMENTS_RECEIVED . "` WHERE id=$id ORDER BY id");
     // $total_rows                 = $result_payment_received_items->num_rows;
 
 
@@ -462,7 +464,7 @@ if ($total_rows == 0)           $total_rows = 1;
                             <div class="row">
                                 <?php
                                 $warehouse_information = '';
-                                $rs_warehouse   = $mysqli->query("SELECT * FROM `" . tbl_warehouses . "` WHERE id=1");
+                                $rs_warehouse   = $mysqli->query("SELECT * FROM `" . DB::WAREHOUSES . "` WHERE id=1");
                                 $row_warehouse  = $rs_warehouse->fetch_array();
 
                                 $warehouse_no       = s__($row_warehouse['warehouse_no']);
@@ -471,10 +473,10 @@ if ($total_rows == 0)           $total_rows = 1;
                                 $street2            = s__($row_warehouse['street2']);
 
                                 $country            = s__($row_warehouse['country']);
-                                $country            = getTableAttr('country_name', tbl_geo_countries, $country);
+                                $country            = getTableAttr('country_name', DB::GEO_COUNTRIES, $country);
 
                                 $state              = s__($row_warehouse['state']);
-                                $state            = getTableAttr('state_name', tbl_geo_states, $state);
+                                $state            = getTableAttr('state_name', DB::GEO_STATES, $state);
 
                                 $phone              = s__($row_warehouse['phone']);
                                 $email              = s__($row_warehouse['email']);
@@ -507,16 +509,16 @@ if ($total_rows == 0)           $total_rows = 1;
 
                         // ------------------------------------------------------------------------------------------------
                         $inv_no = '';
-                        $rs_inv = $mysqli->query("SELECT * FROM `" . tbl_payment_received_items . "` WHERE payment_id=$payment_id");
+                        $rs_inv = $mysqli->query("SELECT * FROM `" . DB::PAYMENT_RECEIVED_ITEMS . "` WHERE payment_id=$payment_id");
                         // $row = $rs_inv->fetch_array();
                         while ($row_inv = $rs_inv->fetch_array()) {
                             $inv_id   = s__($row_inv['invoice_id']);
-                            $inv_no = getTableAttr("invoice_no", tbl_invoices, $inv_id);
+                            $inv_no = getTableAttr("invoice_no", DB::INVOICES, $inv_id);
                         }
                         // ------------------------------------------------------------------------------------------------
                         // Note: Variables already loaded earlier in the code (lines 215-240)
-                        // Just update invoice_no from the items query
-                        $invoice_no = $inv_no;
+                        // Just update invoice_no from the items query; fall back to payment number when no items exist
+                        $invoice_no = $inv_no !== '' ? $inv_no : (($payment_no !== '' && $payment_no !== '0') ? $payment_no : '#' . $payment_id);
                         ?>
                         <div class="table-responsive">
                             <div class="table-responsive">
@@ -579,15 +581,15 @@ if ($total_rows == 0)           $total_rows = 1;
 
                                     <?php
                                     // ------------------------------------------------------------------
-                                    $rs_items     = $mysqli->query("SELECT * FROM `" . tbl_payment_received_items . "` WHERE payment_id=$payment_id");
+                                    $rs_items     = $mysqli->query("SELECT * FROM `" . DB::PAYMENT_RECEIVED_ITEMS . "` WHERE payment_id=$payment_id");
                                     if ($rs_items && $rs_items->num_rows > 0) {
                                         while ($row_items = $rs_items->fetch_array()) {
 
                                             $invoice_id             = $row_items['invoice_id'];
 
-                                            $invoice_no             = getTableAttr('invoice_no', tbl_invoices, $invoice_id);
-                                            $invoice_date           = getTableAttr('invoice_date', tbl_invoices, $invoice_id);
-                                            $invoice_amount         = getTableAttr('grand_total', tbl_invoices, $invoice_id);
+                                            $invoice_no             = getTableAttr('invoice_no', DB::INVOICES, $invoice_id);
+                                            $invoice_date           = getTableAttr('invoice_date', DB::INVOICES, $invoice_id);
+                                            $invoice_amount         = getTableAttr('grand_total', DB::INVOICES, $invoice_id);
 
                                             $amount_received_on     = $row_items['amount_received_on'];
                                             $amount_received        = $row_items['amount_received'];
@@ -595,7 +597,7 @@ if ($total_rows == 0)           $total_rows = 1;
                                     ?>
                                         <tr>
                                             <td><a href="invoice_overview.php?invoice_id=<?php echo $invoice_id; ?>"><?php echo $invoice_no; ?></a></td>
-                                            <td><?php echo dd_($invoice_date); ?></td>
+                                            <td><?php echo ddm_($invoice_date); ?></td>
                                             <td class="text-end"><?php echo BASE_CURRENCY['code']; ?> <?php echo (!empty($invoice_amount) ? dec_($invoice_amount) : '0.00'); ?></td>
                                             <td class="text-end"><?php echo BASE_CURRENCY['code']; ?> <?php echo (!empty($amount_received) ? dec_($amount_received) : '0.00'); ?></td>
                                         </tr>
@@ -635,7 +637,7 @@ if ($total_rows == 0)           $total_rows = 1;
                 <?php
                 // ---------------------------------------------------------------------------------------------------------------------------------------
                 // Get all journal entries for this payment - both original and void entries
-                $rs_all_journals = $mysqli->query("SELECT id, reference_type, journal_date FROM `" . tbl_journals . "` WHERE (reference_type='payment_received' OR reference_type='payment_received_void' OR reference_type='payment_received_refund') AND reference_id='$payment_id' ORDER BY id ASC");
+                $rs_all_journals = $mysqli->query("SELECT id, reference_type, journal_date FROM `" . DB::JOURNALS . "` WHERE (reference_type='payment_received' OR reference_type='payment_received_void' OR reference_type='payment_received_refund') AND reference_id='$payment_id' ORDER BY id ASC");
                 
                 if ($rs_all_journals && $rs_all_journals->num_rows > 0) {
                     while ($row_journal = $rs_all_journals->fetch_array()) {
@@ -668,7 +670,7 @@ if ($total_rows == 0)           $total_rows = 1;
                             </p>
 
                             <div class="ms-auto small text-muted">
-                                <?php echo dd_($journal_date); ?> | 
+                                <?php echo ddm_($journal_date); ?> | 
                                 Amount is displayed in your base currency <span class="badge bg-success"><?php echo BASE_CURRENCY['code']; ?></span>
                             </div>
                         </div>
@@ -692,11 +694,11 @@ if ($total_rows == 0)           $total_rows = 1;
                                     // -------- JOURNAL ITEMS FOR THIS ENTRY
                                     //-------------------------------------------------------------------
 
-                                    $result_journal_items = $mysqli->query("SELECT * FROM `" . tbl_journal_items . "` WHERE journal_id=$current_journal_id");
+                                    $result_journal_items = $mysqli->query("SELECT * FROM `" . DB::JOURNAL_ITEMS . "` WHERE journal_id=$current_journal_id");
                                     while ($row_journal_items = $result_journal_items->fetch_array()) {
 
                                         $account    = $row_journal_items['account'];
-                                        $account    = getTableAttr('account_name', tbl_accounts, $account);
+                                        $account    = getTableAttr('account_name', DB::ACCOUNTS, $account);
                                         $debit      = $row_journal_items['debit'];
                                         $credit     = $row_journal_items['credit'];
 

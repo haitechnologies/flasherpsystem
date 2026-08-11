@@ -36,14 +36,14 @@ class PurchaseOrderService
         return $order;
     }
 
-    public function getPurchaseOrderItems(int $purchaseOrderId, int $orgId): array
+    public function getPurchaseOrderItems(int $purchaseOrderId): array
     {
-        return $this->purchaseOrderRepo->findItemsByPurchaseOrder($purchaseOrderId, $orgId);
+        return $this->purchaseOrderRepo->findItemsByPurchaseOrder($purchaseOrderId);
     }
 
     public function createPurchaseOrder(array $data, array $itemsData, int $orgId, int $userId): PurchaseOrder
     {
-        $this->validatePurchaseOrderData($data);
+        $this->validatePurchaseOrderData($data, $orgId);
 
         if (empty($itemsData)) {
             throw new ValidationException(['items' => "No items added. Please add at least one item."]);
@@ -58,6 +58,7 @@ class PurchaseOrderService
                 organizationId: $orgId,
                 purchaseOrderDate: $purchaseOrderDate,
                 vendorId: (int)($data['vendor_id'] ?? 0),
+                purchaseOrderNo: $this->purchaseOrderRepo->generatePurchaseOrderNo($orgId),
                 purchaseOrderStatus: !empty($data['purchase_order_status']) ? trim((string)$data['purchase_order_status']) : 'draft',
                 referenceNo: !empty($data['reference_no']) ? trim((string)$data['reference_no']) : null,
                 subject: !empty($data['subject']) ? trim((string)$data['subject']) : null,
@@ -114,7 +115,7 @@ class PurchaseOrderService
     public function updatePurchaseOrder(int $id, array $data, array $itemsData, int $orgId, int $userId): PurchaseOrder
     {
         $order = $this->getPurchaseOrder($id, $orgId);
-        $this->validatePurchaseOrderData($data);
+        $this->validatePurchaseOrderData($data, $orgId);
 
         $this->db->beginTransaction();
         try {
@@ -125,6 +126,7 @@ class PurchaseOrderService
                 organizationId: $order->organizationId,
                 purchaseOrderDate: $purchaseOrderDate,
                 vendorId: isset($data['vendor_id']) ? (int)$data['vendor_id'] : $order->vendorId,
+                purchaseOrderNo: $order->purchaseOrderNo,
                 purchaseOrderStatus: isset($data['purchase_order_status']) ? (!empty($data['purchase_order_status']) ? trim((string)$data['purchase_order_status']) : 'draft') : $order->purchaseOrderStatus,
                 referenceNo: isset($data['reference_no']) ? (!empty($data['reference_no']) ? trim((string)$data['reference_no']) : null) : $order->referenceNo,
                 subject: isset($data['subject']) ? (!empty($data['subject']) ? trim((string)$data['subject']) : null) : $order->subject,
@@ -145,7 +147,7 @@ class PurchaseOrderService
 
             $savedOrder = $this->purchaseOrderRepo->save($updatedOrder);
 
-            $existingItems = $this->purchaseOrderRepo->findItemsByPurchaseOrder($id, $orgId);
+            $existingItems = $this->purchaseOrderRepo->findItemsByPurchaseOrder($id);
             $existingIds = array_map(fn($item) => $item->id, $existingItems);
             $incomingIds = [];
 
@@ -181,7 +183,7 @@ class PurchaseOrderService
 
             $deletedIds = array_diff($existingIds, $incomingIds);
             if (!empty($deletedIds)) {
-                $this->purchaseOrderRepo->deleteItemsByIds($deletedIds, $id, $orgId);
+                $this->purchaseOrderRepo->deleteItemsByIds($deletedIds, $id);
             }
 
             $this->db->commit();
@@ -208,18 +210,21 @@ class PurchaseOrderService
         }
     }
 
-    private function validatePurchaseOrderData(array $data): void
+    private function validatePurchaseOrderData(array $data, int $orgId): void
     {
         if (empty($data['vendor_id']) || (int)$data['vendor_id'] <= 0) {
             throw new ValidationException(['vendor_id' => "Please select Vendor."]);
         }
         // Verify vendor exists
-        $vendor = $this->vendorRepo->find((int)$data['vendor_id']);
+        $vendor = $this->vendorRepo->find((int)$data['vendor_id'], $orgId);
         if ($vendor === null) {
             throw new ValidationException(['vendor_id' => "Selected vendor does not exist."]);
         }
         if (empty($data['purchase_order_date'])) {
             throw new ValidationException(['purchase_order_date' => "Please select Purchase Order Date."]);
+        }
+        if (empty($data['warehouse_id']) || $data['warehouse_id'] === 'Please select') {
+            throw new ValidationException(['warehouse_id' => "Please select Warehouse."]);
         }
     }
 

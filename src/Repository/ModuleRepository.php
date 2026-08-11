@@ -7,6 +7,7 @@ namespace App\Repository;
 use App\Core\Database;
 use App\Core\DB;
 use App\Model\Module;
+use App\Core\ErrorCapture;
 
 class ModuleRepository
 {
@@ -68,7 +69,7 @@ class ModuleRepository
             $this->db->execute($sql, $params);
             return true;
         } catch (\Throwable $e) {
-            error_log("ModuleRepository: Update failed: " . $e->getMessage());
+            ErrorCapture::record("ModuleRepository: Update failed: " . $e->getMessage());
             return false;
         }
     }

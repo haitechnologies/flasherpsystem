@@ -7,6 +7,7 @@ namespace App\Repository;
 use App\Core\Database;
 use App\Core\DB;
 use App\Model\SalaryStructure;
+use App\Core\ErrorCapture;
 
 class SalaryStructureRepository
 {
@@ -86,7 +87,7 @@ class SalaryStructureRepository
             $this->db->execute($sql, $params);
             return true;
         } catch (\Throwable $e) {
-            error_log("SalaryStructureRepository: Update failed: " . $e->getMessage());
+            ErrorCapture::record("SalaryStructureRepository: Update failed: " . $e->getMessage());
             return false;
         }
     }

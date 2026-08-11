@@ -64,6 +64,14 @@ class CronJobScheduler {
             'schedule' => '0 4 * * 0',
             'description' => 'Clean up old database records'
         ],
+
+        // Recurring invoice jobs
+        'recurring:invoice' => [
+            'class' => 'RecurringInvoiceCron',
+            'path' => 'invoices/RecurringInvoiceCron.php',
+            'schedule' => '0 6 * * *',
+            'description' => 'Generate due recurring invoices'
+        ],
     ];
     
     /**
@@ -261,7 +269,8 @@ class CronJobScheduler {
         
         $categories = [
             'Email Jobs' => ['email:queue', 'email:bounce', 'email:cleanup', 'email:stats'],
-            'Database Jobs' => ['db:backup', 'db:cleanup']
+            'Database Jobs' => ['db:backup', 'db:cleanup'],
+            'Invoice Jobs' => ['recurring:invoice']
         ];
         
         foreach ($categories as $category => $jobNames) {

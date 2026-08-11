@@ -158,9 +158,6 @@ class DB
     /** System modules table */
     public const MODULES = self::PREFIX . 'modules';
 
-    /** Schema migration tracking */
-    public const SCHEMA_MIGRATIONS = self::PREFIX . 'schema_migrations';
-
     /** @deprecated Merged into BACKEND_ERROR_LOGS — kept for backward compat */
     public const ERROR_LOG_STATUS = self::PREFIX . 'error_log_status';
 
@@ -529,6 +526,9 @@ class DB
     /** Vendor attachments */
     public const VENDOR_ATTACHMENTS = self::PREFIX . 'attachments';
 
+    /** Vendor transactions (purchase-side) */
+    public const VENDOR_TRANSACTIONS = self::PREFIX . 'vendor_transactions';
+
     /** Purchase transactions */
     public const PURCHASES = self::PREFIX . 'purchases';
 
@@ -565,6 +565,9 @@ class DB
 
     /** Expense line items */
     public const EXPENSE_ITEMS = self::PREFIX . 'expense_items';
+
+    /** Expense attachments (receipts) */
+    public const EXPENSE_ATTACHMENTS = self::PREFIX . 'expense_attachments';
 
     // ================================
     // ACCOUNTING - BANKING & FINANCE SETUP

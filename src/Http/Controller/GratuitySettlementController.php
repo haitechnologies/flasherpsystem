@@ -80,6 +80,7 @@ class GratuitySettlementController extends BaseController
             flash_error($error);
             return Response::redirect("gratuity_settlements.php?id=$id&action=edit_gratuity_settlements");
         } catch (\Throwable $e) {
+            $this->logError("GratuitySettlementController::handleUpdate error: " . $e->getMessage());
             flash_error('The gratuity settlement could not be updated.');
             return Response::redirect("gratuity_settlements.php?id=$id&action=edit_gratuity_settlements");
         }
@@ -108,6 +109,7 @@ class GratuitySettlementController extends BaseController
             flash_error($error);
             return Response::redirect('gratuity_settlements.php');
         } catch (\Throwable $e) {
+            $this->logError("GratuitySettlementController::handleCreate error: " . $e->getMessage());
             flash_error('The gratuity settlement could not be saved.');
             return Response::redirect('gratuity_settlements.php');
         }
@@ -133,6 +135,7 @@ class GratuitySettlementController extends BaseController
         } catch (ValidationException $e) {
             return Response::json(['success' => false, 'error' => current($e->getErrors())]);
         } catch (\Throwable $e) {
+            $this->logError("GratuitySettlementController::handleCalculate error: " . $e->getMessage());
             return Response::json(['success' => false, 'error' => 'Calculation failed: ' . $e->getMessage()]);
         }
     }

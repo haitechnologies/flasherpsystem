@@ -132,14 +132,40 @@ if (!empty($id)) {
     $created_by             = s__($row['created_by']);
 }
 
+?>
+<?php
 // $photo = getTableAttr('photo', $tbl_name, $id);
 /*
 |--------------------------------------------------------------------------
-|--------------------------------------------------------------------------
+| EMAIL HISTORY — dynamic system mails for this customer
 |--------------------------------------------------------------------------
 */
-?>
 
+$customer_email = '';
+$email_history = array();
+
+if (!empty($customer_id)) {
+    $stmt_cust = $mysqli->prepare("SELECT email FROM `" . DB::CUSTOMERS . "` WHERE id = ? AND organization_id = ?");
+    $cid = (int)$customer_id;
+    $oid = (int)$activeOrganizationId;
+    $stmt_cust->bind_param('ii', $cid, $oid);
+    $stmt_cust->execute();
+    $stmt_cust->bind_result($customer_email);
+    $stmt_cust->fetch();
+    $stmt_cust->close();
+
+    if (!empty($customer_email)) {
+        $stmt_mails = $mysqli->prepare("SELECT id, recipient_email, subject, body, from_name, from_email, sent_at, status FROM `" . DB::EMAIL_HISTORY . "` WHERE recipient_email = ? AND status = 'sent' ORDER BY sent_at DESC, id DESC");
+        $stmt_mails->bind_param('s', $customer_email);
+        $stmt_mails->execute();
+        $result_mails = $stmt_mails->get_result();
+        while ($mail_row = $result_mails->fetch_assoc()) {
+            $email_history[] = $mail_row;
+        }
+        $stmt_mails->close();
+    }
+}
+?>
 
 <style>
     /* .timeline {
@@ -248,23 +274,32 @@ if (!empty($id)) {
                                         </div>
 
                                         <div class="card-body">
-                                            <div class="d-flex align-items-start mb-3">
-                                                <div class="me-3 position-relative">
-                                                    <div class="bg-success bg-opacity-10 text-success lh-1 rounded-pill p-2">
-                                                        <i class="ph-envelope"></i>
+                                            <?php if (empty($email_history)) { ?>
+                                                <div class="text-muted">No emails sent to this customer yet.</div>
+                                            <?php } else { ?>
+                                                <?php foreach ($email_history as $mail) { ?>
+                                                    <div class="d-flex align-items-start mb-3">
+                                                        <div class="me-3 position-relative">
+                                                            <div class="bg-success bg-opacity-10 text-success lh-1 rounded-pill p-2">
+                                                                <i class="ph-envelope"></i>
+                                                            </div>
+                                                        </div>
+
+                                                        <div class="flex-fill">
+                                                            <div class="d-flex justify-content-between align-items-center">
+                                                                <div><span class="text-muted">To</span> <?php echo s__($mail['recipient_email']); ?></div>
+                                                                <span class="fs-sm text-muted"><?php echo dd_($mail['sent_at'], 'd M Y g:ia'); ?></span>
+                                                            </div>
+
+                                                            <div class="fw-semibold"><?php echo s__($mail['subject']); ?></div>
+
+                                                            <?php if (!empty($mail['body'])) { ?>
+                                                                <div class="fs-sm text-muted mt-1 email-body-preview" style="white-space: pre-line;"><?php echo s__($mail['body']); ?></div>
+                                                            <?php } ?>
+                                                        </div>
                                                     </div>
-                                                </div>
-
-                                                <div class="flex-fill">
-                                                    <div class="d-flex justify-content-between align-items-center">
-                                                        <div><span class="text-muted">To</span> imrangconnect@gmail.com</div>
-                                                        <span class="fs-sm text-muted">21 Aug 2025 09:51 PM</span>
-                                                    </div>
-
-                                                    Quote Notification - Quote - QT-000001 is awaiting your approval
-                                                </div>
-                                            </div>
-
+                                                <?php } ?>
+                                            <?php } ?>
                                         </div>
                                     </div>
  
@@ -283,7 +318,6 @@ if (!empty($id)) {
     <!-- /content area -->
 
     <?php include('admin_elements/copyright.php'); ?>
-</div>
 </div>
 
 <?php include('admin_elements/admin_footer.php'); ?>

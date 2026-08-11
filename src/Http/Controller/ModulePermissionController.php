@@ -64,7 +64,8 @@ class ModulePermissionController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("permission_names.php?id=$id&action=edit_permission_names");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("ModulePermissionController::handleUpdate error: " . $e->getMessage());
             flash_error('The Module Permission could not be updated.');
             return Response::redirect("permission_names.php?id=$id&action=edit_permission_names");
         }
@@ -84,7 +85,8 @@ class ModulePermissionController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("permission_names.php");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("ModulePermissionController::handleCreate error: " . $e->getMessage());
             flash_error('The Module Permission could not be saved.');
             return Response::redirect("permission_names.php");
         }

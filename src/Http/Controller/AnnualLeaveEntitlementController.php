@@ -72,6 +72,7 @@ class AnnualLeaveEntitlementController extends BaseController
             flash_error($e->getMessage());
             return Response::redirect("annual_leave_entitlements.php?id=$id&action=edit_annual_leave_entitlements");
         } catch (\Throwable $e) {
+            $this->logError("AnnualLeaveEntitlementController::handleUpdate error: " . $e->getMessage());
             flash_error('The Annual Leave Entitlement could not be updated.');
             return Response::redirect("annual_leave_entitlements.php?id=$id&action=edit_annual_leave_entitlements");
         }
@@ -100,6 +101,7 @@ class AnnualLeaveEntitlementController extends BaseController
             flash_error($error);
             return Response::redirect('annual_leave_entitlements.php');
         } catch (\Throwable $e) {
+            $this->logError("AnnualLeaveEntitlementController::handleCreate error: " . $e->getMessage());
             flash_error('The Annual Leave Entitlement could not be saved.');
             return Response::redirect('annual_leave_entitlements.php');
         }

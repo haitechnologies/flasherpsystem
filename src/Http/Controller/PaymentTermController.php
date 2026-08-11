@@ -64,7 +64,8 @@ class PaymentTermController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("payment_terms.php?id=$id&action=edit_payment_terms");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("PaymentTermController::handleUpdate error: " . $e->getMessage());
             flash_error('The Payment Term could not be updated.');
             return Response::redirect("payment_terms.php?id=$id&action=edit_payment_terms");
         }
@@ -84,7 +85,8 @@ class PaymentTermController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("payment_terms.php");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("PaymentTermController::handleCreate error: " . $e->getMessage());
             flash_error('The Payment Term could not be saved.');
             return Response::redirect("payment_terms.php");
         }

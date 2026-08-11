@@ -7,6 +7,7 @@ namespace App\Service;
 use App\Core\Container;
 use App\Core\Database;
 use App\Core\DB;
+use App\Core\ErrorCapture;
 use Throwable;
 
 class EmailQueue
@@ -57,7 +58,7 @@ class EmailQueue
         try {
             return (int)$this->db->insert($sql, [$to, $to, $subject, $body, $headersJson, $priority, $status, $maxRetries]);
         } catch (Throwable $e) {
-            error_log("Failed to insert into email queue: " . $e->getMessage());
+            ErrorCapture::record("Failed to insert into email queue: " . $e->getMessage());
             return false;
         }
     }
@@ -92,7 +93,7 @@ class EmailQueue
                 }
             }
         } catch (Throwable $e) {
-            error_log("Failed processing pending email queue: " . $e->getMessage());
+            ErrorCapture::record("Failed processing pending email queue: " . $e->getMessage());
         }
 
         return $sent;
@@ -113,10 +114,10 @@ class EmailQueue
                 $mailer = new $class();
                 return $mailer->send($to, $subject, $body, $headers);
             }
-            error_log("[EmailQueue] SMTPMailer not found, fallback is disabled. Email not sent.");
+            ErrorCapture::record("[EmailQueue] SMTPMailer not found, fallback is disabled. Email not sent.");
             return false;
         } catch (Throwable $e) {
-            error_log("[EmailQueue] Email sending failed: " . $e->getMessage());
+            ErrorCapture::record("[EmailQueue] Email sending failed: " . $e->getMessage());
             return false;
         }
     }
@@ -135,7 +136,7 @@ class EmailQueue
             $this->db->execute($sql, [$status, $queueId]);
             return true;
         } catch (Throwable $e) {
-            error_log("Failed to mark email as sent: " . $e->getMessage());
+            ErrorCapture::record("Failed to mark email as sent: " . $e->getMessage());
             return false;
         }
     }
@@ -155,7 +156,7 @@ class EmailQueue
             $this->db->execute($sql, [$queueId]);
             return true;
         } catch (Throwable $e) {
-            error_log("Failed to increment retry: " . $e->getMessage());
+            ErrorCapture::record("Failed to increment retry: " . $e->getMessage());
             return false;
         }
     }
@@ -177,7 +178,7 @@ class EmailQueue
         try {
             return $this->db->fetchOne($sql) ?: [];
         } catch (Throwable $e) {
-            error_log("Failed to get email queue stats: " . $e->getMessage());
+            ErrorCapture::record("Failed to get email queue stats: " . $e->getMessage());
             return [];
         }
     }

@@ -8,6 +8,7 @@ use App\Core\Database;
 use App\Core\DB;
 use App\Model\SetupTag;
 use App\Helper\SlugHelper;
+use App\Core\ErrorCapture;
 
 class SetupTagRepository
 {
@@ -105,7 +106,7 @@ class SetupTagRepository
             $this->db->execute($sql, $params);
             return true;
         } catch (\Throwable $e) {
-            error_log("SetupTagRepository: Update failed: " . $e->getMessage());
+            ErrorCapture::record("SetupTagRepository: Update failed: " . $e->getMessage());
             return false;
         }
     }

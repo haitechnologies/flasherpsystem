@@ -74,6 +74,7 @@ class UserDocumentController extends BaseController
             flash_error($error);
             return Response::redirect("user_documents.php");
         } catch (\Throwable $e) {
+            $this->logError("UserDocumentController::handleCreate error: " . $e->getMessage());
             flash_error($e->getMessage());
             return Response::redirect("user_documents.php");
         }
@@ -99,6 +100,7 @@ class UserDocumentController extends BaseController
             flash_error($error);
             return Response::redirect("user_documents.php?id=$id&action=edit_user_documents");
         } catch (\Throwable $e) {
+            $this->logError("UserDocumentController::handleUpdate error: " . $e->getMessage());
             flash_error($e->getMessage());
             return Response::redirect("user_documents.php?id=$id&action=edit_user_documents");
         }
@@ -113,6 +115,7 @@ class UserDocumentController extends BaseController
             flash_success('User Document deleted successfully.');
             return Response::redirect('listing_user_documents.php');
         } catch (\Throwable $e) {
+            $this->logError("UserDocumentController::handleDelete error: " . $e->getMessage());
             flash_error($e->getMessage());
             return Response::redirect('listing_user_documents.php');
         }
@@ -145,6 +148,7 @@ class UserDocumentController extends BaseController
                 $expiryDate = $document->expiryDate !== null ? DateHelper::toDisplayDate($document->expiryDate) : '';
                 $documentFilename = (string)$document->filename;
             } catch (\Throwable $e) {
+                $this->logError("UserDocumentController::showForm error: " . $e->getMessage());
                 $error_message = $e->getMessage();
             }
         }
@@ -154,10 +158,12 @@ class UserDocumentController extends BaseController
         try {
             $usersList = $this->db->fetchAll("SELECT id, full_name FROM `" . DB::USERS . "` WHERE is_active=1 ORDER BY full_name");
         } catch (\Throwable $e) {
+            $this->logError("UserDocumentController::showForm error: " . $e->getMessage());
         }
         try {
             $documentCategories = $this->db->fetchAll("SELECT id, document_category FROM `" . DB::DOCUMENT_CATEGORIES . "` WHERE is_active=1 AND document_category_type='employees' ORDER BY CASE document_category WHEN 'Emirates ID' THEN 1 WHEN 'Visa' THEN 2 WHEN 'Labor Card' THEN 3 WHEN 'Passport' THEN 4 WHEN 'Photo' THEN 5 WHEN 'Contract' THEN 6 ELSE 7 END, document_category");
         } catch (\Throwable $e) {
+            $this->logError("UserDocumentController::showForm error: " . $e->getMessage());
         }
 
         $uploadPath = '../uploads/user_documents/';

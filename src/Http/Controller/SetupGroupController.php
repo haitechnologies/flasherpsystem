@@ -68,6 +68,7 @@ class SetupGroupController extends BaseController
             flash_error($error);
             return Response::redirect("setup_groups.php?id=$id&action=edit_setup_groups");
         } catch (\Throwable $e) {
+            $this->logError("SetupGroupController::handleUpdate error: " . $e->getMessage());
             flash_error('The Group Name could not be updated.');
             return Response::redirect("setup_groups.php?id=$id&action=edit_setup_groups");
         }
@@ -90,6 +91,7 @@ class SetupGroupController extends BaseController
             flash_error($error);
             return Response::redirect("setup_groups.php");
         } catch (\Throwable $e) {
+            $this->logError("SetupGroupController::handleCreate error: " . $e->getMessage());
             flash_error('The Group Name could not be saved.');
             return Response::redirect("setup_groups.php");
         }

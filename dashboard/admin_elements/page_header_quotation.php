@@ -11,24 +11,15 @@ $quotation_status = getTableAttr('quotation_status', DB::QUOTATIONS, $quotation_
 
 ?>
 
-<div class="page-header page-header-light shadow">
-    <div class="page-header-content d-lg-flex border-top">
-        <div class="row mt-3">
-            <div class="col-lg-12">
-                <h5 class="ms-2"><?php echo $quotation_no; ?></h5>
+<div class="page-header page-header-light shadow carriers-page-header">
+    <div class="page-header-content d-lg-flex border-top carriers-page-header-content py-2 px-3 align-items-center">
+        <div class="my-1">
+            <h5 class="ms-2"><?php echo $quotation_no; ?></h5>
+            <div class="p-3 rounded mt-1">
+                <label class="form-check-label text-muted small"><?php echo (!empty($quotation_status) ? strtoupper($quotation_status) : ''); ?></label>
             </div>
-
-            <a href="#breadcrumb_elements" class="btn btn-light align-self-center collapsed d-lg-none border-transparent rounded-pill p-0 ms-auto" data-bs-toggle="collapse">
-                <i class="ph-caret-down collapsible-indicator ph-sm m-1"></i>
-            </a>
         </div>
-
-        <div class="p-3 rounded mt-1">
-            <label class="form-check-label text-muted small"><?php echo (!empty($quotation_status) ? strtoupper($quotation_status) : ''); ?></label>
-        </div>
-
-        <div class="collapse d-lg-flex ms-lg-auto my-2" id="breadcrumb_elements">
-            <div class="d-flex flex-wrap align-items-center gap-1">
+        <div class="my-1 ms-auto d-flex align-items-center gap-2 flex-wrap">
 
                 <a href="listing_<?php echo $module; ?>.php" class="btn btn-light btn-sm">
                     Cancel
@@ -51,6 +42,10 @@ $quotation_status = getTableAttr('quotation_status', DB::QUOTATIONS, $quotation_
 
                 <a class="btn btn-light btn-sm" href="#" onclick="postQuotationAction('convert_<?php echo $module; ?>','','');return false;">
                     <i class="ph-file pe-1"></i> Convert to Invoice
+                </a>
+
+                <a class="btn btn-light btn-sm" href="#" onclick="postToSaleOrder('convert_quotation_to_sale_orders','<?php echo $quotation_id; ?>');return false;">
+                    <i class="ph-shopping-cart pe-1"></i> Convert to Sale Order
                 </a>
 
                 <?php $quotation_status = getTableAttr('quotation_status', DB::QUOTATIONS, $quotation_id); ?>
@@ -121,10 +116,32 @@ function postQuotationAction(action, status, target) {
     document.body.appendChild(f);
     f.submit();
 }
+
+function postToSaleOrder(action, quotationId) {
+    var f = document.createElement('form');
+    f.method = 'POST';
+    f.action = 'sale_orders.php';
+    var csrf = document.createElement('input');
+    csrf.type = 'hidden';
+    csrf.name = 'csrf_token';
+    csrf.value = '<?php echo csrf_token(); ?>';
+    f.appendChild(csrf);
+    var a = document.createElement('input');
+    a.type = 'hidden';
+    a.name = 'action';
+    a.value = action;
+    f.appendChild(a);
+    var qid = document.createElement('input');
+    qid.type = 'hidden';
+    qid.name = 'quotation_id';
+    qid.value = quotationId;
+    f.appendChild(qid);
+    document.body.appendChild(f);
+    f.submit();
+}
 </script>
                 </div>
 
-            </div>
         </div>
 
     </div>

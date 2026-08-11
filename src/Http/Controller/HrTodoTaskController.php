@@ -73,6 +73,7 @@ class HrTodoTaskController extends BaseController
             flash_error($e->getMessage());
             return Response::redirect("hr_todo_tasks.php?id=$id&action=edit_hr_todo_tasks");
         } catch (\Throwable $e) {
+            $this->logError("HrTodoTaskController::handleUpdate error: " . $e->getMessage());
             flash_error('The HR To-Do Task could not be updated.');
             return Response::redirect("hr_todo_tasks.php?id=$id&action=edit_hr_todo_tasks");
         }
@@ -98,6 +99,7 @@ class HrTodoTaskController extends BaseController
             flash_error($error);
             return Response::redirect('hr_todo_tasks.php');
         } catch (\Throwable $e) {
+            $this->logError("HrTodoTaskController::handleCreate error: " . $e->getMessage());
             flash_error('The HR To-Do Task could not be saved.');
             return Response::redirect('hr_todo_tasks.php');
         }

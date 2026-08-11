@@ -104,7 +104,15 @@ if (!empty($filter_by) && $filter_by !== '0') {
     }
 }
 
-$as_of_date_ymd = (!empty($as_of_date) ? processDateDtoY($as_of_date) : '');
+if (!function_exists('normalizeDateToYmd')) {
+    function normalizeDateToYmd($date)
+    {
+        if (empty($date)) return '';
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) return $date;
+        return processDateDtoY($date);
+    }
+}
+$as_of_date_ymd = (!empty($as_of_date) ? normalizeDateToYmd($as_of_date) : '');
 
 // Build subquery conditions for filtering transactions
 $transaction_filter = '';
@@ -113,6 +121,9 @@ if (!empty($as_of_date_ymd)) {
 }
 if (!empty($report_basis)) {
     $transaction_filter .= " AND j.reporting_method = '" . e_s__($report_basis) . "'";
+}
+if (!empty($activeOrganizationId)) {
+    $transaction_filter .= " AND j.organization_id = " . (int)$activeOrganizationId;
 }
 
 // UPDATES LAST VISITED
@@ -162,7 +173,7 @@ if ($trial_result) {
                     <div class="col-lg-6">
                         <div class="text-muted"><?php echo $accounts_report_category_name; ?></div>
                         <div class="mb-0">
-                            <span class="fw-semibold">Trial Balance</span> - <span class="small">As of <?php echo dd_($as_of_date); ?></span>
+                            <span class="fw-semibold">Trial Balance</span> - <span class="small">As of <?php echo ddm_($as_of_date); ?></span>
                         </div>
                     </div>
 
@@ -275,7 +286,7 @@ if ($trial_result) {
                 <p class="text-muted">Flash Logistics FZC</p>
                 <h5 class="mb-0">Trial Balance</h5>
                 <p class="small"><span class="text-muted">Basis</span> : <?php echo ucfirst($report_basis); ?></p>
-                <p class="small"><span class="text-muted">As of</span> <?php echo dd_($as_of_date); ?></p>
+                <p class="small"><span class="text-muted">As of</span> <?php echo ddm_($as_of_date); ?></p>
 
                 <!-- DEBUG INFO - Remove this after testing -->
                 <div style="background: #f0f0f0; padding: 10px; margin: 10px; text-align: left; font-size: 11px;">

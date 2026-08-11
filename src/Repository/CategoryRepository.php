@@ -7,6 +7,7 @@ namespace App\Repository;
 use App\Core\Database;
 use App\Core\DB;
 use App\Model\Category;
+use App\Core\ErrorCapture;
 
 class CategoryRepository
 {
@@ -88,7 +89,7 @@ class CategoryRepository
             $this->db->execute($sql, $params);
             return true;
         } catch (\Throwable $e) {
-            error_log("CategoryRepository: Update failed: " . $e->getMessage());
+            ErrorCapture::record("CategoryRepository: Update failed: " . $e->getMessage());
             return false;
         }
     }

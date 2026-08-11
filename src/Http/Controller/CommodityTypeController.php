@@ -64,7 +64,8 @@ class CommodityTypeController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("commodity_types.php?id=$id&action=edit_commodity_types");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("CommodityTypeController::handleUpdate error: " . $e->getMessage());
             flash_error('The Commodity Type could not be updated.');
             return Response::redirect("commodity_types.php?id=$id&action=edit_commodity_types");
         }
@@ -84,7 +85,8 @@ class CommodityTypeController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("commodity_types.php");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("CommodityTypeController::handleCreate error: " . $e->getMessage());
             flash_error('The Commodity Type could not be saved.');
             return Response::redirect("commodity_types.php");
         }

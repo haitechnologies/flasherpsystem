@@ -7,6 +7,7 @@ namespace App\Repository;
 use App\Core\Database;
 use App\Core\DB;
 use App\Model\ModulePermission;
+use App\Core\ErrorCapture;
 
 class ModulePermissionRepository
 {
@@ -68,7 +69,7 @@ class ModulePermissionRepository
             $this->db->execute($sql, $params);
             return true;
         } catch (\Throwable $e) {
-            error_log("ModulePermissionRepository: Update failed: " . $e->getMessage());
+            ErrorCapture::record("ModulePermissionRepository: Update failed: " . $e->getMessage());
             return false;
         }
     }

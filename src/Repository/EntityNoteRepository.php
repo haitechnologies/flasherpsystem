@@ -55,10 +55,10 @@ class EntityNoteRepository
     private function insert(EntityNote $note): EntityNote
     {
         $sql = "INSERT INTO `{DB::ENTITY_NOTES}` (
-                    entity_type, entity_id, notes, customer_name, title,
+                    entity_type, entity_id, notes,
                     created_by, is_active, organization_id, created_at, updated_at
                 ) VALUES (
-                    :entity_type, :entity_id, :notes, :customer_name, :title,
+                    :entity_type, :entity_id, :notes,
                     :created_by, :is_active, :organization_id, NOW(), NOW()
                 )";
 
@@ -80,8 +80,6 @@ class EntityNoteRepository
         $sql = "UPDATE `{DB::ENTITY_NOTES}` SET
                     entity_id = :entity_id,
                     notes = :notes,
-                    customer_name = :customer_name,
-                    title = :title,
                     is_active = :is_active,
                     updated_at = NOW(),
                     updated_by = :updated_by
@@ -114,8 +112,6 @@ class EntityNoteRepository
             entityType: (string)($row['entity_type'] ?? ''),
             entityId: (int)($row['entity_id'] ?? 0),
             notes: $row['notes'] !== null ? (string)$row['notes'] : null,
-            customerName: $row['customer_name'] !== null ? (string)$row['customer_name'] : null,
-            title: $row['title'] !== null ? (string)$row['title'] : null,
             createdBy: (int)($row['created_by'] ?? 0),
             updatedBy: $row['updated_by'] !== null ? (int)$row['updated_by'] : null,
             isActive: (bool)($row['is_active'] ?? true),

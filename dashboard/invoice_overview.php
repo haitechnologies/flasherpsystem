@@ -4,13 +4,14 @@
 use App\Core\DB;
 use App\Security\Roles;
 use App\Security\InputValidator;
+use App\Service\JournalService;
 include('admin_elements/admin_header.php');
 // Removed legacy require for autoloader compatibility: require_once __DIR__ . '/../classes/InputValidator.php';
 // Removed legacy require for autoloader compatibility: require_once __DIR__ . '/../classes/Roles.php';
 
 $module = 'invoices';
 $module_caption = 'Invoice';
-$tbl_name = $tbl_prefix . $module;
+$tbl_name = DB::INVOICES;
 $error_message = '';
 $success_message = '';
 
@@ -85,7 +86,7 @@ $is_active = $invoice->isActive ? 1 : 0;
 
 $invoice_status_req = '';
 if (isset($_REQUEST['invoice_status']) && !empty($_REQUEST['invoice_status'])) {
-    $statusResult = InputValidator::enum($_REQUEST['invoice_status'], ['draft', 'sent', 'paid', 'partially_paid', 'overdue', 'cancelled']);
+    $statusResult = InputValidator::enum($_REQUEST['invoice_status'], ['draft', 'sent', 'paid', 'partially_paid', 'overdue', 'cancelled', 'confirmed', 'writeoff', 'void']);
     if ($statusResult['valid']) {
         $invoice_status_req = $statusResult['value'];
     }
@@ -113,13 +114,177 @@ if ($action == "convert_$module" && !empty($invoice_id)) {
     try {
         if ($invoiceService->updateStatus((int)$invoice_id, $invoice_status_req, $activeOrganizationId)) {
             $success_message = "The $module_caption status has been updated successfully.";
-            // Refresh the loaded invoice
+
+            // CREATE JOURNAL ENTRIES WHEN STATUS IS 'SENT'
+            if ($invoice_status_req === 'sent') {
+                $journalService = \App\Core\Container::getInstance()->get(JournalService::class);
+                $journal_check = $mysqli->prepare("SELECT id FROM `" . DB::JOURNALS . "` WHERE reference_type='invoice' AND reference_id=? LIMIT 1");
+                $journal_check->bind_param('i', $invoice_id);
+                $journal_check->execute();
+                $existing_journal = $journal_check->get_result()->fetch_assoc();
+                $journal_check->close();
+                if ($existing_journal) {
+                    $success_message .= " Note: Journal entry already exists.";
+                } else {
+                    $invoice_stmt = $mysqli->prepare("SELECT grand_total, grand_after_discount, grand_discount_amount, grand_tax, invoice_no, customer_id FROM `" . DB::INVOICES . "` WHERE id=? LIMIT 1");
+                    $invoice_stmt->bind_param('i', $invoice_id);
+                    $invoice_stmt->execute();
+                    $invoice_data = $invoice_stmt->get_result()->fetch_assoc();
+                    $invoice_stmt->close();
+                    if ($invoice_data) {
+                        $grand_total = (float)($invoice_data['grand_total'] ?? 0);
+                        $grand_after_discount = (float)($invoice_data['grand_after_discount'] ?? $grand_total);
+                        $grand_tax = (float)($invoice_data['grand_tax'] ?? 0);
+                        $invoice_no = $invoice_data['invoice_no'] ?? '';
+                        $customer_name = getTableAttr('display_name', DB::CUSTOMERS, $invoice_data['customer_id'] ?? 0);
+
+                        $ar_stmt = $mysqli->prepare("SELECT id FROM `" . DB::ACCOUNTS . "` WHERE account_code IN ('1200','1210','1100') OR account_name LIKE '%Receivable%' LIMIT 1");
+                        $ar_stmt->execute();
+                        $ar_account = $ar_stmt->get_result()->fetch_assoc();
+                        $ar_stmt->close();
+                        $revenue_stmt = $mysqli->prepare("SELECT id FROM `" . DB::ACCOUNTS . "` WHERE account_code='4100' OR account_name LIKE '%Sales Revenue%' LIMIT 1");
+                        $revenue_stmt->execute();
+                        $revenue_account = $revenue_stmt->get_result()->fetch_assoc();
+                        $revenue_stmt->close();
+                        $tax_stmt = $mysqli->prepare("SELECT id FROM `" . DB::ACCOUNTS . "` WHERE account_code='2110' OR account_name LIKE '%Sales Tax%' OR account_name LIKE '%Taxes Payable%' LIMIT 1");
+                        $tax_stmt->execute();
+                        $tax_account = $tax_stmt->get_result()->fetch_assoc();
+                        $tax_stmt->close();
+
+                        $journal_entries = array();
+                        if ($ar_account) {
+                            $journal_entries[] = array(
+                                'account' => (int)$ar_account['id'],
+                                'description' => "Invoice {$invoice_no} - {$customer_name}",
+                                'debit' => $grand_total,
+                                'credit' => 0.0,
+                            );
+                        }
+                        $revenue_amount = $grand_after_discount;
+                        if ($revenue_amount <= 0) $revenue_amount = $grand_total;
+                        if ($revenue_account) {
+                            $journal_entries[] = array(
+                                'account' => (int)$revenue_account['id'],
+                                'description' => "Invoice {$invoice_no} - {$customer_name}",
+                                'debit' => 0.0,
+                                'credit' => $revenue_amount,
+                            );
+                        }
+                        if ($grand_tax > 0 && $tax_account) {
+                            $journal_entries[] = array(
+                                'account' => (int)$tax_account['id'],
+                                'description' => "Sales Tax - Invoice {$invoice_no}",
+                                'debit' => 0.0,
+                                'credit' => $grand_tax,
+                            );
+                        }
+                        if (count($journal_entries) >= 2) {
+                            try {
+                                $journalService->createJournal(
+                                    array(
+                                        'journal_date' => date('Y-m-d'),
+                                        'journal_status' => 'posted',
+                                        'reference_no' => $invoice_no,
+                                        'notes' => "Invoice {$invoice_no} - {$customer_name}",
+                                        'reporting_method' => 'accrual',
+                                        'reference_type' => 'invoice',
+                                        'reference_id' => (int)$invoice_id,
+                                        'currency' => 'AED',
+                                        'warehouse_id' => (int)($invoice->warehouseId ?? 0),
+                                    ),
+                                    $journal_entries,
+                                    (int)$activeOrganizationId,
+                                    (int)Session::userId()
+                                );
+                                $success_message .= " Journal entry created.";
+                            } catch (\Throwable $e) {
+                                $success_message .= " Warning: " . $e->getMessage();
+                            }
+                        } else {
+                            $success_message .= " Warning: Could not create journal entry - required accounts not found.";
+                        }
+                    }
+                }
+            }
+
+            // CREATE REVERSING JOURNAL WHEN STATUS IS 'VOID'
+            if ($invoice_status_req === 'void') {
+                $journalService = \App\Core\Container::getInstance()->get(JournalService::class);
+                $void_check = $mysqli->prepare("SELECT id FROM `" . DB::JOURNALS . "` WHERE reference_type='invoice_void' AND reference_id=? LIMIT 1");
+                $void_check->bind_param('i', $invoice_id);
+                $void_check->execute();
+                $existing_void = $void_check->get_result()->fetch_assoc();
+                $void_check->close();
+                if ($existing_void) {
+                    $success_message .= " Note: Void journal entry already exists.";
+                } else {
+                    $orig_check = $mysqli->prepare("SELECT id FROM `" . DB::JOURNALS . "` WHERE reference_type='invoice' AND reference_id=? LIMIT 1");
+                    $orig_check->bind_param('i', $invoice_id);
+                    $orig_check->execute();
+                    $original_journal = $orig_check->get_result()->fetch_assoc();
+                    $orig_check->close();
+                    if ($original_journal) {
+                        $original_journal_id = (int)$original_journal['id'];
+                        $items_stmt = $mysqli->prepare("SELECT account, debit, credit, description FROM `" . DB::JOURNAL_ITEMS . "` WHERE journal_id=?");
+                        $items_stmt->bind_param('i', $original_journal_id);
+                        $items_stmt->execute();
+                        $items_result = $items_stmt->get_result();
+                        $void_entries = array();
+                        while ($item = $items_result->fetch_assoc()) {
+                            if ((float)$item['debit'] > 0) {
+                                $void_entries[] = array(
+                                    'account' => (int)$item['account'],
+                                    'description' => 'Void: ' . ($item['description'] ?? "Invoice {$invoice_id}"),
+                                    'debit' => 0.0,
+                                    'credit' => (float)$item['debit'],
+                                );
+                            }
+                            if ((float)$item['credit'] > 0) {
+                                $void_entries[] = array(
+                                    'account' => (int)$item['account'],
+                                    'description' => 'Void: ' . ($item['description'] ?? "Invoice {$invoice_id}"),
+                                    'debit' => (float)$item['credit'],
+                                    'credit' => 0.0,
+                                );
+                            }
+                        }
+                        $items_stmt->close();
+                        if (!empty($void_entries)) {
+                            try {
+                                $journalService->createJournal(
+                                    array(
+                                        'journal_date' => date('Y-m-d'),
+                                        'journal_status' => 'posted',
+                                        'reference_no' => $invoice->invoiceNo,
+                                        'notes' => "Void Invoice {$invoice->invoiceNo}",
+                                        'reporting_method' => 'accrual',
+                                        'reference_type' => 'invoice_void',
+                                        'reference_id' => (int)$invoice_id,
+                                        'currency' => 'AED',
+                                        'warehouse_id' => (int)($invoice->warehouseId ?? 0),
+                                    ),
+                                    $void_entries,
+                                    (int)$activeOrganizationId,
+                                    (int)Session::userId()
+                                );
+                                $success_message .= " Reversing journal entry created.";
+                            } catch (\Throwable $e) {
+                                $success_message .= " Warning: " . $e->getMessage();
+                            }
+                        }
+                    } else {
+                        $success_message .= " Note: No original journal found to reverse.";
+                    }
+                }
+            }
+
             $invoice = $invoiceService->getInvoice((int)$invoice_id, $activeOrganizationId);
         } else {
             $error_message = "Sorry! $module Status Could Not Be Updated.";
         }
     } catch (\Throwable $e) {
         $error_message = $e->getMessage();
+        log_error("Journal entry failed for invoice {$invoice_id}: " . $e->getMessage());
     }
 }
 
@@ -221,10 +386,14 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
                 $sales_person           = $invoice->salesPerson;
                 $job_reference_no       = $invoice->jobReferenceNo;
                 $master_awb_no          = $invoice->masterAwbNo;
+                $hwb_hbol               = $invoice->hwbHbol;
+                $lead_id                = $invoice->leadId;
                 $shipper                = $invoice->shipper;
                 $consignee              = $invoice->consignee;
                 $origin                 = $invoice->origin;
+                $origin_country         = $invoice->originCountry;
                 $destination            = $invoice->destination;
+                $destination_country    = $invoice->destinationCountry;
                 $no_of_packs            = $invoice->noOfPacks;
                 $gross_weight           = $invoice->grossWeight;
                 $chargeable_weight      = $invoice->chargeableWeight;
@@ -283,7 +452,7 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
                 ]);
 
                 $billing_attention      = (!empty($row_billing['attention']) ? s__($row_billing['attention']) : '');
-                $billing_country        = (!empty($row_billing['country']) ? s__($row_billing['country']) : '');
+                $billing_country        = (!empty($row_billing['country']) ? s__(getTableAttr('country_name', DB::GEO_COUNTRIES, $row_billing['country'])) : '');
                 $billing_address_line1  = (!empty($row_billing['address_line1']) ? s__($row_billing['address_line1']) : '');
                 $billing_address_line2  = (!empty($row_billing['address_line2']) ? s__($row_billing['address_line2']) : '');
                 $billing_city           = (!empty($row_billing['city']) ? s__($row_billing['city']) : '');
@@ -292,9 +461,9 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
                 $billing_phone          = (!empty($row_billing['phone']) ? s__($row_billing['phone']) : '');
                 $billing_fax            = (!empty($row_billing['fax']) ? s__($row_billing['fax']) : '');
 
-                $invoice_date         = processDateYtoD($invoice_date);
-                $expiry_date            = ($expiry_date === '1970-01-01' || empty($expiry_date)) ? '' : processDateDtoY($expiry_date);
-                $expected_shipment_date = ($expected_shipment_date === '1970-01-01' || empty($expected_shipment_date)) ? '' : processDateDtoY($expected_shipment_date);
+                $invoice_date         = ddm_($invoice_date);
+                $expiry_date            = ($expiry_date === '1970-01-01' || empty($expiry_date)) ? '' : ddm_($expiry_date);
+                $expected_shipment_date = ($expected_shipment_date === '1970-01-01' || empty($expected_shipment_date)) ? '' : ddm_($expected_shipment_date);
 
                 // ------------------ TOTAL INVOICES ITEMS ------------------
                 $invoice_items = $invoiceService->getInvoiceItems($invoice_id, $activeOrganizationId);
@@ -321,9 +490,14 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
             ?>
 
             <?php
-            // Journal features removed (tables not available)
+            // Check for void/write-off journal entries
             $has_void_entry = false;
             $has_writeoff_entry = false;
+            $journals_table = DB::JOURNALS;
+            $void_check = $mysqli->query("SELECT id FROM `{$journals_table}` WHERE reference_type='invoice_void' AND reference_id={$invoice_id} LIMIT 1");
+            if ($void_check && $void_check->num_rows > 0) { $has_void_entry = true; }
+            $writeoff_check = $mysqli->query("SELECT id FROM `{$journals_table}` WHERE reference_type='invoice_writeoff' AND reference_id={$invoice_id} LIMIT 1");
+            if ($writeoff_check && $writeoff_check->num_rows > 0) { $has_writeoff_entry = true; }
             
             ?>
             
@@ -395,7 +569,7 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
 
                                 <?php
                                 $warehouse_information = '';
-                                $row_warehouse = $db->fetchOne("SELECT * FROM `erp_organizations` WHERE id = :id", ['id' => $warehouse_id]);
+                                $row_warehouse = $db->fetchOne("SELECT warehouse_no, warehouse_name, street1, street2, country, state, phone, email, trn FROM `" . DB::ORGANIZATIONS . "` WHERE id = :id AND is_active = 1 LIMIT 1", ['id' => $warehouse_id]);
 
                                 $warehouse_no       = s__($row_warehouse['warehouse_no'] ?? '');
                                 $warehouse_name     = s__($row_warehouse['warehouse_name'] ?? '');
@@ -458,7 +632,7 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
                                             ?>
 
                                             <?php $display_due_date = calculateInvoiceDueDate($invoice_status, $invoice_date, $payment_term_duration); ?>
-                                            <li>Due date: <span class="fw-semibold"><?php echo (!empty($display_due_date) ? dd_($display_due_date) : ''); ?></span></li>
+                                            <li>Due date: <span class="fw-semibold"><?php echo (!empty($display_due_date) ? ddm_($display_due_date) : ''); ?></span></li>
 
                                         </ul>
                                     </div>
@@ -496,7 +670,7 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
                                     <div class="row">
                                         <label class="col-lg-5 col-form-label">Origin:</label>
                                         <div class="col-lg-7 mt-2">
-                                            <?php echo getTableAttr('alpha3_code', DB::GEO_COUNTRIES, $origin); ?> - <?php echo getTableAttr('country', DB::GEO_COUNTRIES, $origin); ?>
+                                            <?php echo $origin ? getTableAttr('port_name', DB::PORTS, $origin) : ''; ?><?php echo ($origin && $origin_country) ? ' - ' : ''; ?><?php echo $origin_country ? getTableAttr('country', DB::GEO_COUNTRIES, $origin_country) : ''; ?>
                                         </div>
                                     </div>
                                     <div class="row">
@@ -527,9 +701,21 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
                                         </div>
                                     </div>
                                     <div class="row">
+                                        <label class="col-lg-5 col-form-label">Lead Name:</label>
+                                        <div class="col-lg-7 mt-2">
+                                            <?php echo $lead_id ? getTableAttr('lead_name', DB::LEADS, $lead_id) : ''; ?>
+                                        </div>
+                                    </div>
+                                    <div class="row">
                                         <label class="col-lg-5 col-form-label">Master AWB No:</label>
                                         <div class="col-lg-7 mt-2">
                                             <?php echo $master_awb_no; ?>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <label class="col-lg-5 col-form-label">HWB/HBOL:</label>
+                                        <div class="col-lg-7 mt-2">
+                                            <?php echo $hwb_hbol; ?>
                                         </div>
                                     </div>
                                     <div class="row">
@@ -542,7 +728,7 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
                                     <div class="row">
                                         <label class="col-lg-5 col-form-label">Destination:</label>
                                         <div class="col-lg-7 mt-2">
-                                            <?php echo getTableAttr('alpha3_code', DB::GEO_COUNTRIES, $destination); ?> - <?php echo getTableAttr('country', DB::GEO_COUNTRIES, $destination); ?>
+                                            <?php echo $destination ? getTableAttr('port_name', DB::PORTS, $destination) : ''; ?><?php echo ($destination && $destination_country) ? ' - ' : ''; ?><?php echo $destination_country ? getTableAttr('country', DB::GEO_COUNTRIES, $destination_country) : ''; ?>
                                         </div>
                                     </div>
                                     <div class="row">
@@ -646,7 +832,7 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
                                                     // ----------------------------------------------
                                                     // Seprate Line Number on base of Space new line
                                                     // ----------------------------------------------
-                                                    $desc = explode("\r", $description_arr[$index]);
+                                                    $desc = explode("\r", (string)($description_arr[$index] ?? ''));
                                                     // print_r($desc);
                                                     $d_counter = 1;
                                                     if (count($desc) > 0) {
@@ -751,11 +937,13 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
 
                 <?php
                 // ---------------------------------------------------------------------------------------------------------------------------------------
-                // Journal entries disabled (tables removed)
-                $has_journal_entries = false;
+                // Check for journal entries
+                $journals_table = DB::JOURNALS;
+                $journal_result = $mysqli->query("SELECT * FROM `{$journals_table}` WHERE reference_id={$invoice_id} AND reference_type IN ('invoice', 'invoice_void', 'invoice_writeoff') ORDER BY id ASC");
+                $has_journal_entries = ($journal_result && $journal_result->num_rows > 0);
                 // ---------------------------------------------------------------------------------------------------------------------------------------
 
-                if (false) {
+                if ($has_journal_entries) {
                 ?>
 
                     <p class="mb-0 opacity-50" id="journal">JOURNAL</p>
@@ -774,12 +962,12 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
                         <div class="card-header d-flex align-items-center <?php echo $is_void ? 'bg-danger bg-opacity-10' : ($is_writeoff ? 'bg-warning bg-opacity-10' : ''); ?>">
                             <?php if ($is_void) { ?>
                                 <span class="badge bg-danger me-2">VOID ENTRY</span>
-                                <span class="text-muted small">Reversing Entry - <?php echo dd_($journal_date, 'd M Y'); ?></span>
+                                <span class="text-muted small">Reversing Entry - <?php echo ddm_($journal_date); ?></span>
                             <?php } elseif ($is_writeoff) { ?>
                                 <span class="badge bg-warning me-2">WRITE-OFF ENTRY</span>
-                                <span class="text-muted small">Bad Debt Expense - <?php echo dd_($journal_date, 'd M Y'); ?></span>
+                                <span class="text-muted small">Bad Debt Expense - <?php echo ddm_($journal_date); ?></span>
                             <?php } else { ?>
-                                <span class="text-muted small">Original Entry - <?php echo dd_($journal_date, 'd M Y'); ?></span>
+                                <span class="text-muted small">Original Entry - <?php echo ddm_($journal_date); ?></span>
                             <?php } ?>
 
                             <div class="ms-auto small text-muted">
@@ -805,7 +993,7 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
                                     // -------- JOURNAL ENTRIES 
                                     //-------------------------------------------------------------------
 
-                                    $result_journal_items = $mysqli->query("SELECT * FROM `" . $journal_items_table . "` WHERE journal_id=$journal_id");
+                                    $result_journal_items = $mysqli->query("SELECT * FROM `" . DB::JOURNAL_ITEMS . "` WHERE journal_id=$journal_id");
                                     while ($row_journal_items = $result_journal_items->fetch_array()) {
 
                                         $account    = $row_journal_items['account'];

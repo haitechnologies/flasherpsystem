@@ -7,6 +7,7 @@ namespace App\DataTable;
 use App\Core\DB;
 use App\Helper\BadgeHelper;
 use App\Helper\ActionButtonHelper;
+use App\Core\ErrorCapture;
 
 class SaleOrdersDataTable extends BaseDataTable
 {
@@ -25,7 +26,7 @@ class SaleOrdersDataTable extends BaseDataTable
                     $this->relatedDataCache['customers'][(int)$row['id']] = $row['display_name'];
                 }
             } catch (\Throwable $e) {
-                error_log("SaleOrdersDataTable::prepareRelatedData error: " . $e->getMessage());
+                ErrorCapture::record("SaleOrdersDataTable::prepareRelatedData error: " . $e->getMessage());
             }
         }
     }
@@ -38,16 +39,17 @@ class SaleOrdersDataTable extends BaseDataTable
         $ref      = (string)($row['reference_no'] ?? '');
         $custId   = (int)($row['customer_id'] ?? 0);
         $status   = (string)($row['sale_order_status'] ?? '');
-        $total    = (string)($row['grand_total'] ?? '0');
+        $total    = (float)($row['grand_total'] ?? 0);
         $custName = $this->relatedDataCache['customers'][$custId] ?? '';
         $badge    = BadgeHelper::info(htmlspecialchars($status));
+        $currencyCode = defined('BASE_CURRENCY') ? BASE_CURRENCY['code'] : 'AED';
         return [
-            htmlspecialchars($date),
+            $this->formatDate($date) ?: '-',
             htmlspecialchars($no),
             htmlspecialchars($ref),
             htmlspecialchars($custName),
             $badge,
-            htmlspecialchars(number_format((float)$total, 2)),
+            $currencyCode . ' ' . number_format($total, 2),
             $id,
         ];
     }

@@ -70,6 +70,7 @@ class PaymentMethodController extends BaseController
             flash_error($e->getMessage());
             return Response::redirect("payment_methods.php?id=$id&action=edit_payment_methods");
         } catch (\Throwable $e) {
+            $this->logError("PaymentMethodController::handleUpdate error: " . $e->getMessage());
             flash_error('The Payment method could not be updated.');
             return Response::redirect("payment_methods.php?id=$id&action=edit_payment_methods");
         }
@@ -91,6 +92,7 @@ class PaymentMethodController extends BaseController
             flash_error($error);
             return Response::redirect("payment_methods.php");
         } catch (\Throwable $e) {
+            $this->logError("PaymentMethodController::handleCreate error: " . $e->getMessage());
             flash_error('The Payment method could not be saved.');
             return Response::redirect("payment_methods.php");
         }

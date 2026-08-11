@@ -29,7 +29,7 @@ class CustomerCommentController extends BaseController
 
     public function __invoke(Request $request): Response
     {
-        $this->requiresModule('customer_comments', 'Comment');
+        $this->requiresModule('customers', 'Comment');
 
         if (!$this->canView()) {
             return new Response('Forbidden', 403);
@@ -47,7 +47,7 @@ class CustomerCommentController extends BaseController
                 => $this->handleUpdate($request, $id),
             $request->isPost() && $action === 'add_customer_comments' && $this->canCreate()
                 => $this->handleCreate($request),
-            in_array($action, ['delete_customer_comments'], true) && $id > 0 && $this->canDelete()
+            $request->isPost() && $action === 'delete_customer_comments' && $id > 0 && $this->canDelete()
                 => $this->handleDelete($request, $id),
             default => $this->showForm($request, $id),
         };
@@ -72,8 +72,17 @@ class CustomerCommentController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("customer_comments.php?customer_id={$customerId}&action=edit_customer_comments&comment_id={$id}");
+        } catch (NotFoundException $e) {
+            flash_error($e->getMessage());
+            return Response::redirect("customer_comments.php?customer_id={$customerId}&action=edit_customer_comments&comment_id={$id}");
         } catch (\Throwable $e) {
-            flash_error('The Comment could not be updated.');
+            log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
+                'module' => 'customer_comments',
+                'module_slug' => 'customer_comments',
+                'stack_trace' => $e->getTraceAsString(),
+                'error_code' => (string)$e->getCode(),
+            ]));
+            flash_error('The Comment could not be updated. ' . $e->getMessage());
             return Response::redirect("customer_comments.php?customer_id={$customerId}&action=edit_customer_comments&comment_id={$id}");
         }
     }
@@ -97,8 +106,17 @@ class CustomerCommentController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("customer_comments.php?customer_id={$customerId}");
+        } catch (NotFoundException $e) {
+            flash_error($e->getMessage());
+            return Response::redirect("customer_comments.php?customer_id={$customerId}");
         } catch (\Throwable $e) {
-            flash_error('The Comment could not be saved.');
+            log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
+                'module' => 'customer_comments',
+                'module_slug' => 'customer_comments',
+                'stack_trace' => $e->getTraceAsString(),
+                'error_code' => (string)$e->getCode(),
+            ]));
+            flash_error('The Comment could not be saved. ' . $e->getMessage());
             return Response::redirect("customer_comments.php?customer_id={$customerId}");
         }
     }
@@ -113,6 +131,12 @@ class CustomerCommentController extends BaseController
             flash_success('Comment Deleted Successfully.');
             return Response::redirect("customer_comments.php?customer_id={$customerId}");
         } catch (\Throwable $e) {
+            log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
+                'module' => 'customer_comments',
+                'module_slug' => 'customer_comments',
+                'stack_trace' => $e->getTraceAsString(),
+                'error_code' => (string)$e->getCode(),
+            ]));
             flash_error($e->getMessage());
             return Response::redirect("customer_comments.php?customer_id={$customerId}");
         }
@@ -123,19 +147,8 @@ class CustomerCommentController extends BaseController
         $customerId = $request->getInt('customer_id');
         $action = $request->getString('action');
         $commentId = $request->getInt('comment_id') ?: $id;
-        $flashMessages = \App\Core\FlashMessage::all();
         $error_message = $request->getString('error_message');
-        if (empty($error_message)) {
-            foreach ($flashMessages as $fm) {
-                if ($fm['type'] === 'danger') { $error_message = $fm['message']; break; }
-            }
-        }
         $success_message = $request->getString('success_message');
-        if (empty($success_message)) {
-            foreach ($flashMessages as $fm) {
-                if ($fm['type'] === 'success') { $success_message = $fm['message']; break; }
-            }
-        }
 
         $comments = '';
         $commentIdToEdit = 0;
@@ -148,6 +161,12 @@ class CustomerCommentController extends BaseController
                     $commentIdToEdit = $commentId;
                 }
             } catch (\Throwable $e) {
+                log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
+                    'module' => 'customer_comments',
+                    'module_slug' => 'customer_comments',
+                    'stack_trace' => $e->getTraceAsString(),
+                    'error_code' => (string)$e->getCode(),
+                ]));
                 $error_message = $e->getMessage();
             }
         }

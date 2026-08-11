@@ -110,6 +110,9 @@ if (!function_exists('normalizeDateToYmd')) {
         if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
             return $date;
         }
+        if (!preg_match('/^\d{1,2}\-\d{1,2}\-\d{4}$/', $date)) {
+            return '';
+        }
         return processDateDtoY($date);
     }
 }
@@ -126,7 +129,7 @@ if (!empty($date_to_ymd)) {
 }
 
 if (!function_exists('getProfitLossAccounts')) {
-    function getProfitLossAccounts($mysqli, $account_types, $date_join)
+    function getProfitLossAccounts($mysqli, $account_types, $date_join, $activeOrganizationId)
     {
         $rows = [];
         $types = (array)$account_types;
@@ -135,13 +138,22 @@ if (!function_exists('getProfitLossAccounts')) {
         }, $types);
         $type_clause = implode(', ', $types);
 
+        $org_join = '';
+        if (!empty($activeOrganizationId)) {
+            $org_join = " AND j.organization_id = " . (int)$activeOrganizationId;
+        }
+        $org_filters = '';
+        if (!empty($activeOrganizationId)) {
+            $org_filters = '';
+        }
+
         $sql = "SELECT a.id, a.account_name, a.account_code, a.account_type, a.parent_id, a.level,
                        COALESCE(SUM(ji.debit), 0) AS debit,
                        COALESCE(SUM(ji.credit), 0) AS credit
                 FROM `" . DB::ACCOUNTS . "` a
                 LEFT JOIN `" . DB::JOURNAL_ITEMS . "` ji ON ji.account = a.id
-                LEFT JOIN `" . DB::JOURNALS . "` j ON j.id = ji.journal_id" . $date_join . "
-                WHERE a.account_type IN (" . $type_clause . ")
+                LEFT JOIN `" . DB::JOURNALS . "` j ON j.id = ji.journal_id" . $date_join . $org_join . "
+                WHERE a.account_type IN (" . $type_clause . ")" . $org_filters . "
                 GROUP BY a.id
                 ORDER BY a.account_name ASC";
 
@@ -164,8 +176,8 @@ if (!function_exists('calculateProfitLossBalance')) {
     }
 }
 
-$income_accounts   = getProfitLossAccounts($mysqli, ['Income', 'Other Income'], $date_join);
-$expense_accounts  = getProfitLossAccounts($mysqli, ['Expense', 'Other Expense'], $date_join);
+$income_accounts   = getProfitLossAccounts($mysqli, ['Income', 'Other Income'], $date_join, $activeOrganizationId);
+$expense_accounts  = getProfitLossAccounts($mysqli, ['Expense', 'Other Expense'], $date_join, $activeOrganizationId);
 
 // UPDATES LAST VISITED
 $accounts_report_subcategory_id = getTableAttrv("id", DB::ACCOUNTS_REPORT_SUBCATEGORIES, " slug = 'profit_and_loss'");
@@ -191,7 +203,7 @@ if (!empty($accounts_report_subcategory_id)) {
                     <div class="col-lg-6">
                         <div class="text-muted"><?php echo $accounts_report_category_name; ?></div>
                         <div class="mb-0">
-                            <span class="fw-semibold">Profit &amp; Loss</span> - <span class="small">From <?php echo dd_($date_from); ?> To <?php echo dd_($date_to); ?></span>
+                            <span class="fw-semibold">Profit &amp; Loss</span> - <span class="small">From <?php echo ddm_($date_from); ?> To <?php echo ddm_($date_to); ?></span>
                         </div>
                     </div>
 
@@ -310,7 +322,7 @@ if (!empty($accounts_report_subcategory_id)) {
             <div class="card-header text-center">
                 <p>Flash Logistics FZC</p>
                 <h5 class="mb-0">Profit &amp; Loss</h5>
-                <p><span class="text-muted">From</span> <?php echo dd_($date_from); ?> <span class="text-muted">To</span> <?php echo dd_($date_to); ?></p>
+                <p><span class="text-muted">From</span> <?php echo ddm_($date_from); ?> <span class="text-muted">To</span> <?php echo ddm_($date_to); ?></p>
             </div>
 
             <div class="table-responsive">

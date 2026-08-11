@@ -7,6 +7,7 @@ namespace App\Service;
 use App\Core\Container;
 use App\Core\Database;
 use App\Core\DB;
+use App\Core\ErrorCapture;
 use Throwable;
 
 class MembershipService
@@ -43,7 +44,7 @@ class MembershipService
             $row = $this->db->fetchOne($sql, [$organizationId]);
             return (int)($row['cnt'] ?? 0);
         } catch (Throwable $e) {
-            error_log('MembershipService::countActiveMembers() failed: ' . $e->getMessage());
+            ErrorCapture::record('MembershipService::countActiveMembers() failed: ' . $e->getMessage());
             return 0;
         }
     }
@@ -91,7 +92,7 @@ class MembershipService
                     'email' => $email,
                 ];
             } catch (Throwable $e) {
-                error_log('MembershipService::createInvite() update failed: ' . $e->getMessage());
+                ErrorCapture::record('MembershipService::createInvite() update failed: ' . $e->getMessage());
                 return ['success' => false, 'message' => 'Failed to refresh organization invite.'];
             }
         }
@@ -109,7 +110,7 @@ class MembershipService
                 'email' => $email,
             ];
         } catch (Throwable $e) {
-            error_log('MembershipService::createInvite() insert failed: ' . $e->getMessage());
+            ErrorCapture::record('MembershipService::createInvite() insert failed: ' . $e->getMessage());
             return ['success' => false, 'message' => 'Failed to create organization invite.'];
         }
     }
@@ -157,14 +158,14 @@ class MembershipService
                 try {
                     $this->db->execute($roleSql, [$membershipId, $roleId]);
                 } catch (Throwable $e) {
-                    error_log('MembershipService::acceptInviteByToken() role assignment failed: ' . $e->getMessage());
+                    ErrorCapture::record('MembershipService::acceptInviteByToken() role assignment failed: ' . $e->getMessage());
                 }
             }
 
             $this->markInviteAccepted((int)$invite['id']);
             return ['success' => true, 'message' => 'Organization invite accepted successfully.', 'organization_id' => $organizationId];
         } catch (Throwable $e) {
-            error_log('MembershipService::acceptInviteByToken() membership insert failed: ' . $e->getMessage());
+            ErrorCapture::record('MembershipService::acceptInviteByToken() membership insert failed: ' . $e->getMessage());
             return ['success' => false, 'message' => 'Failed to create organization membership.'];
         }
     }
@@ -207,7 +208,7 @@ class MembershipService
                 'email' => (string)($invite['email'] ?? ''),
             ];
         } catch (Throwable $e) {
-            error_log('MembershipService::resendInvite() failed: ' . $e->getMessage());
+            ErrorCapture::record('MembershipService::resendInvite() failed: ' . $e->getMessage());
             return ['success' => false, 'message' => 'Failed to resend organization invite.'];
         }
     }
@@ -238,7 +239,7 @@ class MembershipService
             $this->db->execute($sql, [$inviteId, $organizationId]);
             return ['success' => true, 'message' => 'Organization invite revoked successfully.', 'invite_id' => $inviteId];
         } catch (Throwable $e) {
-            error_log('MembershipService::revokeInvite() failed: ' . $e->getMessage());
+            ErrorCapture::record('MembershipService::revokeInvite() failed: ' . $e->getMessage());
             return ['success' => false, 'message' => 'Failed to revoke organization invite.'];
         }
     }
@@ -250,7 +251,7 @@ class MembershipService
             $row = $this->db->fetchOne($sql, [$organizationId, $userId]);
             return !empty($row);
         } catch (Throwable $e) {
-            error_log('MembershipService::userBelongsToOrganization() failed: ' . $e->getMessage());
+            ErrorCapture::record('MembershipService::userBelongsToOrganization() failed: ' . $e->getMessage());
             return false;
         }
     }
@@ -261,7 +262,7 @@ class MembershipService
         try {
             return $this->db->fetchOne($sql, [$organizationId, $email]);
         } catch (Throwable $e) {
-            error_log('MembershipService::findPendingInviteByEmail() failed: ' . $e->getMessage());
+            ErrorCapture::record('MembershipService::findPendingInviteByEmail() failed: ' . $e->getMessage());
             return null;
         }
     }
@@ -272,7 +273,7 @@ class MembershipService
         try {
             return $this->db->fetchOne($sql, [$token]);
         } catch (Throwable $e) {
-            error_log('MembershipService::findInviteByToken() failed: ' . $e->getMessage());
+            ErrorCapture::record('MembershipService::findInviteByToken() failed: ' . $e->getMessage());
             return null;
         }
     }
@@ -283,7 +284,7 @@ class MembershipService
         try {
             return $this->db->fetchOne($sql, [$inviteId, $organizationId]);
         } catch (Throwable $e) {
-            error_log('MembershipService::findPendingInviteById() failed: ' . $e->getMessage());
+            ErrorCapture::record('MembershipService::findPendingInviteById() failed: ' . $e->getMessage());
             return null;
         }
     }
@@ -295,7 +296,7 @@ class MembershipService
             $row = $this->db->fetchOne($sql, [$email]);
             return (int)($row['id'] ?? 0);
         } catch (Throwable $e) {
-            error_log('MembershipService::findUserIdByEmail() failed: ' . $e->getMessage());
+            ErrorCapture::record('MembershipService::findUserIdByEmail() failed: ' . $e->getMessage());
             return 0;
         }
     }
@@ -307,7 +308,7 @@ class MembershipService
             $row = $this->db->fetchOne($sql, [$userId]);
             return (string)($row['email'] ?? '');
         } catch (Throwable $e) {
-            error_log('MembershipService::findUserEmailById() failed: ' . $e->getMessage());
+            ErrorCapture::record('MembershipService::findUserEmailById() failed: ' . $e->getMessage());
             return '';
         }
     }
@@ -318,7 +319,7 @@ class MembershipService
         try {
             $this->db->execute($sql, [$inviteId]);
         } catch (Throwable $e) {
-            error_log('MembershipService::markInviteAccepted() failed: ' . $e->getMessage());
+            ErrorCapture::record('MembershipService::markInviteAccepted() failed: ' . $e->getMessage());
         }
     }
 
@@ -328,7 +329,7 @@ class MembershipService
         try {
             $this->db->execute($sql, [$inviteId]);
         } catch (Throwable $e) {
-            error_log('MembershipService::markInviteExpired() failed: ' . $e->getMessage());
+            ErrorCapture::record('MembershipService::markInviteExpired() failed: ' . $e->getMessage());
         }
     }
 }

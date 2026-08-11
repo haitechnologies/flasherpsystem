@@ -94,12 +94,14 @@ deploy-exclude.txt
 # ----- All markdown files are ignored by default -----
 *.md
 
-# ----- Only these root-level .md files are allowed -----
+# ----- Only README is allowed (minimal public info) -----
 !/README.md
-!/CHANGELOG.md
-!/HR_CHANGELOG.md
-!/ACCOUNTING_CHANGELOG.md
-!/OPERATIONS_CHANGELOG.md
+
+# ----- Changelogs are internal — NOT deployed to production -----
+# !/CHANGELOG.md          (removed for production safety)
+# !/HR_CHANGELOG.md       (removed for production safety)
+# !/ACCOUNTING_CHANGELOG.md  (removed for production safety)
+# !/OPERATIONS_CHANGELOG.md  (removed for production safety)
 
 # ============================================================
 # TESTS (not for production)
@@ -129,6 +131,8 @@ logs/
 !migrations/*.sql
 flasherpsystem_raw.sql
 flasherpsystem_live.sql
+flasherpsystem_export.sql
+export_db.php
 
 # ============================================================
 # DASHBOARD DEV/AUDIT FILES

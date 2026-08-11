@@ -8,6 +8,7 @@ use App\Core\Database;
 use App\Core\DB;
 use App\Model\SetupStatus;
 use App\Helper\SlugHelper;
+use App\Core\ErrorCapture;
 
 class SetupStatusRepository
 {
@@ -105,7 +106,7 @@ class SetupStatusRepository
             $this->db->execute($sql, $params);
             return true;
         } catch (\Throwable $e) {
-            error_log("SetupStatusRepository: Update failed: " . $e->getMessage());
+            ErrorCapture::record("SetupStatusRepository: Update failed: " . $e->getMessage());
             return false;
         }
     }

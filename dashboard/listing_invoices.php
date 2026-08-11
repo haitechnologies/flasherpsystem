@@ -12,6 +12,7 @@ $module_id = getModuleIdBySlug($module, $mysqli);
 $tbl_name = DB::INVOICES;  // Invoices table
 $error_message = '';
 $success_message = '';
+$page = $_GET['page'] ?? '';
 
 //Import PHPMailer classes into the global namespace
 //These must be at the top of your script, not inside a function
@@ -83,7 +84,7 @@ if (($action == "delete_$module" && !empty($id)) && granted('delete', $module_id
     // INPUT VALIDATION: Validate invoice ID
     $idResult = InputValidator::integer($id, 1);
     if (!$idResult['valid']) {
-        $error_message = "Invalid invoice ID: " . $idResult['error'];
+        flash_error("Invalid invoice ID: " . $idResult['error']);
     } else {
         $invoiceId = $idResult['value'];
         
@@ -95,7 +96,7 @@ if (($action == "delete_$module" && !empty($id)) && granted('delete', $module_id
             $canDelete = has_full_access() || ($invoice->createdBy === (int)Session::userId());
             
             if (!$canDelete) {
-                $error_message = "You do not have permission to delete this invoice";
+                flash_error("You do not have permission to delete this invoice");
                 log_error("IDOR attempt: User Session::userId() tried to delete invoice $invoiceId", 'WARNING', __FILE__, __LINE__);
             } else {
                 if ($invoiceService->deleteInvoice($invoiceId, $activeOrganizationId)) {
@@ -104,11 +105,11 @@ if (($action == "delete_$module" && !empty($id)) && granted('delete', $module_id
                     header("Location:listing_$module.php?page=$page");
                     exit;
                 } else {
-                    $error_message = "Could not delete record. It may have already been deleted.";
+                    flash_error("Could not delete record. It may have already been deleted.");
                 }
             }
         } catch (\Throwable $e) {
-            $error_message = $e->getMessage();
+            flash_error($e->getMessage());
         }
     }
 }
@@ -190,7 +191,6 @@ if (($action == "delete_$module" && !empty($id)) && granted('delete', $module_id
                             <th class="text-center">Status</th>
                             <th class="text-center">Days Overdue</th>
                             <th>Dates</th>
-                            <th class="text-end pe-4" style="width: 80px;">Actions</th>
                         </tr>
                     </thead>
                 </table>
@@ -204,9 +204,6 @@ if (($action == "delete_$module" && !empty($id)) && granted('delete', $module_id
 </div>
 
 <script>
-var INVOICE_EDIT_PERM = <?php echo granted('edit', $module_id) ? '1' : '0'; ?>;
-var INVOICE_DELETE_PERM = <?php echo granted('delete', $module_id) ? '1' : '0'; ?>;
-
 $(document).ready(function() {
 
     window.HAIDatatableInitializer.init('#grid-<?php echo $module; ?>', '<?php echo $module; ?>', {
@@ -238,7 +235,6 @@ $(document).ready(function() {
             { data: 4, className: 'text-center' }, // col 4: Status
             { data: 9, className: 'text-center' }, // col 5: Days Overdue
             { data: null }, // col 6: Dates
-            { data: null, orderable: false, searchable: false, className: 'text-end pe-4' } // col 7: Actions
         ],
         columnDefs: [
             {
@@ -326,69 +322,11 @@ $(document).ready(function() {
                     return '<div class="d-flex flex-column fs-7">' + htmlDate + htmlDue + '</div>';
                 }
             },
-            {
-                targets: 7,
-                render: function(data, type, row) {
-                    var id = row[8] || '';
-                    var module = 'invoices';
-                    var html = '<div class="dropdown d-inline-block">';
-                    html += '<button class="btn btn-link text-muted p-1 border-0" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Actions menu">';
-                    html += '<i class="ph-dots-three-vertical fs-4"></i>';
-                    html += '</button>';
-                    html += '<ul class="dropdown-menu dropdown-menu-end shadow border-0 py-2 fs-7">';
-                    html += '<li><a class="dropdown-item py-2" href="invoice_overview.php?invoice_id=' + id + '"><i class="ph-eye me-2 align-middle text-muted"></i> View Details</a></li>';
-                    if (INVOICE_EDIT_PERM) {
-                        html += '<li><a class="dropdown-item py-2" href="invoices.php?action=edit_invoices&id=' + id + '"><i class="ph-pencil me-2 align-middle text-muted"></i> Edit Invoice</a></li>';
-                    }
-                    html += '<li><a class="dropdown-item py-2" href="generate_pdf.php?invoice_id=' + id + '" target="_blank"><i class="ph-file-pdf me-2 align-middle text-muted"></i> Download PDF</a></li>';
-                    if (INVOICE_DELETE_PERM) {
-                        html += '<li><hr class="dropdown-divider my-1"></li>';
-                        html += '<li><a class="dropdown-item py-2 text-danger fw-semibold" href="#" data-action="delete_record" data-module="' + module + '" data-id="' + id + '"><i class="ph-trash me-2 align-middle text-danger"></i> Delete</a></li>';
-                    }
-                    html += '</ul>';
-                    html += '</div>';
-                    return html;
-                }
-            }
         ],
         order: [[0, 'desc']],
         pageLength: 10,
         lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
         dom: "<'dt-header d-flex justify-content-between align-items-center mb-3'<'dt-head-left'f><'dt-head-right'l>>rt<'dt-footer d-flex justify-content-between align-items-center mt-3'<'dt-foot-left'i><'dt-foot-right'p>>"
-    });
-
-    // ========================================
-    // CSRF-Protected Delete Record Handler
-    // ========================================
-    $(document).off('click.haiDatatableDelete', 'a[data-action="delete_record"]');
-    $(document).on('click', 'a[data-action="delete_record"]', function(e) {
-        e.preventDefault();
-        
-        var id = $(this).data('id');
-        var module = $(this).data('module');
-        var csrfToken = $('input[name="csrf_token"]').first().val() || '';
-        
-        if (confirm('Are you sure you want to delete this record?')) {
-            var form = $('<form>', {
-                'method': 'POST',
-                'action': 'listing_' + module + '.php'
-            }).append($('<input>', {
-                'type': 'hidden',
-                'name': 'action',
-                'value': 'delete_' + module
-            })).append($('<input>', {
-                'type': 'hidden',
-                'name': 'id',
-                'value': id
-            })).append($('<input>', {
-                'type': 'hidden',
-                'name': 'csrf_token',
-                'value': csrfToken
-            }));
-            
-            $('body').append(form);
-            form.submit();
-        }
     });
 
 });

@@ -7,6 +7,7 @@ namespace App\Repository;
 use App\Core\Database;
 use App\Core\DB;
 use App\Model\Port;
+use App\Core\ErrorCapture;
 
 class PortRepository
 {
@@ -69,7 +70,7 @@ class PortRepository
             $this->db->execute($sql, $params);
             return true;
         } catch (\Throwable $e) {
-            error_log("PortRepository: Update failed: " . $e->getMessage());
+            ErrorCapture::record("PortRepository: Update failed: " . $e->getMessage());
             return false;
         }
     }

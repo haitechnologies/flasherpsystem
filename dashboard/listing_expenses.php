@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Core\DB;
+use App\Core\Session;
 
 include('admin_elements/admin_header.php');
 
@@ -22,24 +23,39 @@ include('admin_elements/permissions.php');
 
 $activeOrganizationId = dashboardRequireActiveOrganization();
 
-if (($action == "delete_$module" && !empty($id))) {
-    if (is_SystemAdmin() || is_SuperAdmin()) {
-        $mysqli->query("DELETE FROM `" . tbl_expense_items . "` WHERE expense_id=$id");
-        $mysqli->query("DELETE FROM `$tbl_name` WHERE id=$id");
+if (!empty($action) && $action == "delete_$module") {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !validate_csrf_token($_POST['csrf_token'] ?? '')) {
+        $error_message = 'Invalid security token. Please try again.';
+        log_error('Invalid CSRF token on expense delete', 'SECURITY', __FILE__, __LINE__, backend_runtime_log_context([
+            'module' => 'expenses',
+            'module_slug' => 'expenses',
+        ]));
+        $action = '';
+    }
+}
 
-        $journal_id = getTableAttrV('id', DB::JOURNALS, " reference_type='expense' AND reference_id=$id ");
+if (($action == "delete_$module" && !empty($id)) && granted('delete', $module_id)) {
+    $expenseId = (int)$id;
+    $uid = (int)Session::userId();
+    if (is_SystemAdmin() || is_SuperAdmin()) {
+        $mysqli->query("DELETE FROM `" . tbl_expense_items . "` WHERE expense_id=$expenseId AND organization_id=$activeOrganizationId");
+        $mysqli->query("DELETE FROM `" . tbl_expense_attachments . "` WHERE expense_id=$expenseId AND organization_id=$activeOrganizationId");
+        $mysqli->query("DELETE FROM `$tbl_name` WHERE id=$expenseId AND organization_id=$activeOrganizationId");
+
+        $journal_id = getTableAttrV('id', DB::JOURNALS, " reference_type='expense' AND reference_id=$expenseId AND organization_id=$activeOrganizationId ");
         if (!empty($journal_id)) {
             $mysqli->query("DELETE FROM `" . DB::JOURNAL_ITEMS . "` WHERE journal_id=$journal_id ");
-            $mysqli->query("DELETE FROM `" . DB::JOURNALS . "` WHERE reference_type='expense' AND reference_id=$id ");
+            $mysqli->query("DELETE FROM `" . DB::JOURNALS . "` WHERE reference_type='expense' AND reference_id=$expenseId AND organization_id=$activeOrganizationId ");
         }
     } else {
-        $mysqli->query("DELETE FROM `" . tbl_expense_items . "` WHERE expense_id=$id AND created_by ='" . Session::userId() . "'");
-        $mysqli->query("DELETE FROM `$tbl_name` WHERE id=$id AND created_by ='" . Session::userId() . "'");
+        $mysqli->query("DELETE FROM `" . tbl_expense_items . "` WHERE expense_id=$expenseId AND organization_id=$activeOrganizationId AND created_by ='$uid'");
+        $mysqli->query("DELETE FROM `" . tbl_expense_attachments . "` WHERE expense_id=$expenseId AND organization_id=$activeOrganizationId AND created_by ='$uid'");
+        $mysqli->query("DELETE FROM `$tbl_name` WHERE id=$expenseId AND organization_id=$activeOrganizationId AND created_by ='$uid'");
 
-        $journal_id = getTableAttrV('id', DB::JOURNALS, " reference_type='expense' AND reference_id=$id ");
+        $journal_id = getTableAttrV('id', DB::JOURNALS, " reference_type='expense' AND reference_id=$expenseId AND organization_id=$activeOrganizationId ");
         if (!empty($journal_id)) {
             $mysqli->query("DELETE FROM `" . DB::JOURNAL_ITEMS . "` WHERE journal_id=$journal_id ");
-            $mysqli->query("DELETE FROM `" . DB::JOURNALS . "` WHERE reference_type='expense' AND reference_id=$id AND created_by='" . Session::userId() . "' ");
+            $mysqli->query("DELETE FROM `" . DB::JOURNALS . "` WHERE reference_type='expense' AND reference_id=$expenseId AND organization_id=$activeOrganizationId AND created_by='$uid' ");
         }
     }
 

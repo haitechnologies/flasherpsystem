@@ -7,6 +7,7 @@ namespace App\Repository;
 use App\Core\Database;
 use App\Core\DB;
 use App\Model\Subcategory;
+use App\Core\ErrorCapture;
 
 class SubcategoryRepository
 {
@@ -73,7 +74,7 @@ class SubcategoryRepository
             $this->db->execute($sql, $params);
             return true;
         } catch (\Throwable $e) {
-            error_log("SubcategoryRepository: Update failed: " . $e->getMessage());
+            ErrorCapture::record("SubcategoryRepository: Update failed: " . $e->getMessage());
             return false;
         }
     }

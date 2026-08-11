@@ -310,13 +310,28 @@ if (!empty($id)) {
     $master_awb_no          = $invoice->masterAwbNo;
 
     $shipper                = $invoice->shipper;
+    $shipper_text           = !empty($shipper) ? getTableAttr('shipper_name', DB::SHIPPERS, $shipper) : '';
     $consignee              = $invoice->consignee;
+    $consignee_text         = !empty($consignee) ? getTableAttr('consignee_name', DB::CONSIGNEES, $consignee) : '';
 
     $origin                 = $invoice->origin;
-    $origin                 = getTableAttr('abbr', DB::GEO_COUNTRIES, $origin) . ' - ' . getTableAttr('country', DB::GEO_COUNTRIES, $origin);
+    $origin_text            = '';
+    if (!empty($origin)) {
+        $origin_text = getTableAttr('port_name', DB::PORTS, $origin);
+        $origin_country = getTableAttr('country', DB::GEO_COUNTRIES, $invoice->originCountry);
+        $origin_text = trim($origin_text . ' - ' . $origin_country, ' -');
+    }
 
     $destination            = $invoice->destination;
-    $destination            = getTableAttr('abbr', DB::GEO_COUNTRIES, $destination) . ' - ' . getTableAttr('country', DB::GEO_COUNTRIES, $destination);
+    $destination_text       = '';
+    if (!empty($destination)) {
+        $destination_text = getTableAttr('port_name', DB::PORTS, $destination);
+        $destination_country = getTableAttr('country', DB::GEO_COUNTRIES, $invoice->destinationCountry);
+        $destination_text = trim($destination_text . ' - ' . $destination_country, ' -');
+    }
+
+    $hwb_hbol               = $invoice->hwbHbol;
+    $master_awb_display     = $master_awb_no . (!empty($hwb_hbol) ? ' / ' . $hwb_hbol : '');
 
     $no_of_packs            = $invoice->noOfPacks;
     $gross_weight           = $invoice->grossWeight;
@@ -336,13 +351,13 @@ if (!empty($id)) {
 
     $is_active = $invoice->isActive ? 1 : 0;
 
-    $invoice_date               = processDateYtoD($invoice_date);
-    $expiry_date                = ($expiry_date === '1970-01-01' || empty($expiry_date) ? '' : processDateDtoY($expiry_date));
-    $expected_shipment_date     = ($expected_shipment_date === '1970-01-01' || empty($expected_shipment_date) ? '' : processDateDtoY($expected_shipment_date));
+    $invoice_date               = ddm_($invoice_date);
+    $expiry_date                = ($expiry_date === '1970-01-01' || empty($expiry_date) ? '' : ddm_($expiry_date));
+    $expected_shipment_date     = ($expected_shipment_date === '1970-01-01' || empty($expected_shipment_date) ? '' : ddm_($expected_shipment_date));
 
     $created_at             = $invoice->createdAt;
     $created_time           = $created_at ? date('h:i:s', strtotime($created_at)) : '';
-    $created_date           = $created_at ? date('d-m-Y', strtotime($created_at)) : '';
+    $created_date           = $created_at ? date('d M Y', strtotime($created_at)) : '';
     $created_by             = $invoice->createdBy;
     $created_by             = getUsernameByID($created_by);
 
@@ -588,7 +603,7 @@ $tbl = <<<EOD
     <td width="80" style="background-color: #e8f7f4; border:1px solid #f1f1f1;"><span style="color: #555;">Terms </span> </td>
     <td width="90" style="background-color: #e8f7f4; border:1px solid #f1f1f1;"><span style="color: #555;">Due Date </span> </td>
     <td width="80" style="background-color: #e8f7f4; border:1px solid #f1f1f1;"><span style="color: #555;">Job No </span> </td>
-    <td width="105" style="background-color: #e8f7f4; border:1px solid #f1f1f1"><span style="color: #555;">Master AWB No: </span> </td>
+    <td width="105" style="background-color: #e8f7f4; border:1px solid #f1f1f1"><span style="color: #555;">Master AWB / HWB </span> </td>
     <td width="100" style="background-color: #e8f7f4; border:1px solid #f1f1f1"><span style="color: #555;">Ref No </span> </td>
     <td width="123" style="background-color: #e8f7f4; border:1px solid #f1f1f1"><span style="color: #555;">Shipper </span> </td>
 </tr>
@@ -598,9 +613,9 @@ $tbl = <<<EOD
     <td style="border:1px solid #f1f1f1;"><span style="color: #555;">$payment_term </span> </td>
     <td style="border:1px solid #f1f1f1;"><span style="color: #555;">$expiry_date </span> </td>
     <td style="border:1px solid #f1f1f1;"><span style="color: #555;">$job_reference_no </span> </td>
-    <td style="border:1px solid #f1f1f1;"><span style="color: #555;">$master_awb_no </span> </td>
+    <td style="border:1px solid #f1f1f1;"><span style="color: #555;">$master_awb_display </span> </td>
     <td style="border:1px solid #f1f1f1;"><span style="color: #555;">$reference_no </span> </td>
-    <td style="border:1px solid #f1f1f1;"><span style="color: #555;">$shipper </span> </td>
+    <td style="border:1px solid #f1f1f1;"><span style="color: #555;">$shipper_text </span> </td>
 </tr>
 
 </table>
@@ -626,9 +641,9 @@ $tbl = <<<EOD
 </tr>
 
 <tr>
-    <td style="border:1px solid #f1f1f1;"><span style="color: #555;">$consignee </span> </td>
-    <td style="border:1px solid #f1f1f1;"><span style="color: #555;">$origin </span> </td>
-    <td style="border:1px solid #f1f1f1;"><span style="color: #555;">$destination </span> </td>
+    <td style="border:1px solid #f1f1f1;"><span style="color: #555;">$consignee_text </span> </td>
+    <td style="border:1px solid #f1f1f1;"><span style="color: #555;">$origin_text </span> </td>
+    <td style="border:1px solid #f1f1f1;"><span style="color: #555;">$destination_text </span> </td>
     <td style="border:1px solid #f1f1f1;"><span style="color: #555;">$no_of_packs </span> </td>
     <td style="border:1px solid #f1f1f1;"><span style="color: #555;">$gross_weight </span> </td>
     <td style="border:1px solid #f1f1f1;"><span style="color: #555;">$chargeable_weight </span> </td>
@@ -857,8 +872,7 @@ $pdf->writeHTML($tbl, true, false, false, false, '');
     // $encrypted_filename = crc32($id . $salt);
     // $encrypted_filename = sha($id . $salt);
 
-    $salt =  '}#f4ga~g%7hjg4&jokho!bj30ab-wi=6gia^7-$^R9F|GaK5Jzxs#E6WT;IOJN'; // random string 
-    $encrypted_filename = hash('sha256', $salt . $id);
+    $encrypted_filename = \App\Helper\PdfHelper::filename((int)$id);
 
 
 //============================================================+
@@ -888,26 +902,34 @@ $pdf->writeHTML($tbl, true, false, false, false, '');
 //     $pdf->Output($_SERVER['DOCUMENT_ROOT'] . '/haipulse/pdfs_invoices/' . $encrypted_filename . '.pdf', 'F');
 // }
 
+// --- Output / persistence ---
+$pdfs_dir = dirname(__DIR__) . '/pdfs_invoices';
+if (!is_dir($pdfs_dir)) {
+    @mkdir($pdfs_dir, 0755, true);
+}
+$pdf_path = $pdfs_dir . '/' . $encrypted_filename . '.pdf';
+
+$save_mode = isset($_GET['mode']) && $_GET['mode'] === 'save';
+
+if ($save_mode) {
+    // File-only generation (used by send_email.php to attach the PDF)
+    $pdf->Output($pdf_path, 'F');
+    $mysqli->query("UPDATE `" . DB::INVOICES . "` SET pdf = '" . $encrypted_filename . "' WHERE id=$id");
+    header('Content-Type: application/json');
+    echo json_encode(['success' => true, 'filename' => $encrypted_filename . '.pdf', 'path' => $pdf_path]);
+    exit;
+}
+
+// Persist PDF to disk so the file + pdf column are always available
+if (!is_file($pdf_path)) {
+    $pdf->Output($pdf_path, 'F');
+}
+$mysqli->query("UPDATE `" . DB::INVOICES . "` SET pdf = '" . $encrypted_filename . "' WHERE id=$id");
+
 $pdf->Output($encrypted_filename, 'I');  // Flag - I (show file)
-    // $pdf->Output($encrypted_filename, 'F');  // Flag - I (show file)
     //============================================================+
     // END OF FILE
     //============================================================+
-
-
-
-    // https://stackoverflow.com/questions/29121375/fpdf-outputfilename-pdf-f-downloading-file-on-browser-instead-of-saving-i
-    // I: send the file inline to the browser. The plug-in is used if available. The name given by name is used when one selects the "Save as" option on the link generating the PDF.
-    // D: send to the browser and force a file download with the name given by name.
-    // F: save to a local file with the name given by name (may include a path).
-    // S: return the document as a string. name is ignored.
-
-
-
-    // ---------------------------------------------
-    // UPDATE PDF DB 
-    // ---------------------------------------------
-    $mysqli->query("UPDATE `" . DB::INVOICES . "` SET pdf = '" . $encrypted_filename . "' WHERE id=$id");
 
 
 

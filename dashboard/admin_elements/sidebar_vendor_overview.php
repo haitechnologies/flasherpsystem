@@ -1,38 +1,314 @@
-<?php
-use App\Core\DB;
-if (!empty($_GET["vendor_overviews_ordering"] ?? $_REQUEST["vendor_overviews_ordering"] ?? "")) {
-    $_SESSION["vendor_overviews_ordering"] = e_s__($_GET["vendor_overviews_ordering"] ?? $_REQUEST["vendor_overviews_ordering"]);
-}
-if (!isset($_SESSION["vendor_overviews_ordering"])) $_SESSION["vendor_overviews_ordering"] = "all";
-$vendor_overviews_ordering = $_SESSION["vendor_overviews_ordering"];
-$current_id = (int)($_GET["vendor_id"] ?? 0);
-?>
-<div class="sidebar-content">
-    <div class="sidebar-section sidebar-section-body d-flex align-items-center pb-2 border-bottom border-1">
-        <div><h6 class="mb-0">Vendors</h6></div>
-        <div class="ms-auto">
-            <button type="button" class="btn btn-primary border-transparent btn-icon btn-sm opacity-75 p-1 lh-1 fs-6" onclick="window.location.href='vendor_overviews.php';">
-                <i class="ph-plus"></i>
-            </button>
+<div class="col-lg-4">
+
+    <?php
+    use App\Core\DB;
+    // ----------------------------------------------------------------
+    $result_contacts = $mysqli->query("SELECT * FROM `" . DB::VENDOR_CONTACTS . "` WHERE contactable_type='Vendor' AND contactable_id=$vendor_id AND is_primary=1");
+    while ($rows_contacts = $result_contacts->fetch_array()) {
+        // ----------------------------------------------------------------
+    ?>
+        <div class="d-flex align-items-start mb-3">
+            <div class="me-2 position-relative">
+                <div class="bg-success bg-opacity-10 text-success lh-1 rounded-pill p-2">
+                    <i class="ph-user"></i>
+                </div>
+            </div>
+
+            <div class="flex-fill">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div><span class="text-muted small">
+                            <?php echo $rows_contacts['first_name']; ?> <?php echo $rows_contacts['last_name']; ?></span><br />
+                        <?php echo $rows_contacts['email']; ?>
+                    </div>
+                    <span class="fs-sm text-muted">
+                        <div class="dropdown d-inline-block">
+                            <button type="button" class="btn btn-sm me-2" data-bs-toggle="dropdown">
+                                <i class="ph-gear"></i>
+                            </button>
+
+                            <div class="dropdown-menu dropdown-menu-end">
+                                <a class="dropdown-item small" href="vendor_contacts.php?action=edit_vendor_contacts&vendor_id=<?php echo $vendor_id; ?>&contact_id=<?php echo $rows_contacts['id']; ?>">
+                                    Edit
+                                </a>
+                                <form method="post" action="vendor_contacts.php" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this contact?')">
+                                    <input type="hidden" name="action" value="delete_vendor_contacts">
+                                    <input type="hidden" name="vendor_id" value="<?php echo $vendor_id; ?>">
+                                    <input type="hidden" name="contact_id" value="<?php echo $rows_contacts['id']; ?>">
+                                    <?php echo csrf_field(); ?>
+                                    <button type="submit" class="dropdown-item small">Delete</button>
+                                </form>
+                            </div>
+                        </div>
+                    </span>
+                </div>
+
+            </div>
+        </div>
+    <?php } ?>
+
+    <div class="sidebar-section">
+        <div class="sidebar-section-header border-bottom">
+            <span class="text-muted">ADDRESS</span>
+            <div class="ms-auto">
+                <a href="#address" class="text-reset" data-bs-toggle="collapse">
+                    <i class="ph-caret-down collapsible-indicator"></i>
+                </a>
+            </div>
+        </div>
+
+        <div class="collapse show" id="address">
+            <div class="sidebar-section-body">
+
+                <div class="small mt-3"> Billing Address</div>
+
+                <?php
+                $billing_country = ((empty($billing_country)) ? '0' : $billing_country);
+                $rs_billing     = $mysqli->query("SELECT * FROM `" . DB::VENDOR_ADDRESSES . "` WHERE addressable_type='Vendor' AND addressable_id=$vendor_id AND type='billing' ");
+                $row_billing    = $rs_billing->fetch_array();
+
+                if ($rs_billing->num_rows == 0) { ?>
+
+                    <div><span class="small text-muted"> No Billing Address</span> - <span class="small"><a href="vendor_billing_addresses.php?action=edit_vendor_billing_addresses&vendor_id=<?php echo $vendor_id; ?>">New Address</a></div>
+
+                <?php } else {
+
+                    $billing_attention      = (!empty($row_billing['attention']) ? s__($row_billing['attention']) : '');
+
+                    $billing_country        = (!empty($row_billing['country']) ? s__($row_billing['country']) : '');
+                    $billing_country        = (!empty($billing_country) ? getTableAttr('country_name', DB::GEO_COUNTRIES, $billing_country)  : '');
+
+                    $billing_address_line1  = (!empty($row_billing['address_line1']) ? s__($row_billing['address_line1']) : '');
+                    $billing_address_line2  = (!empty($row_billing['address_line2']) ? s__($row_billing['address_line2']) : '');
+                    $billing_city           = (!empty($row_billing['city']) ? s__($row_billing['city']) : '');
+                    $billing_state          = (!empty($row_billing['state']) ? s__($row_billing['state']) : '');
+                    $billing_zipcode        = (!empty($row_billing['zipcode']) ? s__($row_billing['zipcode']) : '');
+                    $billing_phone          = (!empty($row_billing['phone']) ? s__($row_billing['phone']) : '');
+                    $billing_fax            = (!empty($row_billing['fax']) ? s__($row_billing['fax']) : '');
+                ?>
+
+                    <div class="small fw-semibold">
+                        <?php echo $billing_attention; ?>
+
+                        <a href="vendor_billing_addresses.php?action=edit_vendor_billing_addresses&vendor_id=<?php echo $vendor_id; ?>" title="Edit">
+                            <span class="text-dark opacity-50 me-1">
+                                <i class="ph-pencil"></i>
+                            </span>
+                        </a>
+                    </div>
+                    <div class="small"><?php echo $billing_address_line1; ?></div>
+                    <div class="small"><?php echo $billing_address_line2; ?></div>
+                    <div class="small"><?php echo $billing_city; ?> <?php echo $billing_zipcode; ?></div>
+                    <div class="small"><?php echo $billing_state; ?></div>
+                    <div class="small"><?php echo $billing_country; ?></div>
+                    <div class="small"><?php echo $billing_phone; ?></div>
+                    <div class="small"><?php echo $billing_fax; ?></div>
+                <?php } ?>
+
+
+                <div class="small mt-3"> Shipping Address</div>
+
+                <?php
+                $shipping_country = ((empty($shipping_country)) ? '0' : $shipping_country);
+                $rs_shipping     = $mysqli->query("SELECT * FROM `" . DB::VENDOR_ADDRESSES . "` WHERE addressable_type='Vendor' AND addressable_id=$vendor_id AND type='shipping' ");
+                $row_shipping    = $rs_shipping->fetch_array();
+
+                if ($rs_shipping->num_rows == 0) { ?>
+
+                    <div><span class="small text-muted"> No Shipping Address</span> - <span class="small"><a href="vendor_shipping_addresses.php?action=edit_vendor_shipping_addresses&vendor_id=<?php echo $vendor_id; ?>">New Address</a></div>
+
+                <?php } else {
+
+                    $shipping_attention      = (!empty($row_shipping['attention']) ? s__($row_shipping['attention']) : '');
+
+                    $shipping_country        = (!empty($row_shipping['country']) ? s__($row_shipping['country']) : '');
+                    $shipping_country        = (!empty($shipping_country) ? getTableAttr('country_name', DB::GEO_COUNTRIES, $shipping_country)  : '');
+
+                    $shipping_address_line1  = (!empty($row_shipping['address_line1']) ? s__($row_shipping['address_line1']) : '');
+                    $shipping_address_line2  = (!empty($row_shipping['address_line2']) ? s__($row_shipping['address_line2']) : '');
+                    $shipping_city           = (!empty($row_shipping['city']) ? s__($row_shipping['city']) : '');
+                    $shipping_state          = (!empty($row_shipping['state']) ? s__($row_shipping['state']) : '');
+                    $shipping_zipcode        = (!empty($row_shipping['zipcode']) ? s__($row_shipping['zipcode']) : '');
+                    $shipping_phone          = (!empty($row_shipping['phone']) ? s__($row_shipping['phone']) : '');
+                    $shipping_fax            = (!empty($row_shipping['fax']) ? s__($row_shipping['fax']) : '');
+                ?>
+
+                    <div class="small fw-semibold">
+                        <?php echo $shipping_attention; ?>
+
+                        <a href="vendor_shipping_addresses.php?action=edit_vendor_shipping_addresses&vendor_id=<?php echo $vendor_id; ?>" title="Edit">
+                            <span class="text-dark opacity-50 me-1">
+                                <i class="ph-pencil"></i>
+                            </span>
+                        </a>
+                    </div>
+                    <div class="small"><?php echo $shipping_address_line1; ?></div>
+                    <div class="small"><?php echo $shipping_address_line2; ?></div>
+                    <div class="small"><?php echo $shipping_city; ?> <?php echo $shipping_zipcode; ?></div>
+                    <div class="small"><?php echo $shipping_state; ?></div>
+                    <div class="small"><?php echo $shipping_country; ?></div>
+                    <div class="small"><?php echo $shipping_phone; ?></div>
+                    <div class="small"><?php echo $shipping_fax; ?></div>
+                <?php } ?>
+
+
+            </div>
         </div>
     </div>
-    <div class="sidebar-section pt-2">
-        <div class="table-responsive">
-            <table class="table table-hover"><tbody>
-<?php
-$r = $mysqli->query("SELECT t.id, t.company_name, t.display_name FROM `" . DB::VENDORS . "` t WHERE t.is_active = 1 ORDER BY t.id DESC LIMIT 25");
-$c = $mysqli->query("SELECT COUNT(*) FROM `" . DB::VENDORS . "` t WHERE t.is_active = 1")->fetch_row();
-$total = $c[0] ?? 0;
-while ($row = $r->fetch_array()) {
-    $sel = $row["id"] == $current_id ? "table-primary shadow-sm" : "";
-    $name = $row["company_name"] ?: $row["display_name"];
-?>
-    <tr id="<?php echo $row["id"]; ?>" class="<?php echo $sel; ?>">
-        <td><a href="vendor_overview_overview.php?vendor_id=<?php echo $row["id"]; ?>" class="text-black text-decoration-none d-block">
-            <?php echo $name; ?>
-        </a></td>
-    </tr>
-<?php } ?>
-</tbody></table></div>
-<div class="text-center mb-3"><a href="listing_vendors.php">View All (<?php echo $total; ?>)</a></div>
-</div></div>
+
+    <div class="sidebar-section mt-4">
+        <div class="sidebar-section-header border-bottom mb-3">
+            <span class="text-muted">OTHER DETAILS</span>
+            <div class="ms-auto">
+                <a href="#other_details" class="text-reset" data-bs-toggle="collapse">
+                    <i class="ph-caret-down collapsible-indicator"></i>
+                </a>
+            </div>
+        </div>
+
+        <div class="collapse show" id="other_details">
+            <div class="sidebar-section-body">
+
+                <?php $vendor_type = getTableAttr('vendor_type', DB::VENDORS, $vendor_id); ?>
+                <div class="row mt-2">
+                    <div class="col-lg-6 small ">Vendor Type</div>
+                    <div class="col-lg-6 small"><?php echo ucwords($vendor_type); ?></div>
+                </div>
+
+                <div class="row mt-2">
+                    <div class="col-lg-6 small text-muted">Default Currency</div>
+                    <div class="col-lg-6 small"><?php echo BASE_CURRENCY['code']; ?></div>
+                </div>
+
+                <div class="row mt-2">
+                    <div class="col-lg-6 small text-muted">Vendor Language</div>
+                    <div class="col-lg-6 small">English</div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+
+    <?php
+    $rs                     = $mysqli->query("SELECT id FROM `" . DB::VENDOR_CONTACTS . "` WHERE contactable_type='Vendor' AND contactable_id=$vendor_id ");
+    $total_contact_persons  = $rs->num_rows;
+    ?>
+    <div class="sidebar-section mt-4">
+        <div class="sidebar-section-header border-bottom mb-3">
+            <span class="text-muted">CONTACT PERSONS (<?php echo $total_contact_persons; ?>)</span>
+            <div>
+                <a class="btn btn-link" href="vendor_contacts.php?vendor_id=<?php echo $vendor_id; ?>">
+                    <i class="ph-plus-circle me-2"></i>
+                </a>
+            </div>
+            <div class="ms-auto">
+                <a href="#contact_persons" class="text-reset" data-bs-toggle="collapse">
+                    <i class="ph-caret-down collapsible-indicator"></i>
+                </a>
+            </div>
+        </div>
+
+        <div class="collapse show" id="contact_persons">
+            <div class="sidebar-section-body">
+
+                <?php
+                $result_contacts = $mysqli->query("SELECT * FROM `" . DB::VENDOR_CONTACTS . "` WHERE contactable_type='Vendor' AND contactable_id=$vendor_id AND is_primary=0");
+                while ($rows_contacts = $result_contacts->fetch_array()) {
+                ?>
+                    <div class="card-body">
+                        <div class="d-flex align-items-start">
+                            <div class="me-2 position-relative">
+                                <div class="bg-success bg-opacity-10 text-success lh-1 rounded-pill p-2">
+                                    <i class="ph-user"></i>
+                                </div>
+                            </div>
+
+                            <div class="flex-fill">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div><span class="text-muted small">
+                                            <?php echo $rows_contacts['first_name']; ?> <?php echo $rows_contacts['last_name']; ?></span><br />
+                                        <?php echo $rows_contacts['email']; ?>
+                                    </div>
+                                    <span class="fs-sm text-muted">
+                                        <div class="dropdown d-inline-block">
+                                            <button type="button" class="btn btn-sm me-2" data-bs-toggle="dropdown">
+                                                <i class="ph-gear"></i>
+                                            </button>
+
+                                            <div class="dropdown-menu dropdown-menu-end">
+                                                <a class="dropdown-item small" href="vendor_contacts.php?action=edit_vendor_contacts&vendor_id=<?php echo $vendor_id; ?>&contact_id=<?php echo $rows_contacts['id']; ?>">
+                                                    Edit
+                                                </a>
+                                                <form method="post" action="vendor_overview.php" class="d-inline">
+                                                    <input type="hidden" name="action" value="mark_as_primary">
+                                                    <input type="hidden" name="vendor_id" value="<?php echo $vendor_id; ?>">
+                                                    <input type="hidden" name="contact_id" value="<?php echo $rows_contacts['id']; ?>">
+                                                    <?php echo csrf_field(); ?>
+                                                    <button type="submit" class="dropdown-item small">Mark as Primary</button>
+                                                </form>
+                                                <a class="dropdown-item small" href="vendor_overview.php?vendor_id=<?php echo $vendor_id; ?>&action=delete_vendor_contacts&contact_id=<?php echo $rows_contacts['id']; ?>">
+                                                    Delete
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </span>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                <?php } ?>
+
+
+
+
+            </div>
+        </div>
+    </div>
+
+
+
+    <div class="sidebar-section mt-4">
+        <div class="sidebar-section-header border-bottom mb-3">
+            <span class="text-muted">RECORD INFO</span>
+            <div class="ms-auto">
+                <a href="#record_info" class="text-reset" data-bs-toggle="collapse">
+                    <i class="ph-caret-down collapsible-indicator"></i>
+                </a>
+            </div>
+        </div>
+
+        <div class="collapse" id="record_info">
+            <div class="sidebar-section-body">
+
+                <div class="row mt-2">
+                    <div class="col-lg-6 small text-muted">Vendor ID</div>
+                    <div class="col-lg-6 small"><?php echo $vendor_id; ?></div>
+                </div>
+
+                <div class="row mt-2">
+                    <div class="col-lg-6 small text-muted">Created On</div>
+                    <div class="col-lg-6 small"><?php echo ddm_($created_at); ?></div>
+                </div>
+
+                <div class="row mt-2">
+                    <div class="col-lg-6 small text-muted">Created By</div>
+                    <div class="col-lg-6 small"><?php echo getTableAttr('full_name', DB::USERS, $created_by); ?></div>
+                </div>
+
+                <?php if ($approved == 1) { ?>
+
+                    <div class="row mt-2">
+                        <div class="col-lg-6 small text-muted">Approved By</div>
+                        <div class="col-lg-6 small">Zaki on <?php echo date('d M Y g:ia', strtotime($approved_at)); ?></div>
+                    </div>
+
+                <?php } ?>
+
+
+            </div>
+        </div>
+    </div>
+
+
+</div>

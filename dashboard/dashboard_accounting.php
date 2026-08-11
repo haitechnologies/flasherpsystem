@@ -72,7 +72,7 @@ $current_month_revenue = $revenue_data['current_month_revenue'] ?? 0;
 $last_month_revenue = $revenue_data['last_month_revenue'] ?? 0;
 $year_revenue = $revenue_data['year_revenue'] ?? 0;
 
-// ACCOUNTS RECEIVABLE (Outstanding invoices)
+// ACCOUNTS RECEIVABLE (Outstanding invoices - payments - credits)
 $ar_query = "
     SELECT 
         SUM(grand_total) as total_ar,
@@ -82,7 +82,7 @@ $ar_query = "
         SUM(CASE WHEN DATEDIFF(NOW(), expiry_date) BETWEEN 31 AND 45 THEN grand_total ELSE 0 END) as ar_31_45,
         SUM(CASE WHEN DATEDIFF(NOW(), expiry_date) > 45 THEN grand_total ELSE 0 END) as ar_over_45
     FROM `" . DB::INVOICES . "`
-    WHERE invoice_status = 'sent'
+    WHERE invoice_status IN ('sent', 'partially_paid', 'overdue', 'paid')
 ";
 $ar_data = $mysqli->query($ar_query)->fetch_assoc();
 $total_ar = $ar_data['total_ar'] ?? 0;

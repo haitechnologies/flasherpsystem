@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service;
 
 use App\Core\Container;
+use App\Core\DB;
 use App\Model\Customer;
 use App\Model\CustomerContact;
 use App\Model\CustomerAddress;
@@ -53,6 +54,9 @@ class CustomerService
     {
         $this->validateCustomerData($data, $orgId);
 
+        $openingBalance = !empty($data['opening_balance']) ? (float)$data['opening_balance'] : 0.00;
+        $receivableAccountId = !empty($data['receivable_account_id']) ? (int)$data['receivable_account_id'] : null;
+
         $customer = new Customer(
             id: null,
             organizationId: $orgId,
@@ -75,16 +79,16 @@ class CustomerService
             taxTreatment: !empty($data['tax_treatment']) ? (int)$data['tax_treatment'] : null,
             trn: !empty($data['trn']) ? trim((string)$data['trn']) : null,
             corporateTaxNumber: !empty($data['corporate_tax_number']) ? trim((string)$data['corporate_tax_number']) : null,
-            licenseNumber: !empty($data['license_number']) ? (int)$data['license_number'] : null,
+            licenseNumber: !empty($data['license_number']) ? trim((string)$data['license_number']) : null,
             licenseExpiry: !empty($data['license_expiry']) ? $this->convertDateToDb((string)$data['license_expiry']) : '1970-01-01',
             salesPerson: !empty($data['sales_person']) ? (int)$data['sales_person'] : null,
             leadCategory: !empty($data['lead_category']) ? trim((string)$data['lead_category']) : null,
             csAgent: !empty($data['cs_agent']) ? (int)$data['cs_agent'] : null,
             rating: !empty($data['rating']) ? (int)$data['rating'] : null,
             currency: !empty($data['currency']) ? (int)$data['currency'] : null,
-            openingBalance: !empty($data['opening_balance']) ? (float)$data['opening_balance'] : 0.00,
-            receivableAccountId: !empty($data['receivable_account_id']) ? (int)$data['receivable_account_id'] : null,
-            exchangeRate: !empty($data['exchange_rate']) ? (int)$data['exchange_rate'] : 1,
+            openingBalance: $openingBalance,
+            receivableAccountId: $receivableAccountId,
+            exchangeRate: !empty($data['exchange_rate']) ? (float)$data['exchange_rate'] : 1.0,
             website: !empty($data['website']) ? trim((string)$data['website']) : null,
             department: !empty($data['department']) ? trim((string)$data['department']) : null,
             designation: !empty($data['designation']) ? trim((string)$data['designation']) : null,
@@ -109,6 +113,26 @@ class CustomerService
         );
 
         $saved = $this->customerRepo->save($customer);
+
+        if ($openingBalance != 0) {
+            try {
+                $this->createOpeningBalanceJournal($saved->id, $openingBalance, $orgId, $userId, $saved->displayName, $receivableAccountId);
+            } catch (\Throwable $e) {
+                if (function_exists('log_error')) {
+                    log_error(
+                        'Failed to create opening balance journal: ' . $e->getMessage(),
+                        'ERROR',
+                        __FILE__,
+                        __LINE__,
+                        function_exists('backend_runtime_log_context')
+                            ? backend_runtime_log_context(['module' => 'customers', 'module_slug' => 'customers', 'stack_trace' => $e->getTraceAsString(), 'error_code' => (string)$e->getCode(), 'customer_id' => $saved->id])
+                            : ['module' => 'customers', 'module_slug' => 'customers', 'stack_trace' => $e->getTraceAsString(), 'error_code' => (string)$e->getCode(), 'customer_id' => $saved->id]
+                    );
+                } else {
+                    error_log('Failed to create opening balance journal: ' . $e->getMessage());
+                }
+            }
+        }
 
         return $saved;
     }
@@ -146,7 +170,7 @@ class CustomerService
             taxTreatment: isset($data['tax_treatment']) ? (!empty($data['tax_treatment']) ? (int)$data['tax_treatment'] : null) : $customer->taxTreatment,
             trn: isset($data['trn']) ? (!empty($data['trn']) ? trim((string)$data['trn']) : null) : $customer->trn,
             corporateTaxNumber: isset($data['corporate_tax_number']) ? (!empty($data['corporate_tax_number']) ? trim((string)$data['corporate_tax_number']) : null) : $customer->corporateTaxNumber,
-            licenseNumber: isset($data['license_number']) ? (!empty($data['license_number']) ? (int)$data['license_number'] : null) : $customer->licenseNumber,
+            licenseNumber: isset($data['license_number']) ? (!empty($data['license_number']) ? trim((string)$data['license_number']) : null) : $customer->licenseNumber,
             licenseExpiry: isset($data['license_expiry']) ? (!empty($data['license_expiry']) ? $this->convertDateToDb((string)$data['license_expiry']) : '1970-01-01') : $customer->licenseExpiry,
             salesPerson: isset($data['sales_person']) ? (!empty($data['sales_person']) ? (int)$data['sales_person'] : null) : $customer->salesPerson,
             leadCategory: isset($data['lead_category']) ? (!empty($data['lead_category']) ? trim((string)$data['lead_category']) : null) : $customer->leadCategory,
@@ -155,7 +179,7 @@ class CustomerService
             currency: isset($data['currency']) ? (!empty($data['currency']) ? (int)$data['currency'] : null) : $customer->currency,
             openingBalance: isset($data['opening_balance']) ? (float)$data['opening_balance'] : $customer->openingBalance,
             receivableAccountId: isset($data['receivable_account_id']) ? (!empty($data['receivable_account_id']) ? (int)$data['receivable_account_id'] : null) : $customer->receivableAccountId,
-            exchangeRate: isset($data['exchange_rate']) ? (int)$data['exchange_rate'] : $customer->exchangeRate,
+            exchangeRate: isset($data['exchange_rate']) ? (float)$data['exchange_rate'] : $customer->exchangeRate,
             website: isset($data['website']) ? (!empty($data['website']) ? trim((string)$data['website']) : null) : $customer->website,
             department: isset($data['department']) ? (!empty($data['department']) ? trim((string)$data['department']) : null) : $customer->department,
             designation: isset($data['designation']) ? (!empty($data['designation']) ? trim((string)$data['designation']) : null) : $customer->designation,
@@ -177,8 +201,8 @@ class CustomerService
             creditLimit: isset($data['credit_limit']) ? (float)$data['credit_limit'] : $customer->creditLimit,
             discountType: isset($data['discount_type']) ? (!empty($data['discount_type']) ? trim((string)$data['discount_type']) : null) : $customer->discountType,
             discountTypeValue: isset($data['discount_type_value']) ? (float)$data['discount_type_value'] : $customer->discountTypeValue,
-            subscriptionTier: isset($data['subscription_tier']) ? trim((string)$data['subscription_tier']) : $customer->subscriptionTier,
-            subscriptionExpiresAt: isset($data['subscription_expires_at']) ? trim((string)$data['subscription_expires_at']) : $customer->subscriptionExpiresAt
+            subscriptionTier: isset($data['subscription_tier']) && $data['subscription_tier'] !== '' ? trim((string)$data['subscription_tier']) : $customer->subscriptionTier,
+            subscriptionExpiresAt: isset($data['subscription_expires_at']) && $data['subscription_expires_at'] !== '' ? trim((string)$data['subscription_expires_at']) : $customer->subscriptionExpiresAt
         );
 
         $saved = $this->customerRepo->save($updatedCustomer);
@@ -448,6 +472,21 @@ class CustomerService
                     $errors['email'] = 'Duplicate Email. Please enter different.';
                 }
             }
+        }
+
+        $openingBalance = $data['opening_balance'] ?? ($existing ? $existing->openingBalance : null);
+        if ($openingBalance !== null && $openingBalance !== '' && !is_numeric($openingBalance)) {
+            $errors['opening_balance'] = 'Opening balance must be a valid number.';
+        }
+
+        $exchangeRate = $data['exchange_rate'] ?? ($existing ? $existing->exchangeRate : null);
+        if ($exchangeRate !== null && $exchangeRate !== '' && (!is_numeric($exchangeRate) || (float)$exchangeRate <= 0)) {
+            $errors['exchange_rate'] = 'Exchange rate must be a positive number.';
+        }
+
+        $creditLimit = $data['credit_limit'] ?? ($existing ? $existing->creditLimit : null);
+        if ($creditLimit !== null && $creditLimit !== '' && !is_numeric($creditLimit)) {
+            $errors['credit_limit'] = 'Credit limit must be a valid number.';
         }
 
         if (!empty($errors)) {
@@ -1000,5 +1039,199 @@ class CustomerService
             );
             $this->customerRepo->saveContact($updated);
         }
+    }
+
+    /**
+     * Build the customer activity timeline (entity logs + notes)
+     *
+     * @return array<int, array{
+     *     type: string, icon: string, title: string, body: string,
+     *     user_name: string, details_url: ?string, created_at: string
+     * }>
+     */
+    public function getActivityTimeline(int $customerId, int $orgId): array
+    {
+        $db = Container::getInstance()->get(\App\Core\Database::class);
+
+        $logRows = $db->fetchAll(
+            "SELECT id, module, action, record_id, created_by, created_at
+             FROM `" . DB::ENTITY_LOGS . "`
+             WHERE entity_type = 'customer' AND entity_id = :id
+               AND (organization_id IS NULL OR organization_id = :org)
+               AND module NOT IN ('comment', 'comments')
+             ORDER BY created_at DESC LIMIT 30",
+            ['id' => $customerId, 'org' => $orgId]
+        );
+
+        $noteRows = $db->fetchAll(
+            "SELECT id, notes, created_by, created_at
+             FROM `" . DB::ENTITY_NOTES . "`
+             WHERE entity_type = 'customer' AND entity_id = :id AND is_active = 1
+               AND (organization_id IS NULL OR organization_id = :org)
+             ORDER BY created_at DESC LIMIT 30",
+            ['id' => $customerId, 'org' => $orgId]
+        );
+
+        $userIds = [];
+        foreach ($logRows as $row) {
+            if (!empty($row['created_by'])) {
+                $userIds[(int)$row['created_by']] = true;
+            }
+        }
+        foreach ($noteRows as $row) {
+            if (!empty($row['created_by'])) {
+                $userIds[(int)$row['created_by']] = true;
+            }
+        }
+
+        $userNames = [];
+        if ($userIds !== []) {
+            $ids = array_keys($userIds);
+            $placeholders = implode(',', array_fill(0, count($ids), '?'));
+            $users = $db->fetchAll(
+                "SELECT id, full_name FROM `" . DB::USERS . "` WHERE id IN ($placeholders)",
+                $ids
+            );
+            foreach ($users as $u) {
+                $userNames[(int)$u['id']] = (string)($u['full_name'] ?? '');
+            }
+        }
+
+        $quotationRows = [];
+        $invoiceRows = [];
+        foreach ($logRows as $row) {
+            $recordId = (int)($row['record_id'] ?? 0);
+            if ($recordId <= 0) {
+                continue;
+            }
+            if ($row['module'] === 'quotation') {
+                $quotationRows[$recordId] = true;
+            } elseif ($row['module'] === 'invoice') {
+                $invoiceRows[$recordId] = true;
+            }
+        }
+
+        $quotations = [];
+        if ($quotationRows !== []) {
+            $ids = array_keys($quotationRows);
+            $placeholders = implode(',', array_fill(0, count($ids), '?'));
+            $rows = $db->fetchAll(
+                "SELECT id, quotation_no, grand_total FROM `" . DB::QUOTATIONS . "` WHERE id IN ($placeholders)",
+                $ids
+            );
+            foreach ($rows as $r) {
+                $quotations[(int)$r['id']] = $r;
+            }
+        }
+
+        $invoices = [];
+        if ($invoiceRows !== []) {
+            $ids = array_keys($invoiceRows);
+            $placeholders = implode(',', array_fill(0, count($ids), '?'));
+            $rows = $db->fetchAll(
+                "SELECT id, invoice_no, grand_total FROM `" . DB::INVOICES . "` WHERE id IN ($placeholders)",
+                $ids
+            );
+            foreach ($rows as $r) {
+                $invoices[(int)$r['id']] = $r;
+            }
+        }
+
+        $currency = defined('BASE_CURRENCY') && is_array(BASE_CURRENCY) ? (BASE_CURRENCY['code'] ?? 'AED') : 'AED';
+        $entries = [];
+
+        foreach ($logRows as $row) {
+            $module = (string)$row['module'];
+            $action = (string)$row['action'];
+            $recordId = (int)($row['record_id'] ?? 0);
+
+            $entry = [
+                'type' => 'action',
+                'icon' => 'ph-user',
+                'title' => '',
+                'body' => '',
+                'user_name' => $this->resolveUserName($userNames, $row['created_by'] ?? null),
+                'details_url' => null,
+                'created_at' => (string)$row['created_at'],
+            ];
+
+            if ($module === 'customer') {
+                $entry['icon'] = 'ph-user';
+                $entry['title'] = match ($action) {
+                    'add', 'created' => 'Customer added',
+                    'edit', 'updated' => 'Customer updated',
+                    'approved' => 'Customer approved',
+                    'disapproved' => 'Customer disapproved',
+                    'clone' => 'Customer cloned',
+                    'active' => 'Customer marked active',
+                    'inactive' => 'Customer marked inactive',
+                    'opening_balance' => 'Opening balance updated',
+                    default => 'Customer updated',
+                };
+            } elseif ($module === 'contact') {
+                $entry['icon'] = 'ph-identification-card';
+                $entry['title'] = match ($action) {
+                    'add' => 'Contact added',
+                    'edit' => 'Contact updated',
+                    'delete' => 'Contact deleted',
+                    'primary' => 'Contact set as primary',
+                    default => 'Contact updated',
+                };
+            } elseif ($module === 'address') {
+                $entry['icon'] = 'ph-map-pin';
+                $entry['title'] = 'Address updated';
+            } elseif ($module === 'quotation') {
+                $entry['icon'] = 'ph-file-text';
+                $entry['title'] = $action === 'add' ? 'Quote added' : 'Quote updated';
+                if ($recordId > 0 && isset($quotations[$recordId])) {
+                    $q = $quotations[$recordId];
+                    $amount = number_format((float)($q['grand_total'] ?? 0), 2, '.', '');
+                    $entry['body'] = 'Quote ' . $q['quotation_no'] . ' of amount ' . $currency . $amount . ' created';
+                    $entry['details_url'] = 'quotation_overview.php?quotation_id=' . $recordId;
+                }
+            } elseif ($module === 'invoice') {
+                $entry['icon'] = 'ph-receipt';
+                $entry['title'] = $action === 'add' ? 'Invoice added' : 'Invoice updated';
+                if ($recordId > 0 && isset($invoices[$recordId])) {
+                    $inv = $invoices[$recordId];
+                    $amount = number_format((float)($inv['grand_total'] ?? 0), 2, '.', '');
+                    $entry['body'] = 'Invoice ' . $inv['invoice_no'] . ' of amount ' . $currency . $amount . ' created';
+                    $entry['details_url'] = 'invoice_overview.php?invoice_id=' . $recordId;
+                }
+            } elseif ($module === 'payment') {
+                $entry['icon'] = 'ph-bank';
+                $entry['title'] = $action === 'add' ? 'Payment received' : 'Payment updated';
+                $entry['details_url'] = $recordId > 0 ? 'payment_received_overview.php?payment_id=' . $recordId : null;
+            }
+
+            $entries[] = $entry;
+        }
+
+        foreach ($noteRows as $row) {
+            $entries[] = [
+                'type' => 'note',
+                'icon' => 'ph-chat-centered-text',
+                'title' => '',
+                'body' => (string)($row['notes'] ?? ''),
+                'user_name' => $this->resolveUserName($userNames, $row['created_by'] ?? null),
+                'details_url' => null,
+                'created_at' => (string)$row['created_at'],
+            ];
+        }
+
+        usort($entries, function (array $a, array $b): int {
+            return strcmp((string)$b['created_at'], (string)$a['created_at']);
+        });
+
+        return $entries;
+    }
+
+    private function resolveUserName(array $userNames, $createdBy): string
+    {
+        $userId = (int)$createdBy;
+        if ($userId > 0 && isset($userNames[$userId]) && $userNames[$userId] !== '') {
+            return $userNames[$userId];
+        }
+        return 'System';
     }
 }

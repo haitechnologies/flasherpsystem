@@ -1,4 +1,6 @@
 <?php
+use App\Core\DB;
+use App\Core\Session;
 use App\Service\JournalService;
 include('admin_elements/admin_header.php');
 
@@ -16,6 +18,8 @@ $success_message = '';
 */
 include('admin_elements/permissions.php');
 
+$activeOrganizationId = dashboardRequireActiveOrganization();
+
 
 /*
 |--------------------------------------------------------------------------
@@ -31,7 +35,7 @@ if (isset($_POST['payment_id']))           $payment_id     = e_s__($_POST['payme
 
 // ------------------ CHECK IF EXISTS ----------------
 //VERIFY IF IS VALID 
-$rs_valid     = $mysqli->query("SELECT id FROM `" . tbl_payments_made . "` WHERE id='" . $payment_id . "'");
+$rs_valid     = $mysqli->query("SELECT id FROM `" . tbl_payments_made . "` WHERE id='" . $payment_id . "' AND organization_id = " . (int)$activeOrganizationId);
 if ($rs_valid->num_rows == 0) {
     flash_error('Invalid Record in the database.');
     header("Location:listing_payments_made.php");
@@ -43,14 +47,20 @@ $action = isset($_REQUEST['action']) ? $_REQUEST['action'] : '';
 
 /*
 |--------------------------------------------------------------------------
-| VOID PAYMENT (URL Action)
+| VOID PAYMENT (POST Action — CSRF protected)
 |--------------------------------------------------------------------------
 */
 
 if (($action == "void_$module" && !empty($payment_id))) {
-    
+
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !validate_csrf_token($_POST['csrf_token'] ?? '')) {
+        flash_error('Invalid security token. Payment was not voided.');
+        header("Location: payments_made_overview.php?payment_id=$payment_id");
+        exit;
+    }
+
     // Get payment details
-    $result_payment = $mysqli->query("SELECT * FROM `$tbl_name` WHERE id=$payment_id");
+    $result_payment = $mysqli->query("SELECT * FROM `$tbl_name` WHERE id=$payment_id AND organization_id = " . (int)$activeOrganizationId);
     $row_payment = $result_payment->fetch_array();
     
     $payment_status = $row_payment['payment_status'];
@@ -73,51 +83,56 @@ if (($action == "void_$module" && !empty($payment_id))) {
         // Payment was paid, create reversing journal entry
         
         // Determine A/P account
-        $ap_account_id = 2100; // Default Accounts Payable
-        $rs_ap = $mysqli->query("SELECT accounts_payable FROM " . tbl_vendors . " WHERE id=$vendor_id");
+        $ap_account_id = 2100; // Default Accounts Payable (code)
+        $rs_ap = $mysqli->query("SELECT id FROM `" . DB::ACCOUNTS . "` WHERE account_code IN ('2100', '2110', '2000') OR account_name LIKE '%Payable%' LIMIT 1");
         if ($rs_ap && $rs_ap->num_rows > 0) {
             $row_ap = $rs_ap->fetch_array();
-            if (!empty($row_ap['accounts_payable'])) {
-                $ap_account_id = $row_ap['accounts_payable'];
+            if (!empty($row_ap['id'])) {
+                $ap_account_id = $row_ap['id'];
             }
         }
         
         // Create reversing journal entry
-        $journal = new JournalService();
         $journal_data = array(
             'journal_date' => date('Y-m-d'),
-            'reference_type' => 'payment_made_void',
-            'reference_id' => $payment_id,
-            'created_by' => Session::userId(),
+            'journal_status' => 'posted',
             'reporting_method' => 'accrual',
-            'grand_subtotal' => $total_amount_paid,
-            'grand_total' => $total_amount_paid
+            'reference_type' => 'payment_made_void',
+            'reference_id' => (int)$payment_id,
+            'currency' => 'AED',
+            'warehouse_id' => 0,
+            'notes' => 'Void reversal of Payment Made #' . $payment_id
         );
         
         $journal_entries = array(
             // Credit: Accounts Payable (increase liability back)
             array(
-                'account' => $ap_account_id,
-                'amount' => $total_amount_paid,
-                'type' => 'credit'
+                'account' => (int)$ap_account_id,
+                'debit' => 0.0,
+                'credit' => (float)$total_amount_paid
             ),
             // Debit: Bank/Cash Account (restore asset)
             array(
-                'account' => $paid_from,
-                'amount' => $total_amount_paid,
-                'type' => 'debit'
+                'account' => (int)$paid_from,
+                'debit' => (float)$total_amount_paid,
+                'credit' => 0.0
             )
         );
         
-        $journal_result = $journal->createJournalEntry($journal_data, $journal_entries);
-        
-        if (!$journal_result['success']) {
-            error_log("Journal Void Error for Payment $payment_id: " . $journal_result['message']);
+        try {
+            $journalManager = \App\Core\Container::getInstance()->get(JournalService::class);
+            $journalManager->createJournal($journal_data, $journal_entries, (int)$activeOrganizationId, (int)Session::userId());
+        } catch (\Throwable $e) {
+            log_error("Journal Void Error for Payment $payment_id: " . $e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
+                'module' => $module,
+                'module_slug' => $module,
+                'payment_id' => $payment_id,
+            ]));
         }
     }
     
     // Update payment status to void
-    $mysqli->query("UPDATE `" . tbl_payments_made . "` SET payment_status='void' WHERE id='$payment_id'");
+    $mysqli->query("UPDATE `" . tbl_payments_made . "` SET payment_status='void' WHERE id='$payment_id' AND organization_id = " . (int)$activeOrganizationId);
     
     $success_message = 'Payment has been voided' . (!empty($journal_id) ? ' and reversing journal entry created' : '') . '.';
     flash_success($success_message);
@@ -129,7 +144,11 @@ if (($action == "void_$module" && !empty($payment_id))) {
 // -------- ACTION: MARK AS PAID
 //-------------------------------------------------------------------
 if (isset($_POST['mark_paid']) && !empty($payment_id)) {
-    
+
+    if (!validate_csrf_token($_POST['csrf_token'] ?? '')) {
+        $error_message = 'Invalid security token. Payment was not marked as paid.';
+    } else {
+
     // Check if already has journal entry
     $existing_journal_id = getTableAttrV('id', tbl_journals, " reference_type='payment_made' AND reference_id='$payment_id' ");
     
@@ -141,51 +160,56 @@ if (isset($_POST['mark_paid']) && !empty($payment_id)) {
         $vendor_id = getTableAttr('vendor_id', tbl_payments_made, $payment_id);
         
         // Determine A/P account based on vendor
-        $ap_account_id = 2100; // Default Accounts Payable
-        $rs_ap = $mysqli->query("SELECT accounts_payable FROM " . tbl_vendors . " WHERE id=$vendor_id");
+        $ap_account_id = 2100; // Default Accounts Payable (code)
+        $rs_ap = $mysqli->query("SELECT id FROM `" . DB::ACCOUNTS . "` WHERE account_code IN ('2100', '2110', '2000') OR account_name LIKE '%Payable%' LIMIT 1");
         if ($rs_ap && $rs_ap->num_rows > 0) {
             $row_ap = $rs_ap->fetch_array();
-            if (!empty($row_ap['accounts_payable'])) {
-                $ap_account_id = $row_ap['accounts_payable'];
+            if (!empty($row_ap['id'])) {
+                $ap_account_id = $row_ap['id'];
             }
         }
         
         // Create journal entry
-        $journal = new JournalService();
         $journal_data = array(
             'journal_date' => $payment_date,
-            'reference_type' => 'payment_made',
-            'reference_id' => $payment_id,
-            'created_by' => Session::userId(),
+            'journal_status' => 'posted',
             'reporting_method' => 'accrual',
-            'grand_subtotal' => $total_amount_paid,
-            'grand_total' => $total_amount_paid
+            'reference_type' => 'payment_made',
+            'reference_id' => (int)$payment_id,
+            'currency' => 'AED',
+            'warehouse_id' => 0,
+            'notes' => 'Payment Made #' . $payment_id
         );
         
         $journal_entries = array(
             // Debit: Accounts Payable (reduce liability)
             array(
-                'account' => $ap_account_id,
-                'amount' => $total_amount_paid,
-                'type' => 'debit'
+                'account' => (int)$ap_account_id,
+                'debit' => (float)$total_amount_paid,
+                'credit' => 0.0
             ),
             // Credit: Bank/Cash Account (reduce asset)
             array(
-                'account' => $paid_from,
-                'amount' => $total_amount_paid,
-                'type' => 'credit'
+                'account' => (int)$paid_from,
+                'debit' => 0.0,
+                'credit' => (float)$total_amount_paid
             )
         );
         
-        $journal_result = $journal->createJournalEntry($journal_data, $journal_entries);
-        
-        if (!$journal_result['success']) {
-            $error_message = 'Payment marked as paid but journal creation failed: ' . $journal_result['message'];
-            error_log("Journal Error for Payment $payment_id: " . $journal_result['message']);
+        try {
+            $journalManager = \App\Core\Container::getInstance()->get(JournalService::class);
+            $journalManager->createJournal($journal_data, $journal_entries, (int)$activeOrganizationId, (int)Session::userId());
+        } catch (\Throwable $e) {
+            $error_message = 'Payment marked as paid but journal creation failed: ' . $e->getMessage();
+            log_error("Journal Error for Payment $payment_id: " . $e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
+                'module' => $module,
+                'module_slug' => $module,
+                'payment_id' => $payment_id,
+            ]));
         }
         
         // Update payment status
-        $mysqli->query("UPDATE `" . tbl_payments_made . "` SET payment_status='paid' WHERE id='$payment_id'");
+        $mysqli->query("UPDATE `" . tbl_payments_made . "` SET payment_status='paid' WHERE id='$payment_id' AND organization_id = " . (int)$activeOrganizationId);
         
         $success_message = 'Payment has been marked as PAID and journal entry created.';
         flash_success($success_message);
@@ -193,6 +217,7 @@ if (isset($_POST['mark_paid']) && !empty($payment_id)) {
         exit;
     } else {
         $error_message = 'Payment is already marked as paid with journal entry.';
+    }
     }
 }
 
@@ -208,10 +233,10 @@ $created_at     = getTableAttr('created_at', tbl_vendors, $vendor_id);
 $created_by     = getTableAttr('created_by', tbl_vendors, $vendor_id);
 
 // Get payment data
-$result_payment = $mysqli->query("SELECT * FROM `$tbl_name` WHERE id = " . intval($payment_id));
+$result_payment = $mysqli->query("SELECT * FROM `$tbl_name` WHERE id = " . intval($payment_id) . " AND organization_id = " . (int)$activeOrganizationId);
 if ($result_payment && $result_payment->num_rows > 0) {
     $payment_row = $result_payment->fetch_array();
-    $payment_date = processDateYtoD($payment_row['payment_date']);
+    $payment_date = ddm_($payment_row['payment_date']);
     $total_amount_paid = $payment_row['total_amount_paid'];
     $payment_status = $payment_row['payment_status'];
     $bank_charges = $payment_row['bank_charges'];
@@ -408,7 +433,7 @@ if ($result_payment && $result_payment->num_rows > 0) {
                                     ?>
                                         <tr>
                                             <td><a href="purchase_overview.php?purchase_id=<?php echo $purchase_id; ?>"><?php echo $purchase_no; ?></a></td>
-                                            <td><?php echo dd_($purchase_date); ?></td>
+                                            <td><?php echo ddm_($purchase_date); ?></td>
                                             <td class="text-end"><?php echo BASE_CURRENCY['code']; ?> <?php echo (!empty($purchase_amount) ? dec_($purchase_amount) : '0.00'); ?></td>
                                             <td class="text-end"><?php echo BASE_CURRENCY['code']; ?> <?php echo (!empty($amount_paid) ? dec_($amount_paid) : '0.00'); ?></td>
                                         </tr>
@@ -491,7 +516,7 @@ if ($result_payment && $result_payment->num_rows > 0) {
                             </p>
 
                             <div class="ms-auto small text-muted">
-                                <?php echo dd_($journal_date); ?> | 
+                                <?php echo ddm_($journal_date); ?> | 
                                 Amount is displayed in your base currency <span class="badge bg-success"><?php echo BASE_CURRENCY['code']; ?></span>
                             </div>
                         </div>

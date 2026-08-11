@@ -22,6 +22,50 @@ class EmailProviderService
         return $this->repo->find($id);
     }
 
+    public function getByEmail(string $email): ?EmailProvider
+    {
+        $email = strtolower(trim($email));
+        if ($email === '') {
+            return null;
+        }
+        foreach ($this->repo->findAll() as $provider) {
+            if ($provider->isActive && strtolower(trim($provider->email)) === $email) {
+                return $provider;
+            }
+        }
+        return null;
+    }
+
+    public function getDefault(): ?EmailProvider
+    {
+        foreach ($this->repo->findAll() as $provider) {
+            if ($provider->isActive && $provider->isPrimary) {
+                return $provider;
+            }
+        }
+        foreach ($this->repo->findAll() as $provider) {
+            if ($provider->isActive) {
+                return $provider;
+            }
+        }
+        return null;
+    }
+
+    public function getAvailableWithQuota(array $exclude = []): ?EmailProvider
+    {
+        $exclude = array_map('intval', $exclude);
+        foreach ($this->repo->findAll() as $provider) {
+            if (!$provider->isActive) {
+                continue;
+            }
+            if ($provider->id !== null && in_array($provider->id, $exclude, true)) {
+                continue;
+            }
+            return $provider;
+        }
+        return null;
+    }
+
     public function list(): array
     {
         return $this->repo->findAll();

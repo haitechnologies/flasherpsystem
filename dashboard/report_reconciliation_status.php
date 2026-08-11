@@ -24,6 +24,7 @@ $success_message = '';
 */
 include('admin_elements/permissions.php');
 
+$activeOrganizationId = dashboardRequireActiveOrganization();
 
 $limit              = 50;
 $stages             = 2;
@@ -150,14 +151,17 @@ if ($page_no) {
 $search_query = '';
 // -------------------
 
-
-$date_from             = processDateDtoY($date_from);
-$date_to             = processDateDtoY($date_to);
-
-
-
-$date_from             = processDateYtoD($date_from);
-$date_to             = processDateYtoD($date_to);
+if (!function_exists('normalizeDateToYmd')) {
+    function normalizeDateToYmd($date)
+    {
+        if (empty($date)) return '';
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) return $date;
+        if (!preg_match('/^\d{1,2}-\d{1,2}-\d{4}$/', $date)) return '';
+        return processDateDtoY($date);
+    }
+}
+$date_from = normalizeDateToYmd($date_from);
+$date_to = normalizeDateToYmd($date_to);
 
 // ----------------------------------------------------------------------------------------------------
 
@@ -198,8 +202,8 @@ $mysqli->query("UPDATE `" . tbl_accounts_report_subcategories . "` SET last_visi
                             <span class="fw-semibold">Bank Account Reconciliation Status</span>
                             <?php if (!empty($date_from) || !empty($date_to)) { ?>
                                 - <span class="fw-normal">
-                                    <?php if (!empty($date_from)) echo 'From ' . dd_($date_from); ?>
-                                    <?php if (!empty($date_to)) echo ' To ' . dd_($date_to); ?>
+                                    <?php if (!empty($date_from)) echo 'From ' . ddm_($date_from); ?>
+                                    <?php if (!empty($date_to)) echo ' To ' . ddm_($date_to); ?>
                                 </span>
                             <?php } ?>
                         </div>
@@ -323,8 +327,8 @@ $mysqli->query("UPDATE `" . tbl_accounts_report_subcategories . "` SET last_visi
                 <h5 class="mb-0">Bank Account Reconciliation Status</h5>
                 <?php if (!empty($date_from) || !empty($date_to)) { ?>
                     <p>
-                        <?php if (!empty($date_from)) { ?><span class="text-muted">From</span> <?php echo dd_($date_from); ?><?php } ?>
-                        <?php if (!empty($date_to)) { ?> <span class="text-muted">To</span> <?php echo dd_($date_to); ?><?php } ?>
+                        <?php if (!empty($date_from)) { ?><span class="text-muted">From</span> <?php echo ddm_($date_from); ?><?php } ?>
+                        <?php if (!empty($date_to)) { ?> <span class="text-muted">To</span> <?php echo ddm_($date_to); ?><?php } ?>
                     </p>
                 <?php } ?>
             </div>
@@ -345,8 +349,8 @@ $mysqli->query("UPDATE `" . tbl_accounts_report_subcategories . "` SET last_visi
                         <?php
                         // -----------------------------------------------------------------------------------
                         // Build date filter for queries
-                        $date_from_ymd = processDateDtoY($date_from);
-                        $date_to_ymd = processDateDtoY($date_to);
+                        $date_from_ymd = normalizeDateToYmd($date_from);
+                        $date_to_ymd = normalizeDateToYmd($date_to);
 
                         $date_filter = '';
                         if (!empty($date_from_ymd)) {
@@ -355,14 +359,15 @@ $mysqli->query("UPDATE `" . tbl_accounts_report_subcategories . "` SET last_visi
                         if (!empty($date_to_ymd)) {
                             $date_filter .= " AND je.entry_date <= '" . $date_to_ymd . "'";
                         }
+                        $date_filter .= " AND je.organization_id = " . (int)$activeOrganizationId;
 
                         // Count total banks for pagination
-                        $count_result = $mysqli->query("SELECT COUNT(*) as total FROM `" . tbl_banks . "` WHERE id > 0");
+                        $count_result = $mysqli->query("SELECT COUNT(*) as total FROM `" . tbl_banks . "` WHERE id > 0 AND organization_id = " . (int)$activeOrganizationId);
                         $count_row = $count_result->fetch_array();
                         $total_rows = $count_row['total'];
 
                         // Get banks with pagination
-                        $result_banks = $mysqli->query("SELECT * FROM `" . tbl_banks . "` WHERE id > 0 ORDER BY is_primary DESC, account_name ASC LIMIT $start, $limit");
+                        $result_banks = $mysqli->query("SELECT * FROM `" . tbl_banks . "` WHERE id > 0 AND organization_id = " . (int)$activeOrganizationId . " ORDER BY is_primary DESC, account_name ASC LIMIT $start, $limit");
 
                         while ($row_banks = $result_banks->fetch_array()) {
                             $bank_id = $row_banks['id'];
@@ -431,7 +436,7 @@ $mysqli->query("UPDATE `" . tbl_accounts_report_subcategories . "` SET last_visi
                                     </span>
                                 </td>
                                 <td class="text-center"><?php echo number_format($transaction_count); ?></td>
-                                <td><?php echo !empty($last_transaction_date) ? dd_($last_transaction_date) : '-'; ?></td>
+                                <td><?php echo !empty($last_transaction_date) ? ddm_($last_transaction_date) : '-'; ?></td>
                                 <td class="text-center">
                                     <?php if ($publish == 1) { ?>
                                         <span class="badge bg-success">Active</span>

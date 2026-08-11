@@ -7,6 +7,7 @@ namespace App\Repository;
 use App\Core\Database;
 use App\Core\DB;
 use App\Model\Hscode;
+use App\Core\ErrorCapture;
 
 class HscodeRepository
 {
@@ -70,7 +71,7 @@ class HscodeRepository
             $this->db->execute($sql, $params);
             return true;
         } catch (\Throwable $e) {
-            error_log("HscodeRepository: Update failed: " . $e->getMessage());
+            ErrorCapture::record("HscodeRepository: Update failed: " . $e->getMessage());
             return false;
         }
     }

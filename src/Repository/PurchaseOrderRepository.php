@@ -28,10 +28,24 @@ class PurchaseOrderRepository
         return $this->mapRowToPurchaseOrder($row);
     }
 
-    public function findItemsByPurchaseOrder(int $purchaseOrderId, int $orgId): array
+    public function generatePurchaseOrderNo(int $orgId): string
     {
-        $sql = "SELECT * FROM `{DB::PURCHASE_ORDER_ITEMS}` WHERE purchase_order_id = :po_id AND organization_id = :org_id ORDER BY id ASC";
-        $rows = $this->db->fetchAll($sql, ['po_id' => $purchaseOrderId, 'org_id' => $orgId]);
+        $prefix = 'FL-PO' . date('ym');
+        $sql = "SELECT purchase_order_no FROM `{DB::PURCHASE_ORDERS}`
+                WHERE purchase_order_no LIKE :prefix
+                ORDER BY purchase_order_no DESC LIMIT 1";
+        $row = $this->db->fetchOne($sql, ['prefix' => $prefix . '%']);
+        $serial = 1;
+        if ($row !== null && !empty($row['purchase_order_no'])) {
+            $serial = (int)substr((string)$row['purchase_order_no'], -4) + 1;
+        }
+        return $prefix . '-' . str_pad((string)$serial, 4, '0', STR_PAD_LEFT);
+    }
+
+    public function findItemsByPurchaseOrder(int $purchaseOrderId): array
+    {
+        $sql = "SELECT * FROM `{DB::PURCHASE_ORDER_ITEMS}` WHERE purchase_order_id = :po_id ORDER BY id ASC";
+        $rows = $this->db->fetchAll($sql, ['po_id' => $purchaseOrderId]);
         $items = [];
         foreach ($rows as $row) {
             $items[] = $this->mapRowToPurchaseOrderItem($row);
@@ -50,13 +64,13 @@ class PurchaseOrderRepository
     private function insert(PurchaseOrder $order): PurchaseOrder
     {
         $sql = "INSERT INTO `{DB::PURCHASE_ORDERS}` (
-                    organization_id, purchase_order_date, vendor_id, purchase_order_status,
+                    organization_id, purchase_order_no, purchase_order_date, vendor_id, purchase_order_status,
                     reference_no, subject, warehouse_id, vendor_notes, terms_and_conditions,
                     grand_subtotal, grand_discount_type, grand_discount_type_value,
                     grand_discount_amount, grand_after_discount, grand_tax, grand_total,
                     is_active, created_at, updated_at, created_by
                 ) VALUES (
-                    :organization_id, :purchase_order_date, :vendor_id, :purchase_order_status,
+                    :organization_id, :purchase_order_no, :purchase_order_date, :vendor_id, :purchase_order_status,
                     :reference_no, :subject, :warehouse_id, :vendor_notes, :terms_and_conditions,
                     :grand_subtotal, :grand_discount_type, :grand_discount_type_value,
                     :grand_discount_amount, :grand_after_discount, :grand_tax, :grand_total,
@@ -100,7 +114,7 @@ class PurchaseOrderRepository
                 WHERE id = :id AND organization_id = :organization_id";
 
         $params = $order->toArray();
-        unset($params['created_at'], $params['updated_at'], $params['created_by']);
+        unset($params['created_at'], $params['updated_at'], $params['created_by'], $params['purchase_order_no']);
 
         $this->db->execute($sql, $params);
 
@@ -123,21 +137,27 @@ class PurchaseOrderRepository
     private function insertItem(PurchaseOrderItem $item): PurchaseOrderItem
     {
         $sql = "INSERT INTO `{DB::PURCHASE_ORDER_ITEMS}` (
-                    organization_id, purchase_order_id, service, description, qty,
+                    purchase_order_id, service, description, qty,
                     rate, sub_total, tax, tax_amount, total,
                     created_at, updated_at, created_by
                 ) VALUES (
-                    :organization_id, :purchase_order_id, :service, :description, :qty,
+                    :purchase_order_id, :service, :description, :qty,
                     :rate, :sub_total, :tax, :tax_amount, :total,
                     NOW(), NOW(), :created_by
                 )";
 
         $params = $item->toArray();
-        unset($params['id'], $params['created_at'], $params['updated_at'], $params['updated_by']);
+        unset(
+            $params['id'],
+            $params['organization_id'],
+            $params['created_at'],
+            $params['updated_at'],
+            $params['updated_by']
+        );
 
         $insertId = (int)$this->db->insert($sql, $params);
 
-        $inserted = $this->findItem($insertId, $item->organizationId);
+        $inserted = $this->findItem($insertId);
         if ($inserted === null) {
             throw new \RuntimeException("Failed to retrieve inserted purchase order item.");
         }
@@ -158,14 +178,20 @@ class PurchaseOrderRepository
                     total = :total,
                     updated_at = NOW(),
                     updated_by = :updated_by
-                WHERE id = :id AND organization_id = :organization_id";
+                WHERE id = :id";
 
         $params = $item->toArray();
-        unset($params['purchase_order_id'], $params['created_at'], $params['updated_at'], $params['created_by']);
+        unset(
+            $params['purchase_order_id'],
+            $params['organization_id'],
+            $params['created_at'],
+            $params['updated_at'],
+            $params['created_by']
+        );
 
         $this->db->execute($sql, $params);
 
-        $updated = $this->findItem((int)$item->id, $item->organizationId);
+        $updated = $this->findItem((int)$item->id);
         if ($updated === null) {
             throw new \RuntimeException("Failed to retrieve updated purchase order item.");
         }
@@ -173,10 +199,10 @@ class PurchaseOrderRepository
         return $updated;
     }
 
-    public function findItem(int $id, int $orgId): ?PurchaseOrderItem
+    public function findItem(int $id): ?PurchaseOrderItem
     {
-        $sql = "SELECT * FROM `{DB::PURCHASE_ORDER_ITEMS}` WHERE id = :id AND organization_id = :org_id";
-        $row = $this->db->fetchOne($sql, ['id' => $id, 'org_id' => $orgId]);
+        $sql = "SELECT * FROM `{DB::PURCHASE_ORDER_ITEMS}` WHERE id = :id";
+        $row = $this->db->fetchOne($sql, ['id' => $id]);
         if ($row === null) {
             return null;
         }
@@ -185,26 +211,26 @@ class PurchaseOrderRepository
 
     public function delete(int $id, int $orgId): bool
     {
-        $this->deleteItemsByPurchaseOrder($id, $orgId);
+        $this->deleteItemsByPurchaseOrder($id);
         $sql = "DELETE FROM `{DB::PURCHASE_ORDERS}` WHERE id = :id AND organization_id = :org_id";
         $stmt = $this->db->execute($sql, ['id' => $id, 'org_id' => $orgId]);
         return $stmt->rowCount() > 0;
     }
 
-    public function deleteItemsByPurchaseOrder(int $purchaseOrderId, int $orgId): bool
+    public function deleteItemsByPurchaseOrder(int $purchaseOrderId): bool
     {
-        $sql = "DELETE FROM `{DB::PURCHASE_ORDER_ITEMS}` WHERE purchase_order_id = :po_id AND organization_id = :org_id";
-        $this->db->execute($sql, ['po_id' => $purchaseOrderId, 'org_id' => $orgId]);
+        $sql = "DELETE FROM `{DB::PURCHASE_ORDER_ITEMS}` WHERE purchase_order_id = :po_id";
+        $this->db->execute($sql, ['po_id' => $purchaseOrderId]);
         return true;
     }
 
-    public function deleteItemsByIds(array $ids, int $purchaseOrderId, int $orgId): void
+    public function deleteItemsByIds(array $ids, int $purchaseOrderId): void
     {
         if (empty($ids)) {
             return;
         }
         $placeholders = [];
-        $params = ['po_id' => $purchaseOrderId, 'org_id' => $orgId];
+        $params = ['po_id' => $purchaseOrderId];
         foreach ($ids as $index => $id) {
             $key = 'id_' . $index;
             $placeholders[] = ':' . $key;
@@ -212,7 +238,7 @@ class PurchaseOrderRepository
         }
         $inClause = implode(', ', $placeholders);
         $sql = "DELETE FROM `{DB::PURCHASE_ORDER_ITEMS}` 
-                WHERE id IN ($inClause) AND purchase_order_id = :po_id AND organization_id = :org_id";
+                WHERE id IN ($inClause) AND purchase_order_id = :po_id";
         $this->db->execute($sql, $params);
     }
 
@@ -223,6 +249,7 @@ class PurchaseOrderRepository
             organizationId: (int)$row['organization_id'],
             purchaseOrderDate: (string)$row['purchase_order_date'],
             vendorId: (int)($row['vendor_id'] ?? 0),
+            purchaseOrderNo: $row['purchase_order_no'] !== null ? (string)$row['purchase_order_no'] : null,
             purchaseOrderStatus: (string)($row['purchase_order_status'] ?? 'draft'),
             referenceNo: $row['reference_no'] !== null ? (string)$row['reference_no'] : null,
             subject: $row['subject'] !== null ? (string)$row['subject'] : null,
@@ -248,7 +275,7 @@ class PurchaseOrderRepository
     {
         return new PurchaseOrderItem(
             id: (int)$row['id'],
-            organizationId: (int)($row['organization_id'] ?? 0),
+            organizationId: 0,
             purchaseOrderId: (int)$row['purchase_order_id'],
             service: (int)$row['service'],
             description: $row['description'] !== null ? (string)$row['description'] : null,

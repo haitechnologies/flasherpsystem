@@ -18,13 +18,16 @@ if ($customer_id <= 0) {
 }
 
 
-$customer_type  = getTableAttr('customer_type', DB::CUSTOMERS, $customer_id);
-$display_name   = getTableAttr('display_name', DB::CUSTOMERS, $customer_id);
-$approved       = getTableAttr('approved', DB::CUSTOMERS, $customer_id);
-$approved_at    = getTableAttr('approved_at', DB::CUSTOMERS, $customer_id);
-$publish        = getTableAttr('is_active', DB::CUSTOMERS, $customer_id);
-$created_at     = getTableAttr('created_at', DB::CUSTOMERS, $customer_id);
-$created_by     = getTableAttr('created_by', DB::CUSTOMERS, $customer_id);
+$activeOrgId = \App\Core\Session::orgId();
+$orgWhere = " AND organization_id = {$activeOrgId}";
+
+$customer_type  = getTableAttr('customer_type', DB::CUSTOMERS, $customer_id, $orgWhere);
+$display_name   = getTableAttr('display_name', DB::CUSTOMERS, $customer_id, $orgWhere);
+$approved       = getTableAttr('approved', DB::CUSTOMERS, $customer_id, $orgWhere);
+$approved_at    = getTableAttr('approved_at', DB::CUSTOMERS, $customer_id, $orgWhere);
+$publish        = getTableAttr('is_active', DB::CUSTOMERS, $customer_id, $orgWhere);
+$created_at     = getTableAttr('created_at', DB::CUSTOMERS, $customer_id, $orgWhere);
+$created_by     = getTableAttr('created_by', DB::CUSTOMERS, $customer_id, $orgWhere);
 
 /*
     |--------------------------------------------------------------------------
@@ -50,9 +53,21 @@ $created_by     = getTableAttr('created_by', DB::CUSTOMERS, $customer_id);
             <?php $canApprove = Roles::hasFullAccess(\App\Core\Session::roleId()) || Roles::isAccounts(\App\Core\Session::roleId()); ?>
             <?php if ($canApprove && granted_('edit', 'customers')) { ?>
                 <?php if ($approved == 0) { ?>
-                    <a href="customer_overview.php?action=approved&customer_id=<?php echo $customer_id; ?>&approve=1" class="btn btn-success btn-sm"><i class="ph-check-circle me-1"></i> Approve</a>
+                    <form method="post" action="customer_overview.php" class="d-inline">
+                        <input type="hidden" name="action" value="approved">
+                        <input type="hidden" name="customer_id" value="<?php echo $customer_id; ?>">
+                        <input type="hidden" name="approve" value="1">
+                        <?php echo csrf_field(); ?>
+                        <button type="submit" class="btn btn-success btn-sm"><i class="ph-check-circle me-1"></i> Approve</button>
+                    </form>
                 <?php } elseif ($approved == 1) { ?>
-                    <a href="customer_overview.php?action=disapproved&customer_id=<?php echo $customer_id; ?>&approve=0" class="btn btn-outline-danger btn-sm"><i class="ph-x-circle me-1"></i> Dis-Approve</a>
+                    <form method="post" action="customer_overview.php" class="d-inline">
+                        <input type="hidden" name="action" value="disapproved">
+                        <input type="hidden" name="customer_id" value="<?php echo $customer_id; ?>">
+                        <input type="hidden" name="approve" value="0">
+                        <?php echo csrf_field(); ?>
+                        <button type="submit" class="btn btn-outline-danger btn-sm"><i class="ph-x-circle me-1"></i> Dis-Approve</button>
+                    </form>
                 <?php } ?>
             <?php } else { ?>
                 <?php // Edit permission without approval right — only show notice ?>
@@ -67,28 +82,60 @@ $created_by     = getTableAttr('created_by', DB::CUSTOMERS, $customer_id);
                 </button>
                 <div class="dropdown-menu dropdown-menu-end">
                     <div class="dropdown-header text-uppercase fs-sm lh-sm">SALES</div>
+                    <a class="dropdown-item<?php echo $transactions_disabled ? ' disabled' : ''; ?>" href="<?php echo $transactions_disabled ? '#' : 'quotations.php?customer_id=' . $customer_id; ?>" <?php echo $transactions_disabled ? 'aria-disabled="true" tabindex="-1"' : ''; ?>>
+                        Quotes
+                    </a>
+                    <a class="dropdown-item<?php echo $transactions_disabled ? ' disabled' : ''; ?>" href="<?php echo $transactions_disabled ? '#' : 'sale_orders.php?customer_id=' . $customer_id; ?>" <?php echo $transactions_disabled ? 'aria-disabled="true" tabindex="-1"' : ''; ?>>
+                        Sale Order
+                    </a>
                     <a class="dropdown-item<?php echo $transactions_disabled ? ' disabled' : ''; ?>" href="<?php echo $transactions_disabled ? '#' : 'invoices.php?customer_id=' . $customer_id; ?>" <?php echo $transactions_disabled ? 'aria-disabled="true" tabindex="-1"' : ''; ?>>
                         Invoice
                     </a>
-                    <a class="dropdown-item<?php echo $transactions_disabled ? ' disabled' : ''; ?>" href="<?php echo $transactions_disabled ? '#' : 'expenses.php?customer_id=' . $customer_id; ?>" <?php echo $transactions_disabled ? 'aria-disabled="true" tabindex="-1"' : ''; ?>>
-                        Expense
+                    <a class="dropdown-item<?php echo $transactions_disabled ? ' disabled' : ''; ?>" href="<?php echo $transactions_disabled ? '#' : 'payments_received.php?customer_id=' . $customer_id; ?>" <?php echo $transactions_disabled ? 'aria-disabled="true" tabindex="-1"' : ''; ?>>
+                        Payment Received
+                    </a>
+                    <a class="dropdown-item<?php echo $transactions_disabled ? ' disabled' : ''; ?>" href="<?php echo $transactions_disabled ? '#' : 'recurring_invoices.php?customer_id=' . $customer_id; ?>" <?php echo $transactions_disabled ? 'aria-disabled="true" tabindex="-1"' : ''; ?>>
+                        Recurring Invoice
+                    </a>
+                    <a class="dropdown-item<?php echo $transactions_disabled ? ' disabled' : ''; ?>" href="<?php echo $transactions_disabled ? '#' : 'credit_notes.php?customer_id=' . $customer_id; ?>" <?php echo $transactions_disabled ? 'aria-disabled="true" tabindex="-1"' : ''; ?>>
+                        Credit Note
                     </a>
                 </div>
             </div>
             <div class="dropdown">
                 <button type="button" class="btn btn-light btn-sm dropdown-toggle" data-bs-toggle="dropdown">More</button>
                 <div class="dropdown-menu dropdown-menu-end">
-                    <a class="dropdown-item" href="customer_overview.php?action=clone_customers&customer_id=<?php echo $customer_id; ?>">Clone</a>
+                    <form method="post" action="customer_overview.php" class="d-inline">
+                        <input type="hidden" name="action" value="clone_customers">
+                        <input type="hidden" name="customer_id" value="<?php echo $customer_id; ?>">
+                        <?php echo csrf_field(); ?>
+                        <button type="submit" class="dropdown-item">Clone</button>
+                    </form>
                     <?php
-                    $customer_active_status = getTableAttr('is_active', DB::CUSTOMERS, $customer_id);
+                    $customer_active_status = getTableAttr('is_active', DB::CUSTOMERS, $customer_id, $orgWhere);
                     if ($customer_active_status == 1) {
                     ?>
-                        <a class="dropdown-item" href="customer_overview.php?action=mark_as_inactive&customer_id=<?php echo $customer_id; ?>">Mark as Inactive</a>
+                        <form method="post" action="customer_overview.php" class="d-inline">
+                            <input type="hidden" name="action" value="mark_as_inactive">
+                            <input type="hidden" name="customer_id" value="<?php echo $customer_id; ?>">
+                            <?php echo csrf_field(); ?>
+                            <button type="submit" class="dropdown-item">Mark as Inactive</button>
+                        </form>
                     <?php } else { ?>
-                        <a class="dropdown-item" href="customer_overview.php?action=mark_as_active&customer_id=<?php echo $customer_id; ?>">Mark as Active</a>
+                        <form method="post" action="customer_overview.php" class="d-inline">
+                            <input type="hidden" name="action" value="mark_as_active">
+                            <input type="hidden" name="customer_id" value="<?php echo $customer_id; ?>">
+                            <?php echo csrf_field(); ?>
+                            <button type="submit" class="dropdown-item">Mark as Active</button>
+                        </form>
                     <?php } ?>
                     <div class="dropdown-divider"></div>
-                    <a class="dropdown-item" href="listing_customers.php?action=delete_customers&id=<?php echo $customer_id; ?>">Delete</a>
+                    <form method="post" action="listing_customers.php" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this customer?')">
+                        <input type="hidden" name="action" value="delete_customers">
+                        <input type="hidden" name="id" value="<?php echo $customer_id; ?>">
+                        <?php echo csrf_field(); ?>
+                        <button type="submit" class="dropdown-item">Delete</button>
+                    </form>
                 </div>
             </div>
         </div>
@@ -110,6 +157,9 @@ $created_by     = getTableAttr('created_by', DB::CUSTOMERS, $customer_id);
             </li>
             <li class="nav-item">
                 <a href="customer_statement.php?customer_id=<?php echo $customer_id; ?>" class="nav-link <?php if ($current_page == "customer_statement.php") { ?> active fw-semibold<?php } ?>">Statement</a>
+            </li>
+            <li class="nav-item">
+                <a href="customer_logs.php?customer_id=<?php echo $customer_id; ?>" class="nav-link <?php if ($current_page == "customer_logs.php") { ?> active fw-semibold<?php } ?>">Activity Log</a>
             </li>
         </ul>
     </div>

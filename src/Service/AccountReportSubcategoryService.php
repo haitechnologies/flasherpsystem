@@ -40,7 +40,9 @@ class AccountReportSubcategoryService
         $item = new AccountReportSubcategory(
             id: 0,
             reportName: $name,
-            description: (string)($data['description'] ?? ''),
+            slug: $data['slug'] ?? '',
+            categoryId: (int)($data['category_id'] ?? 0),
+            ordering: (int)($data['ordering'] ?? 0),
             isActive: (bool)($data['is_active'] ?? true),
             createdBy: $createdBy,
         );
@@ -65,9 +67,12 @@ class AccountReportSubcategoryService
 
         return $this->repo->update($id, [
             'report_name' => $name,
-            'description' => (string)($data['description'] ?? $existing->description),
+            'slug' => $data['slug'] ?? $existing->slug,
+            'category_id' => (int)($data['category_id'] ?? $existing->categoryId),
+            'ordering' => (int)($data['ordering'] ?? $existing->ordering),
             'is_active' => (bool)($data['is_active'] ?? $existing->isActive) ? 1 : 0,
             'updated_by' => $updatedBy,
+            'updated_at' => date('Y-m-d H:i:s'),
         ]);
     }
 

@@ -7,6 +7,7 @@ namespace App\Repository;
 use App\Core\Database;
 use App\Core\DB;
 use App\Model\PayrollComponent;
+use App\Core\ErrorCapture;
 
 class PayrollComponentRepository
 {
@@ -67,7 +68,7 @@ class PayrollComponentRepository
             $this->db->execute($sql, $params);
             return true;
         } catch (\Throwable $e) {
-            error_log("PayrollComponentRepository: Update failed: " . $e->getMessage());
+            ErrorCapture::record("PayrollComponentRepository: Update failed: " . $e->getMessage());
             return false;
         }
     }

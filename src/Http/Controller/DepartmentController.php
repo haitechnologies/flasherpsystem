@@ -55,9 +55,10 @@ class DepartmentController extends BaseController
     private function handleUpdate(Request $request, int $id): Response
     {
         $department = $request->getString('department');
+        $email = $request->getString('email');
 
         try {
-            $this->deptService->update($id, $department, true);
+            $this->deptService->update($id, $department, true, $email);
             flash_success('The Department has been updated successfully.');
             return Response::redirect('listing_departments.php');
         } catch (ValidationException $e) {
@@ -68,7 +69,7 @@ class DepartmentController extends BaseController
             flash_error($e->getMessage());
             return Response::redirect("departments.php?id=$id&action=edit_departments");
         } catch (\Throwable $e) {
-            error_log("DepartmentController update error: " . $e->getMessage());
+            $this->logError("DepartmentController update error: " . $e->getMessage());
             flash_error($e->getMessage());
             return Response::redirect("departments.php?id=$id&action=edit_departments");
         }
@@ -77,9 +78,10 @@ class DepartmentController extends BaseController
     private function handleCreate(Request $request): Response
     {
         $department = $request->getString('department');
+        $email = $request->getString('email');
 
         try {
-            $newDept = $this->deptService->create($department, $this->orgId, $this->userId);
+            $newDept = $this->deptService->create($department, $this->orgId, $this->userId, $email);
             flash_success('The Department has been saved successfully.');
             return Response::redirect('listing_departments.php');
         } catch (ValidationException $e) {
@@ -87,6 +89,7 @@ class DepartmentController extends BaseController
             flash_error($error);
             return Response::redirect("departments.php");
         } catch (\Throwable $e) {
+            $this->logError("DepartmentController create error: " . $e->getMessage());
             flash_error('The Department could not be saved.');
             return Response::redirect("departments.php");
         }
@@ -95,6 +98,7 @@ class DepartmentController extends BaseController
     private function showForm(int $id): Response
     {
         $department = '';
+        $email = '';
         $publish = 1;
         $error_message = '';
         $moduleCaption = $this->moduleCaption;
@@ -106,6 +110,7 @@ class DepartmentController extends BaseController
             try {
                 $dept = $this->deptService->getById($id);
                 $department = $dept->department;
+                $email = $dept->email ?? '';
                 $publish = $dept->publish ? 1 : 0;
             } catch (NotFoundException $e) {
                 $error_message = $e->getMessage();
@@ -115,6 +120,7 @@ class DepartmentController extends BaseController
         return Response::html($this->view->render('departments/form.php', [
             'id' => $id,
             'department' => $department,
+            'email' => $email,
             'publish' => $publish,
             'error_message' => $error_message,
             'moduleCaption' => $moduleCaption,

@@ -95,6 +95,7 @@ class QuotationRepository
                     lead_id, warehouse_id, expected_shipment_date, payment_term, shipment_type,
                     sales_person, job_reference_no, mawb_bol, hwb_hbol, shipper_id, consignee_id, origin_port,
                     origin_country, destination_port, destination_country, no_of_packs, gross_weight, chargeable_weight, volume,
+                    cbm,
                     terms_and_conditions, grand_subtotal, grand_discount_type, grand_discount_type_value,
                     grand_discount_amount, grand_after_discount, customer_notes, grand_tax, grand_total,
                     publish, is_active, created_at, updated_at, updated_by, created_by, pdf
@@ -103,6 +104,7 @@ class QuotationRepository
                     :lead_id, :warehouse_id, :expected_shipment_date, :payment_term, :shipment_type,
                     :sales_person, :job_reference_no, :mawb_bol, :hwb_hbol, :shipper_id, :consignee_id, :origin_port,
                     :origin_country, :destination_port, :destination_country, :no_of_packs, :gross_weight, :chargeable_weight, :volume,
+                    :cbm,
                     :terms_and_conditions, :grand_subtotal, :grand_discount_type, :grand_discount_type_value,
                     :grand_discount_amount, :grand_after_discount, :customer_notes, :grand_tax, :grand_total,
                     :publish, :is_active, NOW(), NOW(), :updated_by, :created_by, :pdf
@@ -151,6 +153,7 @@ class QuotationRepository
                     gross_weight = :gross_weight,
                     chargeable_weight = :chargeable_weight,
                     volume = :volume,
+                    cbm = :cbm,
                     terms_and_conditions = :terms_and_conditions,
                     grand_subtotal = :grand_subtotal,
                     grand_discount_type = :grand_discount_type,
@@ -361,6 +364,7 @@ class QuotationRepository
             grossWeight: (float)($row['gross_weight'] ?? 0.0),
             chargeableWeight: (float)($row['chargeable_weight'] ?? 0.0),
             volume: (float)($row['volume'] ?? 0.0),
+            cbm: (float)($row['cbm'] ?? 0.0),
             termsAndConditions: $row['terms_and_conditions'] !== null ? (string)$row['terms_and_conditions'] : null,
             grandSubtotal: (float)($row['grand_subtotal'] ?? 0.0),
             grandDiscountType: (string)($row['grand_discount_type'] ?? '0.00'),

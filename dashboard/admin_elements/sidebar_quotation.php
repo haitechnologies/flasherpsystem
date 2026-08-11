@@ -85,7 +85,7 @@ $search_query = isset($status_map[$quotations_ordering])
                     while ($row = $result_side->fetch_array()) {
                         $isSelected = ($row['id'] == $current_id) ? 'table-primary shadow-sm' : '';
                         $display_name = getTableAttr('display_name', DB::CUSTOMERS, $row['customer_id']);
-                        $formatted_date = dd_($row['quotation_date']);
+                        $formatted_date = ddm_($row['quotation_date']);
                         $formatted_amount = BASE_CURRENCY['code'] . number_format($row['grand_total'] ?? 0, 2);
                         $formatted_status = strtoupper($row['quotation_status'] ?? '');
 

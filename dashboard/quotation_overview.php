@@ -400,15 +400,17 @@ if (($action == "convert_$module" && !empty($quotation_id))) {
                     if (!empty($customer_id) && $customer_id != '0') {
                         $rs = $mysqli->query("SELECT * FROM `" . tbl_customers . "` WHERE id=$customer_id");
                         $row_customer = $rs->fetch_array();
-                        $salutation             = s__($row_customer['salutation']);
-                        $first_name             = s__($row_customer['first_name']);
-                        $last_name              = s__($row_customer['last_name']);
-                        $company_name           = s__($row_customer['company_name']);
-                        $display_name           = s__($row_customer['display_name']);
-                        $email                  = s__($row_customer['email']);
-                        $phone                  = s__($row_customer['phone']);
-                        $mobile                 = s__($row_customer['mobile']);
-                        $trn                    = s__($row_customer['trn']);
+                        if ($row_customer) {
+                            $salutation             = s__($row_customer['salutation']);
+                            $first_name             = s__($row_customer['first_name']);
+                            $last_name              = s__($row_customer['last_name']);
+                            $company_name           = s__($row_customer['company_name']);
+                            $display_name           = s__($row_customer['display_name']);
+                            $email                  = s__($row_customer['email']);
+                            $phone                  = s__($row_customer['phone']);
+                            $mobile                 = s__($row_customer['mobile']);
+                            $trn                    = s__($row_customer['trn']);
+                        }
 
                         // Customer Billing Address 
                         $rs_billing     = $mysqli->query("SELECT * FROM `" . DB::CUSTOMER_ADDRESSES . "` WHERE addressable_type='Customer' AND addressable_id=$customer_id AND type='billing' ");
@@ -437,9 +439,9 @@ if (($action == "convert_$module" && !empty($quotation_id))) {
                     }
 
 
-                    $quotation_date         = processDateYtoD($quotation_date);
-                    $expiry_date            = ($expiry_date == '1970-01-01') ? '' : processDateDtoY($expiry_date);
-                    $expected_shipment_date = ($expected_shipment_date == '1970-01-01') ? '' : processDateDtoY($expected_shipment_date);
+                    $quotation_date         = ddm_($quotation_date);
+                    $expiry_date            = ($expiry_date == '1970-01-01' || empty($expiry_date)) ? '' : ddm_($expiry_date);
+                    $expected_shipment_date = ($expected_shipment_date == '1970-01-01' || empty($expected_shipment_date)) ? '' : ddm_($expected_shipment_date);
 
 
                     // ------------------ TOTAL Quotation ITEMS ------------------
@@ -531,9 +533,9 @@ if (($action == "convert_$module" && !empty($quotation_id))) {
                                                 $invoice_no             = s__($row_invoices['invoice_no']);
 
                                                 $invoice_date           = s__($row_invoices['invoice_date']);
-                                                $invoice_date           = processDateYtoD($invoice_date);
+                                                $invoice_date           = ddm_($invoice_date);
                                                 $expiry_date            = s__($row_invoices['expiry_date']);
-                                                $expiry_date            = processDateYtoD($expiry_date);
+                                                $expiry_date            = ddm_($expiry_date);
 
                                                 $invoice_status         = s__($row_invoices['invoice_status']);
                                                 $grand_total            = s__($row_invoices['grand_total']);

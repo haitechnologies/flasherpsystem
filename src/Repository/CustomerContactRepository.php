@@ -10,6 +10,11 @@ use App\Model\CustomerContact;
 
 class CustomerContactRepository
 {
+    private const CONTACT_COLUMNS = '
+        id, organization_id, contactable_type, contactable_id, is_primary,
+        first_name, last_name, position, email, phone, notes,
+        publish, is_active, created_at, updated_at, updated_by, created_by';
+
     private Database $db;
 
     public function __construct(Database $db)
@@ -19,7 +24,7 @@ class CustomerContactRepository
 
     public function find(int $id, int $orgId): ?CustomerContact
     {
-        $sql = "SELECT * FROM `{DB::CUSTOMER_CONTACTS}` WHERE id = :id AND contactable_type = 'Customer' AND organization_id = :org_id";
+        $sql = "SELECT " . self::CONTACT_COLUMNS . " FROM `{DB::CUSTOMER_CONTACTS}` WHERE id = :id AND contactable_type = 'Customer' AND organization_id = :org_id";
         $row = $this->db->fetchOne($sql, ['id' => $id, 'org_id' => $orgId]);
         if ($row === null) {
             return null;
@@ -32,7 +37,7 @@ class CustomerContactRepository
      */
     public function findByCustomer(int $customerId, int $orgId): array
     {
-        $sql = "SELECT * FROM `{DB::CUSTOMER_CONTACTS}` WHERE contactable_type = 'Customer' AND contactable_id = :customer_id AND organization_id = :org_id ORDER BY is_primary DESC, id ASC";
+        $sql = "SELECT " . self::CONTACT_COLUMNS . " FROM `{DB::CUSTOMER_CONTACTS}` WHERE contactable_type = 'Customer' AND contactable_id = :customer_id AND organization_id = :org_id ORDER BY is_primary DESC, id ASC";
         $rows = $this->db->fetchAll($sql, ['customer_id' => $customerId, 'org_id' => $orgId]);
         return array_map([$this, 'mapRowToContact'], $rows);
     }
@@ -85,13 +90,14 @@ class CustomerContactRepository
                     email = :email,
                     phone = :phone,
                     notes = :notes,
+                    publish = :publish,
                     is_active = :is_active,
                     updated_at = NOW(),
                     updated_by = :updated_by
                 WHERE id = :id AND contactable_type = 'Customer' AND organization_id = :organization_id";
 
         $params = $contact->toArray();
-        unset($params['customer_id'], $params['publish'], $params['created_at'], $params['updated_at'], $params['created_by']);
+        unset($params['customer_id'], $params['created_at'], $params['updated_at'], $params['created_by']);
 
         $this->db->execute($sql, $params);
 

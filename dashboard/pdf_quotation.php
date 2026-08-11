@@ -158,9 +158,20 @@ if (!empty($id)) {
         $billing_fax            = (!empty($row_billing['fax']) ? s__($row_billing['fax']) : '');
     }
 
-    $quotation_date         = processDateYtoD($quotation_date);
-    $expiry_date            = ($expiry_date == '1970-01-01' || empty($expiry_date)) ? '' : processDateDtoY($expiry_date);
-    $expected_shipment_date = ($expected_shipment_date == '1970-01-01' || empty($expected_shipment_date)) ? '' : processDateDtoY($expected_shipment_date);
+    $lead_id = s__($row['lead_id']);
+    if ((empty($customer_id) || $customer_id == '0') && !empty($lead_id)) {
+        $rs_lead = $mysqli->query("SELECT display_name, email, phone, mobile, trn FROM `" . DB::LEADS . "` WHERE id=$lead_id");
+        if ($rs_lead && ($row_lead = $rs_lead->fetch_array())) {
+            $display_name   = !empty($row_lead['display_name']) ? s__($row_lead['display_name']) : $display_name;
+            $customer_trn   = !empty($row_lead['trn']) ? s__($row_lead['trn']) : '';
+            $customer_phone = !empty($row_lead['phone']) ? s__($row_lead['phone']) : '';
+            $billing_phone  = !empty($row_lead['mobile']) ? s__($row_lead['mobile']) : $customer_phone;
+        }
+    }
+
+    $quotation_date         = ddm_($quotation_date);
+    $expiry_date            = ($expiry_date == '1970-01-01' || empty($expiry_date)) ? '' : ddm_($expiry_date);
+    $expected_shipment_date = ($expected_shipment_date == '1970-01-01' || empty($expected_shipment_date)) ? '' : ddm_($expected_shipment_date);
 
     $shipper_name   = getTableAttr('shipper_name', DB::SHIPPERS, $shipper_id);
     $consignee_name = getTableAttr('consignee_name', DB::CONSIGNEES, $consignee_id);
@@ -528,11 +539,29 @@ EOD;
 $pdf->writeHTML($tbl, true, false, false, false, '');
 
 // --- Output ---
-$salt = '}#f4ga~g%7hjg4&jokho!bj30ab-wi=6gia^7-$^R9F|GaK5Jzxs#E6WT;IOJN';
-$encrypted_filename = hash('sha256', $salt . $id);
+$encrypted_filename = \App\Helper\PdfHelper::filename((int)$id);
+$pdfs_dir = dirname(__DIR__) . '/pdfs_quotations';
+if (!is_dir($pdfs_dir)) {
+    @mkdir($pdfs_dir, 0755, true);
+}
+$pdf_path = $pdfs_dir . '/' . $encrypted_filename . '.pdf';
+
+$save_mode = isset($_GET['mode']) && $_GET['mode'] === 'save';
+
+if ($save_mode) {
+    // File-only generation (used by send_email.php to attach the PDF)
+    $pdf->Output($pdf_path, 'F');
+    $mysqli->query("UPDATE `" . DB::QUOTATIONS . "` SET pdf = '" . $encrypted_filename . "' WHERE id=$id");
+    header('Content-Type: application/json');
+    echo json_encode(['success' => true, 'filename' => $encrypted_filename . '.pdf', 'path' => $pdf_path]);
+    exit;
+}
+
+// Persist PDF to disk so the file + pdf column are always available
+if (!is_file($pdf_path)) {
+    $pdf->Output($pdf_path, 'F');
+}
+$mysqli->query("UPDATE `" . DB::QUOTATIONS . "` SET pdf = '" . $encrypted_filename . "' WHERE id=$id");
 
 $pdf->Output($encrypted_filename, 'I');
-
-// Update PDF filename in DB
-$mysqli->query("UPDATE `" . DB::QUOTATIONS . "` SET pdf = '" . $encrypted_filename . "' WHERE id=$id");
 

@@ -119,7 +119,7 @@ class CSVExporter
         if ($this->db instanceof mysqli) {
             $result = $this->db->query($query);
             if (!$result) {
-                error_log("CSV Export Query Failed: " . $this->db->error);
+                ErrorCapture::record("CSV Export Query Failed: " . $this->db->error);
                 fclose($output);
                 return false;
             }
@@ -147,7 +147,7 @@ class CSVExporter
                     return false;
                 }
             } catch (Throwable $e) {
-                error_log("CSV Export Query Failed: " . $e->getMessage());
+                ErrorCapture::record("CSV Export Query Failed: " . $e->getMessage());
                 fclose($output);
                 return false;
             }

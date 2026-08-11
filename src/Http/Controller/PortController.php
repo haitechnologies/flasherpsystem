@@ -66,7 +66,8 @@ class PortController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("ports.php?id=$id&action=edit_ports");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("PortController::handleUpdate error: " . $e->getMessage());
             flash_error('Port could not be updated.');
             return Response::redirect("ports.php?id=$id&action=edit_ports");
         }
@@ -87,7 +88,8 @@ class PortController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("ports.php");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("PortController::handleCreate error: " . $e->getMessage());
             flash_error('Port could not be saved.');
             return Response::redirect("ports.php");
         }

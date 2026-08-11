@@ -20,7 +20,6 @@ use App\Security\Roles;
             static $systemMap = [
                 // CRM
                 'leads' => 'crm',
-                'lead_quotations' => 'crm',
                 'projects' => 'crm',
                 'jobs' => 'crm',
                 'job_statuses' => 'crm',
@@ -29,6 +28,7 @@ use App\Security\Roles;
                 'accounts' => 'accounting',
                 'quotations' => 'accounting',
                 'sale_orders' => 'accounting',
+                'sale_types' => 'accounting',
                 'customers' => 'accounting',
                 'invoices' => 'accounting',
                 'payments_received' => 'accounting',
@@ -41,6 +41,8 @@ use App\Security\Roles;
                 'debit_notes' => 'accounting',
                 'banks' => 'accounting',
                 'journals' => 'accounting',
+                'customer_transactions' => 'accounting',
+                'customer_statement' => 'accounting',
 
                 // HR
                 'departments' => 'hr',

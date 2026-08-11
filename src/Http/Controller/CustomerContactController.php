@@ -85,22 +85,32 @@ class CustomerContactController extends BaseController
 
     private function handleUpdate(Request $request, int $customerId, int $contactId): Response
     {
-        try {
-            $this->contactService->updateContact($contactId, [
-                'first_name' => $request->getString('first_name'),
-                'last_name' => $request->getString('last_name'),
-                'position' => $request->getString('position'),
-                'email' => $request->getString('email'),
-                'phone' => $request->getString('phone'),
-                'notes' => $request->getString('notes'),
-            ], $this->orgId, $this->userId);
+        $contactData = [
+            'first_name' => $request->getString('first_name'),
+            'last_name' => $request->getString('last_name'),
+            'position' => $request->getString('position'),
+            'email' => $request->getString('email'),
+            'phone' => $request->getString('phone'),
+            'notes' => $request->getString('notes'),
+        ];
 
+        try {
+            $this->contactService->updateContact($contactId, $contactData, $this->orgId, $this->userId);
+
+            updateCustomerLogs($customerId, 'contact', 'edit', $contactId);
             flash_success('The Customer Contact has been updated successfully.');
             return Response::redirect('customer_overview.php?customer_id=' . $customerId);
         } catch (ValidationException $e) {
+            $error = current($e->getErrors());
             flash_error($error);
-            return Response::redirect('customer_contacts.php?customer_id=' . $customerId . '&contact_id=' . $contactId . '&action=edit_customer_contacts');
+            return $this->showForm($request, $customerId, $contactId, $contactData, $error);
         } catch (\Throwable $e) {
+            log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
+                'module' => $this->moduleSlug,
+                'module_slug' => $this->moduleSlug,
+                'stack_trace' => $e->getTraceAsString(),
+                'error_code' => (string)$e->getCode(),
+            ]));
             flash_error($e->getMessage());
             return Response::redirect('customer_contacts.php?customer_id=' . $customerId . '&contact_id=' . $contactId . '&action=edit_customer_contacts');
         }
@@ -108,24 +118,36 @@ class CustomerContactController extends BaseController
 
     private function handleCreate(Request $request, int $customerId): Response
     {
+        $contactData = [
+            'first_name' => $request->getString('first_name'),
+            'last_name' => $request->getString('last_name'),
+            'position' => $request->getString('position'),
+            'email' => $request->getString('email'),
+            'phone' => $request->getString('phone'),
+            'notes' => $request->getString('notes'),
+            'is_primary' => false,
+        ];
+
         try {
             $this->contactService->createContact([
                 'customer_id' => $customerId,
-                'first_name' => $request->getString('first_name'),
-                'last_name' => $request->getString('last_name'),
-                'position' => $request->getString('position'),
-                'email' => $request->getString('email'),
-                'phone' => $request->getString('phone'),
-                'notes' => $request->getString('notes'),
-                'is_primary' => true,
+                ...$contactData,
             ], $this->orgId, $this->userId);
 
+            updateCustomerLogs($customerId, 'contact', 'add', 0);
             flash_success('The Customer Contact has been saved successfully.');
             return Response::redirect('customer_overview.php?customer_id=' . $customerId);
         } catch (ValidationException $e) {
+            $error = current($e->getErrors());
             flash_error($error);
-            return Response::redirect('customer_contacts.php?customer_id=' . $customerId);
+            return $this->showForm($request, $customerId, 0, $contactData, $error);
         } catch (\Throwable $e) {
+            log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
+                'module' => $this->moduleSlug,
+                'module_slug' => $this->moduleSlug,
+                'stack_trace' => $e->getTraceAsString(),
+                'error_code' => (string)$e->getCode(),
+            ]));
             flash_error($e->getMessage());
             return Response::redirect('customer_contacts.php?customer_id=' . $customerId);
         }
@@ -149,15 +171,22 @@ class CustomerContactController extends BaseController
 
             $this->contactService->deleteContact($contactId, $this->orgId);
 
+            updateCustomerLogs($customerId, 'contact', 'delete', $contactId);
             flash_success('Customer Contact Deleted Successfully.');
             return Response::redirect('customer_overview.php?customer_id=' . $customerId);
         } catch (\Throwable $e) {
+            log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
+                'module' => $this->moduleSlug,
+                'module_slug' => $this->moduleSlug,
+                'stack_trace' => $e->getTraceAsString(),
+                'error_code' => (string)$e->getCode(),
+            ]));
             flash_error($e->getMessage());
             return Response::redirect('customer_contacts.php?customer_id=' . $customerId);
         }
     }
 
-    private function showForm(Request $request, int $customerId, int $contactId): Response
+    private function showForm(Request $request, int $customerId, int $contactId, ?array $prefillData = null, ?string $prefillError = null): Response
     {
         $module = 'customer_contacts';
         $moduleCaption = $this->moduleCaption;
@@ -165,7 +194,7 @@ class CustomerContactController extends BaseController
         $session_user_id = $this->userId;
         $session_role_id = $this->roleId;
         $flashMessages = \App\Core\FlashMessage::all();
-        $error_message = $request->getString('error_message');
+        $error_message = $prefillError ?? $request->getString('error_message');
         if (empty($error_message)) {
             foreach ($flashMessages as $fm) {
                 if ($fm['type'] === 'danger') { $error_message = $fm['message']; break; }
@@ -185,6 +214,16 @@ class CustomerContactController extends BaseController
         $email = '';
         $phone = '';
         $notes = '';
+
+        // Prefill from validation errors
+        if ($prefillData !== null) {
+            $first_name = (string)($prefillData['first_name'] ?? '');
+            $last_name = (string)($prefillData['last_name'] ?? '');
+            $position = (string)($prefillData['position'] ?? '');
+            $email = (string)($prefillData['email'] ?? '');
+            $phone = (string)($prefillData['phone'] ?? '');
+            $notes = (string)($prefillData['notes'] ?? '');
+        }
 
         if ($contactId > 0 && ($action === 'edit_customer_contacts' || $action === 'update_customer_contacts')) {
             try {

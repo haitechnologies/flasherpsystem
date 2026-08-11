@@ -24,6 +24,7 @@ $success_message = '';
 */
 include('admin_elements/permissions.php');
 
+$activeOrganizationId = dashboardRequireActiveOrganization();
 
 $limit              = 50;
 $stages             = 2;
@@ -159,6 +160,8 @@ $date_to             = processDateDtoY($date_to);
 $date_from             = processDateYtoD($date_from);
 $date_to             = processDateYtoD($date_to);
 
+$search_query .= " AND organization_id = " . (int)$activeOrganizationId;
+
 // ----------------------------------------------------------------------------------------------------
 
 
@@ -212,8 +215,8 @@ $mysqli->query("UPDATE `" . tbl_accounts_report_subcategories . "` SET last_visi
                             <span class="fw-semibold">Customer Balance Summary</span>
                             <?php if (!empty($date_from) || !empty($date_to)) { ?>
                                 - <span class="fw-normal">
-                                    <?php if (!empty($date_from)) echo 'From ' . dd_($date_from); ?>
-                                    <?php if (!empty($date_to)) echo ' To ' . dd_($date_to); ?>
+                                    <?php if (!empty($date_from)) echo 'From ' . ddm_($date_from); ?>
+                                    <?php if (!empty($date_to)) echo ' To ' . ddm_($date_to); ?>
                                 </span>
                             <?php } ?>
                         </div>
@@ -337,8 +340,8 @@ $mysqli->query("UPDATE `" . tbl_accounts_report_subcategories . "` SET last_visi
                 <h5 class="mb-0">Customer Balance Summary</h5>
                 <?php if (!empty($date_from) || !empty($date_to)) { ?>
                     <p>
-                        <?php if (!empty($date_from)) { ?><span class="text-muted">From</span> <?php echo dd_($date_from); ?><?php } ?>
-                        <?php if (!empty($date_to)) { ?> <span class="text-muted">To</span> <?php echo dd_($date_to); ?><?php } ?>
+                        <?php if (!empty($date_from)) { ?><span class="text-muted">From</span> <?php echo ddm_($date_from); ?><?php } ?>
+                        <?php if (!empty($date_to)) { ?> <span class="text-muted">To</span> <?php echo ddm_($date_to); ?><?php } ?>
                     </p>
                 <?php } ?>
             </div>
@@ -366,6 +369,7 @@ $mysqli->query("UPDATE `" . tbl_accounts_report_subcategories . "` SET last_visi
                         if (!empty($date_to_ymd)) {
                             $invoice_date_filter .= " AND i.invoice_date <= '" . $date_to_ymd . "'";
                         }
+                        $invoice_date_filter .= " AND i.organization_id = " . (int)$activeOrganizationId;
 
                         // Initialize grand totals
                         $grand_total_invoiced = 0;

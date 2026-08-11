@@ -6,6 +6,7 @@ namespace App\DataTable;
 
 use App\Core\Database;
 use App\Core\DB;
+use App\Core\ErrorCapture;
 
 /**
  * Abstract Base Class for DataTable Handlers
@@ -135,7 +136,7 @@ abstract class BaseDataTable
                 'data' => $this->data
             ];
         } catch (\Throwable $e) {
-            error_log('DataTable Error (' . static::class . ') [' . get_class($e) . ']: ' . $e->getMessage());
+            ErrorCapture::record('DataTable Error (' . static::class . ') [' . get_class($e) . ']: ' . $e->getMessage());
             return $this->errorResponse('Error processing request: ' . $e->getMessage());
         }
     }
@@ -185,7 +186,7 @@ abstract class BaseDataTable
                 $hasOrgIdColumn = true;
             }
         } catch (\Throwable $e) {
-            error_log("BaseDataTable: Error checking org_id column: " . $e->getMessage());
+            ErrorCapture::record("BaseDataTable: Error checking org_id column: " . $e->getMessage());
         }
 
         if (!$hasOrgIdColumn) {
@@ -257,7 +258,7 @@ abstract class BaseDataTable
             $row = $this->db->fetchOne($countQuery, $this->params);
             return (int)($row['total'] ?? 0);
         } catch (\Throwable $e) {
-            error_log("BaseDataTable: Count query failed: " . $e->getMessage() . " | SQL: " . $query);
+            ErrorCapture::record("BaseDataTable: Count query failed: " . $e->getMessage() . " | SQL: " . $query);
             return 0;
         }
     }

@@ -55,7 +55,6 @@ $listingConfig = [
         <th>CUSTOMER NAME</th>
         <th class="col-center">STATUS</th>
         <th class="text-end">AMOUNT</th>
-        <th>ACTIONS</th>
     ',
     'columns' => [
         ['data' => 0, 'name' => 'quotation_date', 'title' => 'DATE'],
@@ -64,7 +63,6 @@ $listingConfig = [
         ['data' => 3, 'name' => 'customer_id', 'title' => 'CUSTOMER NAME'],
         ['data' => 4, 'name' => 'quotation_status', 'title' => 'STATUS', 'className' => 'col-center'],
         ['data' => 5, 'name' => 'grand_total', 'title' => 'AMOUNT', 'className' => 'text-end'],
-        ['data' => 6, 'title' => 'ACTIONS', 'orderable' => false, 'searchable' => false],
     ],
     'order' => [[0, 'desc']],
     'page_length' => 25,

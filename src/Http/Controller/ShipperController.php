@@ -64,7 +64,8 @@ class ShipperController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("shipper_names.php?id=$id&action=edit_shipper_names");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("ShipperController::handleUpdate error: " . $e->getMessage());
             flash_error('The Shipper could not be updated.');
             return Response::redirect("shipper_names.php?id=$id&action=edit_shipper_names");
         }
@@ -84,7 +85,8 @@ class ShipperController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("shipper_names.php");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("ShipperController::handleCreate error: " . $e->getMessage());
             flash_error('The Shipper could not be saved.');
             return Response::redirect("shipper_names.php");
         }

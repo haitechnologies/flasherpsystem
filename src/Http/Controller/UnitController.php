@@ -67,6 +67,7 @@ class UnitController extends BaseController
             flash_error($error);
             return Response::redirect("units.php?id=$id&action=edit_units");
         } catch (\Throwable $e) {
+            $this->logError("UnitController::handleUpdate error: " . $e->getMessage());
             flash_error('The Unit could not be updated.');
             return Response::redirect("units.php?id=$id&action=edit_units");
         }
@@ -88,6 +89,7 @@ class UnitController extends BaseController
             flash_error($error);
             return Response::redirect("units.php");
         } catch (\Throwable $e) {
+            $this->logError("UnitController::handleCreate error: " . $e->getMessage());
             flash_error('The Unit could not be saved.');
             return Response::redirect("units.php");
         }

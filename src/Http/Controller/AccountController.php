@@ -67,7 +67,8 @@ class AccountController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("accounts.php?id=$id&action=edit_accounts");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("AccountController::handleUpdate error: " . $e->getMessage());
             flash_error('Account could not be updated.');
             return Response::redirect("accounts.php?id=$id&action=edit_accounts");
         }
@@ -90,7 +91,8 @@ class AccountController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("accounts.php");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("AccountController::handleCreate error: " . $e->getMessage());
             flash_error('Account could not be saved.');
             return Response::redirect("accounts.php");
         }

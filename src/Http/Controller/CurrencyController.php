@@ -70,6 +70,7 @@ class CurrencyController extends BaseController
             flash_error($e->getMessage());
             return Response::redirect("currencies.php?id=$id&action=edit_currencies");
         } catch (\Throwable $e) {
+            $this->logError("CurrencyController::handleUpdate error: " . $e->getMessage());
             flash_error('The Currency could not be updated.');
             return Response::redirect("currencies.php?id=$id&action=edit_currencies");
         }
@@ -91,6 +92,7 @@ class CurrencyController extends BaseController
             flash_error($error);
             return Response::redirect("currencies.php");
         } catch (\Throwable $e) {
+            $this->logError("CurrencyController::handleCreate error: " . $e->getMessage());
             flash_error('The Currency could not be saved.');
             return Response::redirect("currencies.php");
         }

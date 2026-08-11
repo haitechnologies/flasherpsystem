@@ -11,6 +11,7 @@ namespace App\DataTable;
 use App\Core\DB;
 use App\Helper\BadgeHelper;
 use App\Helper\ActionButtonHelper;
+use App\Core\ErrorCapture;
 
 class HSCodesDataTable extends BaseDataTable
 {
@@ -159,7 +160,7 @@ class HSCodesDataTable extends BaseDataTable
                 )                                                       // ACTIONS (position 8)
             ];
         } catch (\Exception $e) {
-            error_log('[HSCodesDataTable] Error formatting row: ' . $e->getMessage());
+            ErrorCapture::record('[HSCodesDataTable] Error formatting row: ' . $e->getMessage());
             return [0, 'ERROR', '', 'Error formatting row', '', '', '', ''];
         }
     }
@@ -207,7 +208,7 @@ class HSCodesDataTable extends BaseDataTable
             }
         } catch (\Exception $e) {
             // If all else fails, return empty to avoid breaking JSON
-            error_log('[HSCodesDataTable] UTF-8 cleanup exception: ' . $e->getMessage());
+            ErrorCapture::record('[HSCodesDataTable] UTF-8 cleanup exception: ' . $e->getMessage());
             return '';
         }
 
@@ -254,7 +255,7 @@ class HSCodesDataTable extends BaseDataTable
     private function ensureTables(): void
     {
         if (!$this->tableExists($this->table)) {
-            error_log('[HSCodesDataTable] CRITICAL: Missing table: ' . $this->table);
+            ErrorCapture::record('[HSCodesDataTable] CRITICAL: Missing table: ' . $this->table);
             throw new \Exception('Missing table: ' . $this->table);
         }
     }
@@ -267,7 +268,7 @@ class HSCodesDataTable extends BaseDataTable
 
         $this->hasTextTable = $this->tableExists(DB::HS_CODE_TEXTS);
         if (!$this->hasTextTable) {
-            error_log('[HSCodesDataTable] WARNING: HS_CODE_TEXTS table not found, using main table only');
+            ErrorCapture::record('[HSCodesDataTable] WARNING: HS_CODE_TEXTS table not found, using main table only');
         }
         return $this->hasTextTable;
     }

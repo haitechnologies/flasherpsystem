@@ -28,7 +28,7 @@ if (($action == "delete_$module" && !empty($id)) && granted('delete', $module_id
         }
 
         $mysqli->query("DELETE FROM `" . DB::ENTITY_LOGS . "` WHERE entity_type='lead' AND entity_id=$id");
-        $mysqli->query("DELETE FROM `" . DB::LEADS . "` WHERE id=$id");
+        $mysqli->query("UPDATE `" . DB::LEADS . "` SET is_active=0 WHERE id=$id");
     } else {
         $mysqli->query("DELETE FROM `" . DB::ENTITY_NOTES . "` WHERE entity_type='lead' AND entity_id=$id AND created_by ='" . Session::userId() . "'");
 
@@ -39,7 +39,7 @@ if (($action == "delete_$module" && !empty($id)) && granted('delete', $module_id
         }
 
         $mysqli->query("DELETE FROM `" . DB::ENTITY_LOGS . "` WHERE entity_type='lead' AND entity_id=$id AND created_by ='" . Session::userId() . "'");
-        $mysqli->query("DELETE FROM `" . DB::LEADS . "` WHERE id=$id AND created_by ='" . Session::userId() . "'");
+        $mysqli->query("UPDATE `" . DB::LEADS . "` SET is_active=0 WHERE id=$id AND created_by ='" . Session::userId() . "'");
     }
 
     if ($mysqli->affected_rows > 0) {
@@ -50,15 +50,6 @@ if (($action == "delete_$module" && !empty($id)) && granted('delete', $module_id
         $error_message = "Action denied. You are not authorized to delete this record.";
     }
 }
-
-$leadStatusHtml = '<div class="row mb-2 mt-2"><div class="col-lg-12">';
-$result = $mysqli->query("SELECT * FROM `" . DB::TAXONOMIES . "` WHERE is_active=1 AND type='lead_status' ORDER BY value LIMIT 50");
-while ($rows = $result->fetch_array()) {
-    $status = $rows['id'];
-    $rs = $mysqli->query("SELECT id FROM `" . DB::LEADS . "` WHERE lead_status=$status");
-    $leadStatusHtml .= '<span class="badge bg-light text-dark"><a href="listing_leads.php?lead_status=' . $status . '" class="text-black fw-normal">' . htmlspecialchars($rows['value']) . ' (' . $rs->num_rows . ')</a></span> ';
-}
-$leadStatusHtml .= '</div></div>';
 
 $listingConfig = [
     'module' => $module,
@@ -92,7 +83,6 @@ $listingConfig = [
     'order' => [[9, 'desc']],
     'page_length' => 25,
     'search_placeholder' => 'Search leads...',
-    'before_table' => $leadStatusHtml,
 ];
 
 include('admin_elements/listing_template.php');

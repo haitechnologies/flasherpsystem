@@ -7,6 +7,8 @@ namespace App\Service;
 use App\Core\Container;
 use App\Core\Database;
 use App\Core\DB;
+use App\Core\ErrorCapture;
+use App\Repository\EmailProviderRepository;
 use Throwable;
 
 class SMTPMailer
@@ -29,7 +31,7 @@ class SMTPMailer
 
     private static function _log(string $message): void
     {
-        error_log("[SMTPMailer] " . $message);
+        ErrorCapture::record("[SMTPMailer] " . $message);
     }
 
     public function __construct(?Database $db = null)
@@ -55,7 +57,7 @@ class SMTPMailer
             }
         }
 
-        $this->providerManager = new EmailProviderService($this->db);
+        $this->providerManager = new EmailProviderService(new EmailProviderRepository($this->db ?? new Database()));
     }
 
     /**
@@ -119,17 +121,59 @@ class SMTPMailer
         }
 
         if (!$provider) {
+            // Fall back to the static env-backed config (config/email.php).
+            // Secrets are never inline here — they come from the git-ignored .env.
+            $emailCfg = is_file(dirname(__DIR__, 2) . '/config/email.php')
+                ? (include dirname(__DIR__, 2) . '/config/email.php')
+                : null;
+            if (is_array($emailCfg) && !empty($emailCfg['smtp']['host']) && !empty($emailCfg['smtp']['password'])) {
+                $this->activeProvider = [
+                    'id' => 0,
+                    'provider_name' => $emailCfg['from']['name'] ?? 'Flash ERP',
+                    'email' => $emailCfg['from']['address'] ?? '',
+                    'smtp_host' => $emailCfg['smtp']['host'],
+                    'smtp_port' => (string)($emailCfg['smtp']['port'] ?? '465'),
+                    'email_encryption' => $emailCfg['smtp']['encryption'] ?? 'ssl',
+                    'smtp_username' => $emailCfg['smtp']['username'] ?? '',
+                    'smtp_password' => $emailCfg['smtp']['password'],
+                ];
+                $this->from_address = trim((string)($this->activeProvider['email'] ?? ''));
+                $this->from_name = trim((string)($this->activeProvider['provider_name'] ?? ''));
+                $this->smtp_host = trim((string)$this->activeProvider['smtp_host']);
+                $this->smtp_port = (int)$this->activeProvider['smtp_port'];
+                $this->smtp_encryption = strtolower(trim((string)$this->activeProvider['email_encryption']));
+                $this->smtp_username = trim((string)$this->activeProvider['smtp_username']);
+                $this->smtp_password = (string)$this->activeProvider['smtp_password'];
+
+                if (stripos($this->smtp_host, 'titan.email') !== false) {
+                    $this->smtp_port = 465;
+                    $this->smtp_encryption = 'ssl';
+                }
+
+                if (
+                    $this->from_address === '' ||
+                    $this->smtp_host === '' ||
+                    $this->smtp_port <= 0 ||
+                    $this->smtp_username === '' ||
+                    $this->smtp_password === ''
+                ) {
+                    $this->lastError = 'No active email provider found in email_providers table, and the static SMTP config (config/email.php) is incomplete.';
+                    self::_log('[SMTPMailer] ' . $this->lastError);
+                    return false;
+                }
+
+                self::_log('[SMTPMailer] Using static SMTP config from config/email.php (' . $this->from_address . ').');
+                return true;
+            }
+
             $this->lastError = 'No active email provider found in email_providers table.';
             self::_log('[SMTPMailer] ' . $this->lastError);
             return false;
         }
 
-        $providerId = (int)($provider['id'] ?? 0);
+        $providerId = (int)($provider->id ?? 0);
         if ($providerId > 0 && $this->db !== null) {
-            $dailyLimit = (int)($provider['daily_limit'] ?? 0);
-            if ($dailyLimit <= 0) {
-                $dailyLimit = 100;
-            }
+            $dailyLimit = 100;
 
             try {
                 $emailHistoryTable = class_exists('DB') && defined('DB::EMAIL_HISTORY') ? (string)constant('DB::EMAIL_HISTORY') : 'erp_email_history';
@@ -149,21 +193,21 @@ class SMTPMailer
                         return false;
                     }
                     $provider = $fallback;
-                    self::_log('[SMTPMailer] Switched to provider #' . (int)$provider['id'] . ' (' . ($provider['email'] ?? '') . ').');
+                    self::_log('[SMTPMailer] Switched to provider #' . (int)$provider->id . ' (' . ($provider->email ?? '') . ').');
                 }
             } catch (Throwable $e) {
                 self::_log('[SMTPMailer] Quota check failed: ' . $e->getMessage());
             }
         }
 
-        $this->activeProvider = $provider;
-        $this->from_address = trim((string)($provider['email'] ?? ''));
-        $this->from_name = trim((string)($headers['from_name'] ?? $provider['provider_name'] ?? (defined('APP_NAME') ? APP_NAME : 'FLASH ERP SYSTEM')));
-        $this->smtp_host = trim((string)($provider['smtp_host'] ?? ''));
-        $this->smtp_port = (int)($provider['smtp_port'] ?? 0);
-        $this->smtp_encryption = strtolower(trim((string)($provider['email_encryption'] ?? 'tls')));
-        $this->smtp_username = trim((string)($provider['smtp_username'] ?? $this->from_address));
-        $this->smtp_password = (string)($provider['smtp_password_decrypted'] ?? $provider['smtp_password'] ?? '');
+        $this->activeProvider = $provider->toArray();
+        $this->from_address = trim((string)($provider->email ?? ''));
+        $this->from_name = trim((string)($headers['from_name'] ?? $provider->providerName ?? (defined('APP_NAME') ? APP_NAME : 'FLASH ERP SYSTEM')));
+        $this->smtp_host = trim((string)($provider->smtpHost ?? ''));
+        $this->smtp_port = (int)($provider->smtpPort ?? 0);
+        $this->smtp_encryption = strtolower(trim((string)($provider->emailEncryption ?? 'tls')));
+        $this->smtp_username = trim((string)($provider->smtpUsername ?? $this->from_address));
+        $this->smtp_password = (string)($provider->smtpPassword ?? '');
 
         if (stripos($this->smtp_host, 'titan.email') !== false) {
             $this->smtp_port = 465;
@@ -187,11 +231,18 @@ class SMTPMailer
 
     private function sendViaSMTP(string $to, string $subject, string $body, array $headers = []): bool
     {
+        $attachments = $headers['attachments'] ?? [];
+
         $mail_headers = "Date: " . date('r') . "\r\n";
         $mail_headers .= "MIME-Version: 1.0\r\n";
         $app_name_slug = defined('APP_NAME') ? str_replace(' ', '-', APP_NAME) : 'FLASH-ERP-SYSTEM';
         $mail_headers .= "X-Mailer: {$app_name_slug}-SMTP-Mailer/2.0\r\n";
-        $mail_headers .= "Content-Type: text/html; charset=UTF-8\r\n";
+        if (!empty($attachments)) {
+            $boundary = '=_hai_' . md5(uniqid((string)mt_rand(), true));
+            $mail_headers .= "Content-Type: multipart/mixed; boundary=\"{$boundary}\"\r\n";
+        } else {
+            $mail_headers .= "Content-Type: text/html; charset=UTF-8\r\n";
+        }
         if (!empty($headers['Message-ID'])) {
             $mail_headers .= "Message-ID: {$headers['Message-ID']}\r\n";
         } else {
@@ -216,6 +267,8 @@ class SMTPMailer
             }
         }
 
+        $body = $this->buildMimeBody($body, $attachments, $boundary ?? null);
+
         if ($this->smtp_username !== '' && $this->smtp_password !== '') {
             return $this->sendViaSMTPConnection($to, $subject, $body, $mail_headers);
         }
@@ -223,6 +276,38 @@ class SMTPMailer
         $this->lastError = "No SMTP credentials provided. Email not sent. (host: {$this->smtp_host}, user: {$this->smtp_username})";
         self::_log("[SMTPMailer] " . $this->lastError);
         return false;
+    }
+
+    private function buildMimeBody(string $body, array $attachments, ?string $boundary = null): string
+    {
+        if (empty($attachments)) {
+            return $body;
+        }
+
+        $mime = "--{$boundary}\r\n";
+        $mime .= "Content-Type: text/html; charset=UTF-8\r\n";
+        $mime .= "Content-Transfer-Encoding: 8bit\r\n\r\n";
+        $mime .= $body . "\r\n\r\n";
+
+        foreach ($attachments as $attachment) {
+            $path = (string)($attachment['path'] ?? '');
+            if (!is_file($path) || !is_readable($path)) {
+                continue;
+            }
+            $name = (string)($attachment['name'] ?? basename($path));
+            $name = preg_replace('/[^\x20-\x7E]/', '_', $name) ?? 'attachment.pdf';
+            $mimeType = (string)($attachment['mime'] ?? 'application/octet-stream');
+            $fileContent = chunk_split(base64_encode((string)file_get_contents($path)), 76, "\r\n");
+
+            $mime .= "--{$boundary}\r\n";
+            $mime .= "Content-Type: {$mimeType}; name=\"{$name}\"\r\n";
+            $mime .= "Content-Transfer-Encoding: base64\r\n";
+            $mime .= "Content-Disposition: attachment; filename=\"{$name}\"\r\n\r\n";
+            $mime .= $fileContent . "\r\n";
+        }
+
+        $mime .= "--{$boundary}--\r\n";
+        return $mime;
     }
 
     private function readSMTPResponse($socket): string

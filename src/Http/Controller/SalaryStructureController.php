@@ -86,6 +86,7 @@ class SalaryStructureController extends BaseController
             flash_error($error);
             return Response::redirect("salary_structures.php?employee_id=$employeeId");
         } catch (\Throwable $e) {
+            $this->logError("SalaryStructureController::handleBatchSave error: " . $e->getMessage());
             flash_error('Salary structure could not be saved.');
             return Response::redirect('listing_salary_structures.php');
         }
@@ -113,6 +114,7 @@ class SalaryStructureController extends BaseController
             flash_error($error);
             return Response::redirect("salary_structures.php?employee_id=" . $request->getInt('employee_id'));
         } catch (\Throwable $e) {
+            $this->logError("SalaryStructureController::handleCreate error: " . $e->getMessage());
             flash_error('Salary component could not be saved.');
             return Response::redirect('listing_salary_structures.php');
         }

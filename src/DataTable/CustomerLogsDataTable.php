@@ -99,7 +99,7 @@ class CustomerLogsDataTable extends BaseDataTable
         $action = $this->sanitize($row['action'] ?? '') ?: '-';
         $createdAt = $row['created_at'] ?? '';
 
-        $createdDisplay = $createdAt !== '' ? $this->formatDate($createdAt, 'd M Y g:ia') : '-';
+        $createdDisplay = $createdAt !== '' ? $this->formatDate($createdAt, 'd M Y') : '-';
 
         return [
             $this->rowNumber,

@@ -71,7 +71,7 @@ class AttendanceDeviceController extends BaseController
             flash_error($error);
             return Response::redirect("attendance_devices.php?id=$id&action=edit_attendance_device");
         } catch (\Throwable $e) {
-            error_log("AttendanceDeviceController update error: " . $e->getMessage());
+            $this->logError("AttendanceDeviceController update error: " . $e->getMessage());
             flash_error($e->getMessage());
             return Response::redirect("attendance_devices.php?id=$id&action=edit_attendance_device");
         }
@@ -98,9 +98,9 @@ class AttendanceDeviceController extends BaseController
             flash_error($error);
             return Response::redirect('attendance_devices.php');
         } catch (\Throwable $e) {
-            error_log("AttendanceDeviceController create error: " . $e->getMessage());
+            $this->logError("AttendanceDeviceController create error: " . $e->getMessage());
             flash_error($e->getMessage());
-            return Response::redirect('attendance_devices.php');
+            return Response::redirect("attendance_devices.php");
         }
     }
 

@@ -1,3 +1,4 @@
+<?php use App\Core\DB; ?>
 <style>
     /* .timeline {
         position: relative;
@@ -97,7 +98,7 @@
 
                                 <div class="col-lg-8">
                                     <div class="small text-muted">Payment due period</div>
-                                    <div class=""><?php echo $payment_term; ?></div>
+                                    <div class=""><?php echo getTableAttr('payment_term', DB::PAYMENT_TERMS, $payment_term); ?></div>
 
 
                                     <div class="mt-2">
@@ -203,9 +204,7 @@
                                                         });
 
                                                         function loadReceivablesChart() {
-                                                            if (typeof google !== 'undefined' && google.charts && google.visualization) {
-                                                                updateReceivablesChart();
-                                                            } else {
+                                                            if (typeof google !== 'undefined' && google.charts) {
                                                                 google.charts.setOnLoadCallback(updateReceivablesChart);
                                                             }
                                                         }
@@ -305,7 +304,7 @@
                                                                     return;
                                                                 }
                                                                 
-                                                                drawReceivablesChart(data.months, basis, '<?php echo $display_name; ?>');
+                                                                drawReceivablesChart(data.months, basis, <?php echo json_encode($display_name); ?>);
                                                             })
                                                             .catch(error => {
                                                                 console.error('AJAX Error:', error);
@@ -391,7 +390,7 @@
 
 
 
-                                    <style>
+<style>
                                         .timeline-container {
                                             position: relative;
                                             padding-left: 140px;
@@ -447,33 +446,37 @@
                                     <div class="timeline-container mt-4 py-4">
                                         <div class="timeline-line"></div>
 
-                                        <div class="timeline-item">
-                                            <div class="timeline-date">
-                                                <div class="small">20 Dec 2025</div>
-                                                <div class="small">06:11 PM</div>
+                                        <?php if (empty($timelineEntries)): ?>
+                                            <div class="timeline-item">
+                                                <div class="timeline-content shadow-sm">
+                                                    <div class="text-muted small mb-1">No activity recorded yet for this customer.</div>
+                                                </div>
                                             </div>
-                                            <div class="timeline-icon">
-                                                <i class="ph-chat-centered-text text-primary"></i>
-                                            </div>
-                                            <div class="timeline-content shadow-sm">
-                                                <div class="text-muted mb-1">test3</div>
-                                                <div class="small text-muted">by <span class="fw-bold">Flash Logistcis FZC</span></div>
-                                            </div>
-                                        </div>
+                                        <?php else: ?>
+                                            <?php foreach ($timelineEntries as $entry): ?>
+                                                <div class="timeline-item">
+                                                    <div class="timeline-date">
+                                                        <div class="small"><?php echo dd_($entry['created_at'], 'd M Y'); ?></div>
+                                                        <div class="small"><?php echo dd_($entry['created_at'], 'h:i A'); ?></div>
+                                                    </div>
+                                                    <div class="timeline-icon">
+                                                        <i class="<?php echo $entry['icon']; ?> text-primary"></i>
+                                                    </div>
+                                                    <div class="timeline-content shadow-sm">
+                                                        <?php if (!empty($entry['title'])): ?>
+                                                            <h6 class="fw-bold mb-1"><?php echo $entry['title']; ?></h6>
+                                                        <?php endif; ?>
+                                                        <?php if (!empty($entry['body'])): ?>
+                                                            <div class="text-muted small mb-1"><?php echo $entry['body']; ?></div>
+                                                        <?php endif; ?>
+                                                        <div class="small text-muted">by <span class="fw-bold"><?php echo $entry['user_name']; ?></span><?php if (!empty($entry['details_url'])): ?> - <a href="<?php echo $entry['details_url']; ?>" class="text-primary text-decoration-none">View Details</a><?php endif; ?></div>
+                                                    </div>
+                                                </div>
+                                            <?php endforeach; ?>
+                                        <?php endif; ?>
 
-                                        <div class="timeline-item">
-                                            <div class="timeline-date">
-                                                <div class="small">20 Dec 2025</div>
-                                                <div class="small">06:11 PM</div>
-                                            </div>
-                                            <div class="timeline-icon">
-                                                <i class="ph-file-text text-primary"></i>
-                                            </div>
-                                            <div class="timeline-content shadow-sm">
-                                                <h6 class="fw-bold mb-1">Quote added</h6>
-                                                <div class="text-muted small mb-1">Quote QT-000004 of amount <?php echo BASE_CURRENCY['code']; ?>1,500.00 created</div>
-                                                <div class="small text-muted">by <span class="fw-bold">Flash Logistcis FZC</span> - <a href="#" class="text-primary text-decoration-none">View Details</a></div>
-                                            </div>
+                                        <div class="text-center mt-3">
+                                            <a href="customer_logs.php?customer_id=<?php echo $customer_id; ?>" class="text-primary text-decoration-none small fw-bold">View all activity</a>
                                         </div>
                                     </div>
 

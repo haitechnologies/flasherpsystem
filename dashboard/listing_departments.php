@@ -59,6 +59,7 @@ $listingConfig = [
     'thead' => '
         <th width="40">SR.</th>
         <th>DEPARTMENT</th>
+        <th>EMAIL</th>
         <th>EMPLOYEES</th>
         <th width="90">CREATED AT</th>
         <th width="90" class="col-center">ACTIONS</th>
@@ -67,8 +68,9 @@ $listingConfig = [
         ['data' => 0, 'orderable' => false, 'searchable' => false],
         ['data' => 1],
         ['data' => 2, 'orderable' => false, 'searchable' => false],
-        ['data' => 3],
-        ['data' => 4, 'orderable' => false, 'searchable' => false, 'className' => 'col-center'],
+        ['data' => 3, 'orderable' => false, 'searchable' => false],
+        ['data' => 4],
+        ['data' => 5, 'orderable' => false, 'searchable' => false, 'className' => 'col-center'],
     ],
     'order' => [[0, 'asc']],
     'page_length' => 25,

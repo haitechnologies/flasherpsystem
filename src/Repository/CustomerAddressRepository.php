@@ -10,6 +10,11 @@ use App\Model\CustomerAddress;
 
 class CustomerAddressRepository
 {
+    private const ADDRESS_COLUMNS = '
+        id, organization_id, addressable_type, addressable_id, type,
+        attention, country, address_line1, address_line2, city, state, zipcode,
+        phone, fax, publish, is_active, created_at, updated_at, updated_by, created_by';
+
     private Database $db;
 
     public function __construct(Database $db)
@@ -19,7 +24,7 @@ class CustomerAddressRepository
 
     public function findByCustomerAndType(int $customerId, int $orgId, string $type): ?CustomerAddress
     {
-        $sql = "SELECT * FROM `{DB::CUSTOMER_ADDRESSES}` WHERE addressable_type = 'Customer' AND addressable_id = :customer_id AND type = :type AND organization_id = :org_id LIMIT 1";
+        $sql = "SELECT " . self::ADDRESS_COLUMNS . " FROM `{DB::CUSTOMER_ADDRESSES}` WHERE addressable_type = 'Customer' AND addressable_id = :customer_id AND type = :type AND organization_id = :org_id LIMIT 1";
         $row = $this->db->fetchOne($sql, ['customer_id' => $customerId, 'type' => $type, 'org_id' => $orgId]);
         if ($row === null) {
             return null;
@@ -94,7 +99,7 @@ class CustomerAddressRepository
 
     private function findById(int $id, int $orgId): ?CustomerAddress
     {
-        $sql = "SELECT * FROM `{DB::CUSTOMER_ADDRESSES}` WHERE id = :id AND addressable_type = 'Customer' AND organization_id = :org_id";
+        $sql = "SELECT " . self::ADDRESS_COLUMNS . " FROM `{DB::CUSTOMER_ADDRESSES}` WHERE id = :id AND addressable_type = 'Customer' AND organization_id = :org_id";
         $row = $this->db->fetchOne($sql, ['id' => $id, 'org_id' => $orgId]);
         if ($row === null) {
             return null;

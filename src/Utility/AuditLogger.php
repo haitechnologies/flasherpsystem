@@ -7,6 +7,7 @@ namespace App\Utility;
 use App\Core\Container;
 use App\Core\Database;
 use App\Core\DB;
+use App\Core\ErrorCapture;
 use Throwable;
 
 class AuditLogger
@@ -54,7 +55,7 @@ class AuditLogger
                 ]
             );
         } catch (Throwable $e) {
-            error_log('AuditLogger::log() failed: ' . $e->getMessage());
+            ErrorCapture::record('AuditLogger::log() failed: ' . $e->getMessage());
         }
     }
 

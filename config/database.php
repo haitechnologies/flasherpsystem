@@ -383,6 +383,7 @@ define('tbl_payment_received_items', \App\Core\DB::getPrefix() . 'payment_receiv
 define('tbl_credit_notes', \App\Core\DB::CREDIT_NOTES);
 define('tbl_credit_note_items', \App\Core\DB::CREDIT_NOTE_ITEMS);
 define('tbl_vendors', \App\Core\DB::VENDORS);
+define('tbl_vendor_transactions', \App\Core\DB::VENDOR_TRANSACTIONS);
 define('tbl_purchases', \App\Core\DB::PURCHASES);
 define('tbl_purchase_items', \App\Core\DB::PURCHASE_ITEMS);
 define('tbl_purchase_orders', \App\Core\DB::PURCHASE_ORDERS);
@@ -392,6 +393,8 @@ define('tbl_payment_made_items', \App\Core\DB::getPrefix() . 'payment_made_items
 define('tbl_debit_notes', \App\Core\DB::DEBIT_NOTES);
 define('tbl_debit_note_items', \App\Core\DB::DEBIT_NOTE_ITEMS);
 define('tbl_expenses', \App\Core\DB::EXPENSES);
+define('tbl_expense_items', \App\Core\DB::EXPENSE_ITEMS);
+define('tbl_expense_attachments', \App\Core\DB::EXPENSE_ATTACHMENTS);
 define('tbl_banks', \App\Core\DB::BANKS);
 define('tbl_tax_treatments', \App\Core\DB::TAX_TREATMENTS);
 define('tbl_payment_terms', \App\Core\DB::PAYMENT_TERMS);

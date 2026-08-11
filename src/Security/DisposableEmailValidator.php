@@ -7,6 +7,7 @@ namespace App\Security;
 use App\Core\Container;
 use App\Core\Database;
 use App\Core\DB;
+use App\Core\ErrorCapture;
 use Exception;
 use mysqli;
 use Throwable;
@@ -123,7 +124,7 @@ class DisposableEmailValidator
                 }
             }
         } catch (Throwable $e) {
-            error_log("DisposableEmailValidator::loadFromDatabase() - Error loading: " . $e->getMessage());
+            ErrorCapture::record("DisposableEmailValidator::loadFromDatabase() - Error loading: " . $e->getMessage());
             return false;
         }
 

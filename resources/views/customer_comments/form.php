@@ -46,6 +46,20 @@ include 'admin_elements/admin_header.php';
                                     <form class="steps-basic clearfix" method="post" id="frm<?php echo $module; ?>" name="frm<?php echo $module; ?>" action="<?php echo $module; ?>.php" autocomplete="off" enctype="multipart/form-data">
                                         <input type="hidden" name="customer_id" id="customer_id" value="<?php echo $customer_id; ?>" />
 
+                                        <?php if (!empty($success_message)): ?>
+                                            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                                <?php echo htmlspecialchars($success_message); ?>
+                                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                            </div>
+                                        <?php endif; ?>
+
+                                        <?php if (!empty($error_message)): ?>
+                                            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                                <?php echo htmlspecialchars($error_message); ?>
+                                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                            </div>
+                                        <?php endif; ?>
+
                                         <?php if (($action == "edit_$module" || $action == "update_$module") && !empty($customer_id)): ?>
                                             <input type="hidden" name="action" id="action" value="update_<?php echo $module; ?>" />
                                             <input type="hidden" name="comment_id" id="comment_id" value="<?php echo $commentId; ?>" />
@@ -98,13 +112,25 @@ include 'admin_elements/admin_header.php';
                                                             <div class="bg-light rounded p-3 d-flex justify-content-between align-items-center">
                                                                 <span class="text-dark"><?php echo htmlspecialchars($note->notes ?? ''); ?></span>
 
-                                                                <?php if ($canDelete): ?>
-                                                                <button type="button"
-                                                                    class="btn btn-link text-muted p-0 confirm-delete"
-                                                                    data-href="customer_comments.php?action=delete_customer_comments&comment_id=<?php echo $noteId; ?>&customer_id=<?php echo $customer_id; ?>">
-                                                                    <i class="ph-trash"></i>
-                                                                </button>
-                                                                <?php endif; ?>
+                                                                <div class="d-flex">
+                                                                    <?php if ($canEdit): ?>
+                                                                    <a href="customer_comments.php?action=edit_customer_comments&comment_id=<?php echo $noteId; ?>&customer_id=<?php echo $customer_id; ?>"
+                                                                       class="btn btn-link text-muted p-0 me-2" title="Edit">
+                                                                        <i class="ph-pencil-simple"></i>
+                                                                    </a>
+                                                                    <?php endif; ?>
+                                                                    <?php if ($canDelete): ?>
+                                                                    <form method="post" action="customer_comments.php" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this comment?')">
+                                                                        <input type="hidden" name="action" value="delete_customer_comments">
+                                                                        <input type="hidden" name="comment_id" value="<?php echo $noteId; ?>">
+                                                                        <input type="hidden" name="customer_id" value="<?php echo $customer_id; ?>">
+                                                                        <?php echo csrf_field(); ?>
+                                                                        <button type="submit" class="btn btn-link text-muted p-0" title="Delete">
+                                                                            <i class="ph-trash"></i>
+                                                                        </button>
+                                                                    </form>
+                                                                    <?php endif; ?>
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </div>

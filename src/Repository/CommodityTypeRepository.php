@@ -7,6 +7,7 @@ namespace App\Repository;
 use App\Core\Database;
 use App\Core\DB;
 use App\Model\CommodityType;
+use App\Core\ErrorCapture;
 
 class CommodityTypeRepository
 {
@@ -68,7 +69,7 @@ class CommodityTypeRepository
             $this->db->execute($sql, $params);
             return true;
         } catch (\Throwable $e) {
-            error_log("CommodityTypeRepository: Update failed: " . $e->getMessage());
+            ErrorCapture::record("CommodityTypeRepository: Update failed: " . $e->getMessage());
             return false;
         }
     }

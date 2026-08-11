@@ -5,15 +5,15 @@ if (!empty($_GET["purchase_orders_ordering"] ?? $_REQUEST["purchase_orders_order
 }
 if (!isset($_SESSION["purchase_orders_ordering"])) $_SESSION["purchase_orders_ordering"] = "all";
 $purchase_orders_ordering = $_SESSION["purchase_orders_ordering"];
-$current_id = (int)($_GET["purchase_order_id"] ?? 0);
+$current_id = (int)($_GET["purchase_order_id"] ?? $_GET["id"] ?? $_REQUEST["purchase_order_id"] ?? 0);
 ?>
 <div class="sidebar-content">
     <div class="sidebar-section sidebar-section-body d-flex align-items-center pb-2 border-bottom border-1">
         <div>
-            <select class="form-select border-0 fw-bold" name="purchase_orders_ordering" id="purchase_orders_ordering" onchange="window.location.href='purchase_order_overview.php?purchase_order_id=<?php echo $purchase_order_id; ?>&purchase_orders_ordering='+this.value;">
-                <option value="all" <?php if ($purchase_orders_ordering === "all") echo "selected"; ?>>All</option>
+            <select class="form-select border-0 fw-bold" name="purchase_orders_ordering" id="purchase_orders_ordering" onchange="window.location.href='purchase_order_overview.php?purchase_order_id=<?php echo $current_id; ?>&purchase_orders_ordering='+this.value;">
+                <option value="all" <?php if ($purchase_orders_ordering === "all") echo "selected"; ?>>All Purchase Orders</option>
 <?php
-$statusLabels = ['draft' => 'Draft', 'sent' => 'Sent', 'approved' => 'Approved', 'received' => 'Received', 'cancelled' => 'Cancelled'];
+$statusLabels = ['draft' => 'Draft', 'sent' => 'Sent', 'accepted' => 'Accepted', 'purchased' => 'Purchased', 'declined' => 'Declined', 'expired' => 'Expired'];
 foreach ($statusLabels as $val => $lbl) {
     $sel = $purchase_orders_ordering === $val ? "selected" : "";
     echo "<option value=\"{$val}\" {$sel}>{$lbl}</option>";
@@ -38,9 +38,16 @@ $total = $c[0] ?? 0;
 while ($row = $r->fetch_array()) {
     $sel = $row["id"] == $current_id ? "table-primary shadow-sm" : "";
     $name = getTableAttr("display_name", DB::VENDORS, $row["vendor_id"]);
-    $date = dd_($row["purchase_order_date"]);
+    $date = ddm_($row["purchase_order_date"]);
     $amt = number_format($row["grand_total"], 2);
-    $st = strtoupper($row["purchase_order_status"]);
+    $status_class = match($row["purchase_order_status"]) {
+        'accepted', 'purchased' => 'text-success',
+        'declined', 'expired' => 'text-danger',
+        'draft' => 'text-secondary',
+        'sent' => 'text-info',
+        default => 'text-info'
+    };
+    $st = '<span class="' . $status_class . '">' . strtoupper($row["purchase_order_status"]) . '</span>';
 ?>
     <tr id="<?php echo $row["id"]; ?>" class="<?php echo $sel; ?>">
         <td><a href="purchase_order_overview.php?purchase_order_id=<?php echo $row["id"]; ?>" class="text-black text-decoration-none d-block">

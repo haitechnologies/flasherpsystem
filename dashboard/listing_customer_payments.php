@@ -326,7 +326,7 @@ $result_customer_contacts = $mysqli->query("SELECT * FROM `" . DB::CUSTOMER_CONT
                                                             $status = '<span class="badge bg-success">Active</span>';
 
 
-                                                        $created_at     = processDateYtoD($created_at);
+                                                        $created_at     = ddm_($created_at);
 
                                                         // ---------------------------------------------------------------------------------------
                                                     ?>

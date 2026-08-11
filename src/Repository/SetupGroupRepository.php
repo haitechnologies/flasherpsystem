@@ -8,6 +8,7 @@ use App\Core\Database;
 use App\Core\DB;
 use App\Model\SetupGroup;
 use App\Helper\SlugHelper;
+use App\Core\ErrorCapture;
 
 class SetupGroupRepository
 {
@@ -101,7 +102,7 @@ class SetupGroupRepository
             $this->db->execute($sql, $params);
             return true;
         } catch (\Throwable $e) {
-            error_log("SetupGroupRepository: Update failed: " . $e->getMessage());
+            ErrorCapture::record("SetupGroupRepository: Update failed: " . $e->getMessage());
             return false;
         }
     }

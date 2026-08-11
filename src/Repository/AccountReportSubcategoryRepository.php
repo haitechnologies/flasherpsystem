@@ -7,6 +7,7 @@ namespace App\Repository;
 use App\Core\Database;
 use App\Core\DB;
 use App\Model\AccountReportSubcategory;
+use App\Core\ErrorCapture;
 
 class AccountReportSubcategoryRepository
 {
@@ -19,7 +20,7 @@ class AccountReportSubcategoryRepository
 
     public function find(int $id): ?AccountReportSubcategory
     {
-        $sql = "SELECT id, report_name, description, is_active, created_by, created_at
+        $sql = "SELECT id, report_name, slug, category_id, ordering, is_completed, last_visited, publish, is_active, created_by, created_at, updated_at, updated_by
                 FROM `{DB::ACCOUNTS_REPORT_SUBCATEGORIES}` WHERE id = :id";
         $row = $this->db->fetchOne($sql, ['id' => $id]);
         return $row === null ? null : $this->mapRowToDto($row);
@@ -27,7 +28,7 @@ class AccountReportSubcategoryRepository
 
     public function findAll(): array
     {
-        $sql = "SELECT id, report_name, description, is_active, created_by, created_at
+        $sql = "SELECT id, report_name, slug, category_id, ordering, is_completed, last_visited, publish, is_active, created_by, created_at, updated_at, updated_by
                 FROM `{DB::ACCOUNTS_REPORT_SUBCATEGORIES}` ORDER BY report_name ASC";
         return array_map($this->mapRowToDto(...), $this->db->fetchAll($sql));
     }
@@ -43,11 +44,13 @@ class AccountReportSubcategoryRepository
 
     public function insert(AccountReportSubcategory $item): int
     {
-        $sql = "INSERT INTO `{DB::ACCOUNTS_REPORT_SUBCATEGORIES}` (report_name, description, is_active, created_by)
-                VALUES (:report_name, :description, :is_active, :created_by)";
+        $sql = "INSERT INTO `{DB::ACCOUNTS_REPORT_SUBCATEGORIES}` (report_name, slug, category_id, ordering, is_active, created_by)
+                VALUES (:report_name, :slug, :category_id, :ordering, :is_active, :created_by)";
         return (int)$this->db->insert($sql, [
             'report_name' => $item->reportName,
-            'description' => $item->description,
+            'slug' => $item->slug,
+            'category_id' => $item->categoryId,
+            'ordering' => $item->ordering,
             'is_active' => $item->isActive ? 1 : 0,
             'created_by' => $item->createdBy,
         ]);
@@ -68,7 +71,7 @@ class AccountReportSubcategoryRepository
             $this->db->execute($sql, $params);
             return true;
         } catch (\Throwable $e) {
-            error_log("AccountReportSubcategoryRepository: Update failed: " . $e->getMessage());
+            ErrorCapture::record("AccountReportSubcategoryRepository: Update failed: " . $e->getMessage());
             return false;
         }
     }
@@ -84,10 +87,17 @@ class AccountReportSubcategoryRepository
         return new AccountReportSubcategory(
             id: (int)$row['id'],
             reportName: (string)($row['report_name'] ?? ''),
-            description: (string)($row['description'] ?? ''),
+            slug: (string)($row['slug'] ?? ''),
+            categoryId: (int)($row['category_id'] ?? 0),
+            ordering: (int)($row['ordering'] ?? 0),
+            isCompleted: (bool)($row['is_completed'] ?? false),
+            lastVisited: (string)($row['last_visited'] ?? ''),
+            publish: (bool)($row['publish'] ?? true),
             isActive: (bool)($row['is_active'] ?? true),
             createdBy: (int)($row['created_by'] ?? 0),
             createdAt: (string)($row['created_at'] ?? ''),
+            updatedAt: (string)($row['updated_at'] ?? ''),
+            updatedBy: (int)($row['updated_by'] ?? 0),
         );
     }
 }

@@ -38,7 +38,7 @@ class GeoStatesDataTable extends BaseDataTable
             'state_ar' => htmlspecialchars($row['state_ar'] ?? ''),
             'country_id' => $row['country_id'],
             'is_active' => $row['is_active'] ? '<span class="badge bg-success bg-opacity-20 text-success">Active</span>' : '<span class="badge bg-danger bg-opacity-20 text-danger">Inactive</span>',
-            'created_at' => date('M j, Y', strtotime($row['created_at'])),
+            'created_at' => !empty($row['created_at']) ? date('d M Y', strtotime($row['created_at'])) : '-',
             'actions' => $this->getActionButtons($row['id'], 'geo_states')
         ];
     }

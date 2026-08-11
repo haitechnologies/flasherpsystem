@@ -36,6 +36,7 @@ $payroll_row = $mysqli->query("
     INNER JOIN `" . DB::PAYROLL_COMPONENTS . "` pc ON ss.component_id = pc.id
     WHERE (ss.effective_to IS NULL OR CAST(ss.effective_to AS CHAR) = '0000-00-00' OR ss.effective_to >= CURDATE())
     AND (ss.effective_from IS NULL OR CAST(ss.effective_from AS CHAR) = '0000-00-00' OR ss.effective_from <= CURDATE())
+    AND ss.organization_id = $orgId
 ")->fetch_assoc();
 $total_gross = (float)($payroll_row['total_gross'] ?? 0);
 $total_deductions = (float)($payroll_row['total_deductions'] ?? 0);

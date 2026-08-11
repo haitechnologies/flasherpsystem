@@ -239,7 +239,7 @@ class OrgIdInjectionMiddleware
      */
     private function logWarning(string $message, string $sql): void
     {
-        error_log("[OrgIdMiddleware] WARNING: $message - Query: " . substr($sql, 0, 100));
+        ErrorCapture::record("[OrgIdMiddleware] WARNING: $message - Query: " . substr($sql, 0, 100));
 
         if ($this->logger && method_exists($this->logger, 'warn')) {
             $this->logger->warn('org_id_compliance_warning', [

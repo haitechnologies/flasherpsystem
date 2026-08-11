@@ -38,8 +38,7 @@ class CustomerController extends BaseController
         }
 
         if ($request->isPost() && !$this->validateCsrf($request)) {
-            flash_error('Invalid security token.');
-            return Response::redirect('customers.php');
+            return new Response('Invalid security token.', 403);
         }
 
         $id = $request->getInt('id');
@@ -61,17 +60,24 @@ class CustomerController extends BaseController
         try {
             $customer = $this->customerService->updateCustomer($id, $data, $this->orgId, $this->userId);
 
+            updateCustomerLogs($id, 'customer', 'edit', $id);
             flash_success('The Customer has been updated successfully.');
             return Response::redirect("customer_overview.php?customer_id=$id");
         } catch (ValidationException $e) {
             $error = current($e->getErrors());
             flash_error($error);
-            return Response::redirect("customers.php?id=$id&action=edit_customers");
+            return $this->showForm($request, $id, $data, $error);
         } catch (NotFoundException $e) {
             flash_error($e->getMessage());
             return Response::redirect("customers.php?id=$id&action=edit_customers");
         } catch (\Throwable $e) {
-            flash_error('The Customer could not be updated.');
+            log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
+                'module' => $this->moduleSlug,
+                'module_slug' => $this->moduleSlug,
+                'stack_trace' => $e->getTraceAsString(),
+                'error_code' => (string)$e->getCode(),
+            ]));
+            flash_error($e->getMessage());
             return Response::redirect("customers.php?id=$id&action=edit_customers");
         }
     }
@@ -84,13 +90,20 @@ class CustomerController extends BaseController
             $newCustomer = $this->customerService->createCustomer($data, $this->orgId, $this->userId);
             $id = $newCustomer->id;
 
+            updateCustomerLogs($id, 'customer', 'add', $id);
             flash_success('The Customer has been saved successfully.');
             return Response::redirect("customer_overview.php?customer_id=$id");
         } catch (ValidationException $e) {
             $error = current($e->getErrors());
             flash_error($error);
-            return Response::redirect("customers.php");
+            return $this->showForm($request, 0, $data, $error);
         } catch (\Throwable $e) {
+            log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
+                'module' => $this->moduleSlug,
+                'module_slug' => $this->moduleSlug,
+                'stack_trace' => $e->getTraceAsString(),
+                'error_code' => (string)$e->getCode(),
+            ]));
             flash_error('The Customer could not be saved.');
             return Response::redirect("customers.php");
         }
@@ -98,7 +111,7 @@ class CustomerController extends BaseController
 
     private function buildCustomerData(Request $request, bool $isCreate): array
     {
-        return [
+        $data = [
             'customer_owner' => $request->getString('customer_owner'),
             'payment_term' => $request->getString('payment_term'),
             'customer_status' => $request->getString('customer_status'),
@@ -142,10 +155,19 @@ class CustomerController extends BaseController
             'discount_type_value' => $request->getString('discount_type_value'),
             'subscription_tier' => $request->getString('subscription_tier'),
             'subscription_expires_at' => $request->getString('subscription_expires_at'),
-            'is_active' => $request->get('publish') ? true : false,
-            'approved' => $request->get('approved') ? true : false,
-            'publish' => $request->get('publish') ? true : false,
+            'is_active' => $isCreate ? true : ($request->get('publish') ? true : false),
+            'publish' => $isCreate ? true : ($request->get('publish') ? true : false),
         ];
+
+        if (!$isCreate && $request->has('approved')) {
+            $data['approved'] = (bool)$request->get('approved');
+        }
+
+        if (!$isCreate && $request->getString('company_name') === '') {
+            unset($data['company_name']);
+        }
+
+        return $data;
     }
 
     private function buildTagsString(Request $request): string
@@ -157,18 +179,13 @@ class CustomerController extends BaseController
         return (string)$tags;
     }
 
-    private function showForm(Request $request, int $id): Response
+    private function showForm(Request $request, int $id, ?array $prefillData = null, ?string $prefillError = null): Response
     {
         $module = 'customers';
         $moduleCaption = $this->moduleCaption;
         $moduleId = $this->moduleId;
         $session_user_id = $this->userId;
-        $error_message = $request->getString('error_message');
-        if (empty($error_message)) {
-            foreach (\App\Core\FlashMessage::all() as $fm) {
-                if ($fm['type'] === 'danger') { $error_message = $fm['message']; break; }
-            }
-        }
+        $error_message = $prefillError ?? $request->getString('error_message');
         $action = $request->getString('action');
 
         // Default empty values matching original page
@@ -213,6 +230,52 @@ class CustomerController extends BaseController
         $receivable_account_id = '';
         $is_active = 1;
 
+        // Apply prefill data from validation errors (posted values)
+        if ($prefillData !== null) {
+            $customer_owner = (string)($prefillData['customer_owner'] ?? $customer_owner);
+            $payment_term = (string)($prefillData['payment_term'] ?? $payment_term);
+            $customer_status = (string)($prefillData['customer_status'] ?? $customer_status);
+            $customer_source = (string)($prefillData['customer_source'] ?? $customer_source);
+            $assigned_to = (string)($prefillData['assigned_to'] ?? $assigned_to);
+            $customer_type = (string)($prefillData['customer_type'] ?? $customer_type);
+            $salutation = (string)($prefillData['salutation'] ?? $salutation);
+            $first_name = (string)($prefillData['first_name'] ?? $first_name);
+            $last_name = (string)($prefillData['last_name'] ?? $last_name);
+            $display_name = (string)($prefillData['display_name'] ?? $display_name);
+            $company_name = (string)($prefillData['company_name'] ?? $company_name);
+            $address = (string)($prefillData['address'] ?? $address);
+            $email = (string)($prefillData['email'] ?? $email);
+            $phone = (string)($prefillData['phone'] ?? $phone);
+            $mobile = (string)($prefillData['mobile'] ?? $mobile);
+            $tax_treatment = (string)($prefillData['tax_treatment'] ?? $tax_treatment);
+            $trn = (string)($prefillData['trn'] ?? $trn);
+            $corporate_tax_number = (string)($prefillData['corporate_tax_number'] ?? $corporate_tax_number);
+            $license_number = (string)($prefillData['license_number'] ?? $license_number);
+            $license_expiry = (string)($prefillData['license_expiry'] ?? $license_expiry);
+            $currency = (string)($prefillData['currency'] ?? $currency);
+            $exchange_rate = (string)($prefillData['exchange_rate'] ?? $exchange_rate);
+            $sales_person = (string)($prefillData['sales_person'] ?? $sales_person);
+            $cs_agent = (string)($prefillData['cs_agent'] ?? $cs_agent);
+            $lead_category = (string)($prefillData['lead_category'] ?? $lead_category);
+            $rating = (string)($prefillData['rating'] ?? $rating);
+            $contacted_date = (string)($prefillData['contacted_date'] ?? $contacted_date);
+            $description = (string)($prefillData['description'] ?? $description);
+            $tags_string = (string)($prefillData['tags'] ?? '');
+            if ($tags_string !== '') {
+                $tags_arr = explode(',', $tags_string);
+                $tags_arr = array_map('trim', $tags_arr);
+            }
+            $website = (string)($prefillData['website'] ?? $website);
+            $department = (string)($prefillData['department'] ?? $department);
+            $designation = (string)($prefillData['designation'] ?? $designation);
+            $x = (string)($prefillData['x'] ?? $x);
+            $facebook = (string)($prefillData['facebook'] ?? $facebook);
+            $instagram = (string)($prefillData['instagram'] ?? $instagram);
+            $opening_balance = (string)($prefillData['opening_balance'] ?? $opening_balance);
+            $receivable_account_id = (string)($prefillData['receivable_account_id'] ?? $receivable_account_id);
+            $is_active = isset($prefillData['is_active']) ? ((bool)$prefillData['is_active'] ? 1 : 0) : $is_active;
+        }
+
         if ($id > 0) {
             try {
                 $customer = $this->customerService->getCustomer($id, $this->orgId);
@@ -236,14 +299,14 @@ class CustomerController extends BaseController
                 $trn = (string)$customer->trn;
                 $corporate_tax_number = (string)$customer->corporateTaxNumber;
                 $license_number = (string)$customer->licenseNumber;
-                $license_expiry = $customer->licenseExpiry === '1970-01-01' ? '' : DateHelper::toDbDate($customer->licenseExpiry);
+                $license_expiry = $customer->licenseExpiry === '1970-01-01' ? '' : DateHelper::toInputDate($customer->licenseExpiry);
                 $currency = (string)$customer->currency;
                 $exchange_rate = (string)$customer->exchangeRate;
                 $sales_person = (string)$customer->salesPerson;
                 $cs_agent = (string)$customer->csAgent;
                 $lead_category = (string)$customer->leadCategory;
                 $rating = (string)$customer->rating;
-                $contacted_date = $customer->contactedDate ? DateHelper::toDbDateTime($customer->contactedDate) : '';
+                $contacted_date = $customer->contactedDate ? DateHelper::toDisplayDateTime($customer->contactedDate) : '';
                 $description = (string)$customer->description;
                 $tags_value = (string)$customer->tags;
                 if ($tags_value !== '') {
@@ -265,44 +328,68 @@ class CustomerController extends BaseController
 
         // Fetch dropdown data from PDO
         try {
-            $tagsList = $this->db->fetchAll("SELECT id, value FROM `" . DB::TAXONOMIES . "` WHERE is_active=1 AND type='customer_tag' ORDER BY value");
+            $tagsList = $this->db->fetchAll("SELECT id, value FROM `" . DB::TAXONOMIES . "` WHERE is_active=1 AND type='customer_tag' AND organization_id=:org_id ORDER BY value", ['org_id' => $this->orgId]);
         } catch (\Throwable $e) {
             $tagsList = [];
+            if (function_exists('log_error')) {
+                log_error('customers form dropdown load failed: ' . $e->getMessage(), 'WARNING', __FILE__, __LINE__, function_exists('backend_runtime_log_context') ? backend_runtime_log_context(['module' => 'customers', 'module_slug' => 'customers', 'error_code' => (string)$e->getCode()]) : ['module' => 'customers', 'module_slug' => 'customers', 'error_code' => (string)$e->getCode()]);
+            }
         }
         try {
-            $statusesList = $this->db->fetchAll("SELECT id, value FROM `" . DB::TAXONOMIES . "` WHERE is_active=1 AND type='customer_status' ORDER BY value");
+            $statusesList = $this->db->fetchAll("SELECT id, value FROM `" . DB::TAXONOMIES . "` WHERE is_active=1 AND type='customer_status' AND organization_id=:org_id ORDER BY value", ['org_id' => $this->orgId]);
         } catch (\Throwable $e) {
             $statusesList = [];
+            if (function_exists('log_error')) {
+                log_error('customers form dropdown load failed: ' . $e->getMessage(), 'WARNING', __FILE__, __LINE__, function_exists('backend_runtime_log_context') ? backend_runtime_log_context(['module' => 'customers', 'module_slug' => 'customers', 'error_code' => (string)$e->getCode()]) : ['module' => 'customers', 'module_slug' => 'customers', 'error_code' => (string)$e->getCode()]);
+            }
         }
         try {
-            $sourcesList = $this->db->fetchAll("SELECT id, value FROM `" . DB::TAXONOMIES . "` WHERE is_active=1 AND type='customer_source' ORDER BY value");
+            $sourcesList = $this->db->fetchAll("SELECT id, value FROM `" . DB::TAXONOMIES . "` WHERE is_active=1 AND type='customer_source' AND organization_id=:org_id ORDER BY value", ['org_id' => $this->orgId]);
         } catch (\Throwable $e) {
             $sourcesList = [];
+            if (function_exists('log_error')) {
+                log_error('customers form dropdown load failed: ' . $e->getMessage(), 'WARNING', __FILE__, __LINE__, function_exists('backend_runtime_log_context') ? backend_runtime_log_context(['module' => 'customers', 'module_slug' => 'customers', 'error_code' => (string)$e->getCode()]) : ['module' => 'customers', 'module_slug' => 'customers', 'error_code' => (string)$e->getCode()]);
+            }
         }
         try {
-            $usersList = $this->db->fetchAll("SELECT id, full_name FROM `" . DB::USERS . "` WHERE is_active=1 ORDER BY full_name");
+            $usersList = $this->db->fetchAll("SELECT id, full_name FROM `" . DB::USERS . "` WHERE is_active=1 AND organization_id=:org_id ORDER BY full_name", ['org_id' => $this->orgId]);
         } catch (\Throwable $e) {
             $usersList = [];
+            if (function_exists('log_error')) {
+                log_error('customers form dropdown load failed: ' . $e->getMessage(), 'WARNING', __FILE__, __LINE__, function_exists('backend_runtime_log_context') ? backend_runtime_log_context(['module' => 'customers', 'module_slug' => 'customers', 'error_code' => (string)$e->getCode()]) : ['module' => 'customers', 'module_slug' => 'customers', 'error_code' => (string)$e->getCode()]);
+            }
         }
         try {
-            $departmentsList = $this->db->fetchAll("SELECT id, department, email FROM `" . DB::DEPARTMENTS . "` WHERE is_active=1 ORDER BY department");
+            $departmentsList = $this->db->fetchAll("SELECT id, department, email FROM `" . DB::DEPARTMENTS . "` WHERE publish=1 AND organization_id=:org_id ORDER BY department", ['org_id' => $this->orgId]);
         } catch (\Throwable $e) {
             $departmentsList = [];
+            if (function_exists('log_error')) {
+                log_error('customers form dropdown load failed: ' . $e->getMessage(), 'WARNING', __FILE__, __LINE__, function_exists('backend_runtime_log_context') ? backend_runtime_log_context(['module' => 'customers', 'module_slug' => 'customers', 'error_code' => (string)$e->getCode()]) : ['module' => 'customers', 'module_slug' => 'customers', 'error_code' => (string)$e->getCode()]);
+            }
         }
         try {
-            $taxTreatmentsList = $this->db->fetchAll("SELECT id, tax_treatment FROM `" . DB::TAX_TREATMENTS . "` WHERE is_active=1 ORDER BY id ASC");
+            $taxTreatmentsList = $this->db->fetchAll("SELECT id, tax_treatment FROM `" . DB::TAX_TREATMENTS . "` WHERE is_active=1 AND organization_id=:org_id ORDER BY id ASC", ['org_id' => $this->orgId]);
         } catch (\Throwable $e) {
             $taxTreatmentsList = [];
+            if (function_exists('log_error')) {
+                log_error('customers form dropdown load failed: ' . $e->getMessage(), 'WARNING', __FILE__, __LINE__, function_exists('backend_runtime_log_context') ? backend_runtime_log_context(['module' => 'customers', 'module_slug' => 'customers', 'error_code' => (string)$e->getCode()]) : ['module' => 'customers', 'module_slug' => 'customers', 'error_code' => (string)$e->getCode()]);
+            }
         }
         try {
-            $currencyList = $this->db->fetchAll("SELECT id, currency FROM `" . DB::CURRENCIES . "` WHERE is_active=1 ORDER BY id ASC");
+            $currencyList = $this->db->fetchAll("SELECT id, currency FROM `" . DB::CURRENCIES . "` WHERE is_active=1 AND organization_id=:org_id ORDER BY id ASC", ['org_id' => $this->orgId]);
         } catch (\Throwable $e) {
             $currencyList = [];
+            if (function_exists('log_error')) {
+                log_error('customers form dropdown load failed: ' . $e->getMessage(), 'WARNING', __FILE__, __LINE__, function_exists('backend_runtime_log_context') ? backend_runtime_log_context(['module' => 'customers', 'module_slug' => 'customers', 'error_code' => (string)$e->getCode()]) : ['module' => 'customers', 'module_slug' => 'customers', 'error_code' => (string)$e->getCode()]);
+            }
         }
         try {
             $arAccountsList = $this->db->fetchAll("SELECT id, account_name, account_code FROM `" . DB::ACCOUNTS . "` WHERE is_active=1 AND account_type='Assets' ORDER BY account_name");
         } catch (\Throwable $e) {
             $arAccountsList = [];
+            if (function_exists('log_error')) {
+                log_error('customers form dropdown load failed: ' . $e->getMessage(), 'WARNING', __FILE__, __LINE__, function_exists('backend_runtime_log_context') ? backend_runtime_log_context(['module' => 'customers', 'module_slug' => 'customers', 'error_code' => (string)$e->getCode()]) : ['module' => 'customers', 'module_slug' => 'customers', 'error_code' => (string)$e->getCode()]);
+            }
         }
 
         return Response::html($this->view->render('customers/form.php', [
@@ -334,6 +421,7 @@ class CustomerController extends BaseController
             'assigned_to' => $assigned_to,
             'is_active' => $is_active,
             'customer_owner' => $customer_owner,
+            'payment_term' => $payment_term,
             'taxTreatmentsList' => $taxTreatmentsList,
             'tax_treatment' => $tax_treatment,
             'trn' => $trn,

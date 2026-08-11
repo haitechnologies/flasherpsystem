@@ -7,6 +7,7 @@ namespace App\Repository;
 use App\Core\Database;
 use App\Core\DB;
 use App\Model\BannedWord;
+use App\Core\ErrorCapture;
 
 class BannedWordRepository
 {
@@ -68,7 +69,7 @@ class BannedWordRepository
             $this->db->execute($sql, $params);
             return true;
         } catch (\Throwable $e) {
-            error_log("BannedWordRepository: Update failed: " . $e->getMessage());
+            ErrorCapture::record("BannedWordRepository: Update failed: " . $e->getMessage());
             return false;
         }
     }

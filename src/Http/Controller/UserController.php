@@ -119,6 +119,7 @@ class UserController extends BaseController
             flash_error($e->getMessage());
             return Response::redirect("users.php?id=$id&action=edit_users");
         } catch (\Throwable $e) {
+            $this->logError("UserController::handleUpdate error: " . $e->getMessage());
             flash_error('Unable to update employee profile: ' . get_class($e) . ': ' . $e->getMessage());
             return Response::redirect("users.php?id=$id&action=edit_users");
         }
@@ -159,6 +160,7 @@ class UserController extends BaseController
             flash_error($error);
             return Response::redirect("users.php");
         } catch (\Throwable $e) {
+            $this->logError("UserController::handleCreate error: " . $e->getMessage());
             flash_error('Unable to create employee account.');
             return Response::redirect("users.php");
         }
@@ -310,6 +312,7 @@ class UserController extends BaseController
                 return $dt->format('Y-m-d');
             }
         } catch (\Throwable $e) {
+            $this->logError("UserController::convertDateToDb error: " . $e->getMessage());
         }
         $parts = explode('-', $dateStr);
         if (count($parts) === 3) {
@@ -353,6 +356,7 @@ class UserController extends BaseController
             }
             return Response::json(['success' => true, 'data' => $rows, 'missing_mandatory' => $missingMandatoryDocs]);
         } catch (\Throwable $e) {
+            $this->logError("UserController::handleListUserDocs error: " . $e->getMessage());
             return Response::json(['success' => false, 'error' => $e->getMessage()], 500);
         }
     }
@@ -368,6 +372,7 @@ class UserController extends BaseController
         } catch (ValidationException $e) {
             return Response::json(['success' => false, 'error' => current($e->getErrors())], 400);
         } catch (\Throwable $e) {
+            $this->logError("UserController::handleUpdateUserDocDates error: " . $e->getMessage());
             return Response::json(['success' => false, 'error' => $e->getMessage()], 500);
         }
     }
@@ -392,6 +397,7 @@ class UserController extends BaseController
         } catch (\App\Exception\ValidationException $e) {
             return Response::json(['success' => false, 'error' => current($e->getErrors())], 400);
         } catch (\Throwable $e) {
+            $this->logError("UserController::handleUploadUserDoc error: " . $e->getMessage());
             return Response::json(['success' => false, 'error' => $e->getMessage()], 500);
         }
     }
@@ -403,6 +409,7 @@ class UserController extends BaseController
             $this->documentService->deleteDocument($id, $this->orgId, $this->userId, $isSuperAdmin);
             return Response::json(['success' => true]);
         } catch (\Throwable $e) {
+            $this->logError("UserController::handleDeleteUserDoc error: " . $e->getMessage());
             return Response::json(['success' => false, 'error' => $e->getMessage()], 500);
         }
     }
@@ -428,6 +435,7 @@ class UserController extends BaseController
             }
             return Response::json(['success' => true, 'data' => $rows]);
         } catch (\Throwable $e) {
+            $this->logError("UserController::handleListUserAirTickets error: " . $e->getMessage());
             return Response::json(['success' => false, 'error' => $e->getMessage()], 500);
         }
     }
@@ -460,6 +468,7 @@ class UserController extends BaseController
         } catch (ValidationException $e) {
             return Response::json(['success' => false, 'error' => current($e->getErrors())], 400);
         } catch (\Throwable $e) {
+            $this->logError("UserController::handleAddUserAirTicket error: " . $e->getMessage());
             return Response::json(['success' => false, 'error' => $e->getMessage()], 500);
         }
     }
@@ -487,6 +496,7 @@ class UserController extends BaseController
         } catch (NotFoundException $e) {
             return Response::json(['success' => false, 'error' => $e->getMessage()], 404);
         } catch (\Throwable $e) {
+            $this->logError("UserController::handleUpdateUserAirTicket error: " . $e->getMessage());
             return Response::json(['success' => false, 'error' => $e->getMessage()], 500);
         }
     }
@@ -499,6 +509,7 @@ class UserController extends BaseController
         } catch (NotFoundException $e) {
             return Response::json(['success' => false, 'error' => $e->getMessage()], 404);
         } catch (\Throwable $e) {
+            $this->logError("UserController::handleDeleteUserAirTicket error: " . $e->getMessage());
             return Response::json(['success' => false, 'error' => $e->getMessage()], 500);
         }
     }

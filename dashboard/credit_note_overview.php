@@ -1,13 +1,14 @@
 <?php
 
 use App\Core\DB;
+use App\Core\Container;
 use App\Core\Session;
-use App\Service\JournalService;
+use App\Service\CreditNoteService;
 include('admin_elements/admin_header.php');
 
 $module = 'credit_notes';
 $module_caption = 'Credit Note';
-$tbl_name = $tbl_prefix . $module;
+$tbl_name = DB::CREDIT_NOTES;
 $error_message = '';
 $success_message = '';
 
@@ -34,11 +35,19 @@ if (empty($credit_note_id) && isset($_REQUEST['id'])) $credit_note_id = e_s__($_
 
 // ------------------ CHECK IF EXISTS ----------------
 //VERIFY IF IS VALID 
-$rs_valid     = $mysqli->query("SELECT id FROM `" . tbl_credit_notes . "` WHERE id='" . $credit_note_id . "'");
+$rs_valid     = $mysqli->query("SELECT id FROM `" . DB::CREDIT_NOTES . "` WHERE id='" . $credit_note_id . "' AND organization_id=" . (int)Session::orgId());
 if ($rs_valid->num_rows == 0) {
     flash_error('Invalid Record in the database.');
     header("Location:listing_credit_notes.php");
     exit;
+}
+
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && !empty($action)) {
+    if (!validate_csrf_token($_POST['csrf_token'] ?? '')) {
+        flash_error('Invalid CSRF token.');
+        header("Location:credit_note_overview.php?credit_note_id=$credit_note_id");
+        exit;
+    }
 }
 
 
@@ -66,48 +75,14 @@ if (isset($_REQUEST['credit_note_status']) && !empty($_REQUEST['credit_note_stat
 
 if (($action == "convert_$module" && !empty($credit_note_id))) {
 
-    // ======================================================
-    // NO Auto Generation System
-    // ======================================================
-
-    // Build the prefix for this month
-    $prefix = 'FL-CN' . date('ym');
-
-    // Get the last credit_note number for this month
-    $sql = "SELECT invoice_no  FROM `" . tbl_credit_notes . "`  WHERE invoice_no LIKE '{$prefix}-%'ORDER BY invoice_no DESC LIMIT 1";
-    $result = $mysqli->query($sql);
-
-    if ($row = $result->fetch_assoc()) {
-        // Extract the serial part after the dash
-        $last_serial = (int) substr($row['invoice_no'], -4);
-        $new_serial = $last_serial + 1;
+    $creditNoteService = Container::getInstance()->get(CreditNoteService::class);
+    $newInvoiceId = $creditNoteService->convertToInvoice((int)$credit_note_id, (int)Session::orgId(), (int)Session::userId());
+    if ($newInvoiceId > 0) {
+        $invoice_no = getTableAttr('invoice_no', DB::INVOICES, $newInvoiceId);
+        $success_message = 'This Invoice has been Converted to Invoice Successfully. Please click here to view. <a href="invoice_overview.php?invoice_id=' . $newInvoiceId . '"> ' . $invoice_no . '</a>';
     } else {
-        // First invoice of the month
-        $new_serial = 1;
+        $error_message = 'Credit Note could not be converted to an Invoice.';
     }
-
-    // Build new invoice number with zero padding
-    $invoice_no = $prefix . '-' . str_pad($new_serial, 4, '0', STR_PAD_LEFT);
-
-
-    // -- Invoice
-    $result = $mysqli->query("INSERT INTO `" . tbl_invoices . "` (customer_id, warehouse_id, subject, reference_no, invoice_date, expiry_date, grand_subtotal, grand_discount_type, grand_discount_type_value, grand_discount_amount, grand_after_discount, grand_tax, grand_total, customer_notes, terms_and_conditions, invoice_status, is_active, created_at, updated_at)
-    SELECT customer_id, warehouse_id, subject, reference_no, NOW(), NOW(), grand_subtotal, grand_discount_type, grand_discount_type_value, grand_discount_amount, grand_after_discount, grand_tax, grand_total, customer_notes, terms_and_conditions, 'draft', is_active, NOW(), NOW() FROM `" . tbl_credit_notes . "` WHERE id = $invoice_id;");
-
-    $new_invoice_id = $mysqli->insert_id;
-    fp__($tbl_name, $new_invoice_id);
-
-    // Update Invoice no
-    $mysqli->query("UPDATE `" . tbl_invoices . "` SET invoice_no = '" . $invoice_no . "' WHERE id=$new_invoice_id");
-
-    // -- Invoice Items
-    $result = $mysqli->query("INSERT INTO `" . tbl_invoice_items . "` ( invoice_id, service, description, qty, rate, discount_type, discount_type_value, discount_amount, tax, tax_amount, sub_total, total, created_at, updated_at, created_by) 
-    SELECT $new_invoice_id, service, description, qty, rate, discount_type, discount_type_value, discount_amount, tax, tax_amount, sub_total, total, NOW(), NOW(), '" . Session::userId() . "' FROM `" . tbl_invoice_items . "` WHERE invoice_id = $invoice_id");
-
-    fp__(tbl_invoice_items, $mysqli->insert_id);
-
-
-    $success_message = 'This Invoice has been Converted to Invoice Successfully. Please click here to view. <a href="invoice_overview.php?invoice_id=' . $new_invoice_id . '"> ' . $invoice_no . '</a>';
 
 
 
@@ -120,49 +95,17 @@ if (($action == "convert_$module" && !empty($credit_note_id))) {
 */
 } else if (($action == "clone_$module" && !empty($credit_note_id))) {
 
-    // ======================================================
-    // CREDIT NOTE NO Auto Generation System
-    // ======================================================
-
-    // Build the prefix for this month
-    $prefix = 'FL-CN' . date('ym');
-
-    // Get the last credit note number for this month
-    $sql = "SELECT credit_note_no  FROM `" . tbl_credit_notes . "`  WHERE credit_note_no LIKE '{$prefix}-%'ORDER BY credit_note_no DESC LIMIT 1";
-    $result = $mysqli->query($sql);
-
-    if ($row = $result->fetch_assoc()) {
-        // Extract the serial part after the dash
-        $last_serial = (int) substr($row['credit_note_no'], -4);
-        $new_serial = $last_serial + 1;
-    } else {
-        // First credit note of the month
-        $new_serial = 1;
+    $creditNoteService = Container::getInstance()->get(CreditNoteService::class);
+    $newCloned = $creditNoteService->cloneNote((int)$credit_note_id, (int)Session::orgId(), (int)Session::userId());
+    if ($newCloned !== null) {
+        $new_cloned_id = (int)$newCloned->id;
+        $credit_note_no = $newCloned->creditNoteNo;
+        $success_message = 'Credit Note has been cloned successfully. Please click here to view. <a href="credit_note_overview.php?credit_note_id=' . $new_cloned_id . '"> ' . $credit_note_no . '</a>';
+        flash_success($success_message);
+        header("Location:credit_note_overview.php?credit_note_id=$new_cloned_id");
+        exit;
     }
-
-    // Build new credit note number with zero padding
-    $credit_note_no = $prefix . '-' . str_pad($new_serial, 4, '0', STR_PAD_LEFT);
-
-
-    // -- Credit Note
-    $result = $mysqli->query("INSERT INTO `" . tbl_credit_notes . "` (customer_id, warehouse_id, credit_note_no, reference_no, invoice_id, credit_note_date, grand_subtotal, grand_discount_type, grand_discount_type_value, grand_discount_amount, grand_after_discount, grand_tax, grand_total, customer_notes, terms_and_conditions, credit_note_status, is_active, created_at, updated_at)
-    SELECT customer_id, warehouse_id, '" . $credit_note_no . "', reference_no, invoice_id, NOW(), grand_subtotal, grand_discount_type, grand_discount_type_value, grand_discount_amount, grand_after_discount, grand_tax, grand_total, customer_notes, terms_and_conditions, 'draft', is_active, NOW(), NOW() FROM `" . tbl_credit_notes . "` WHERE id = $credit_note_id;");
-
-    $new_cloned_id = $mysqli->insert_id;
-    fp__($tbl_name, $new_cloned_id);
-
-    // -- Credit Note Items
-    $result = $mysqli->query("INSERT INTO `" . tbl_credit_note_items . "` (credit_note_id, service, description, qty, rate, tax, tax_amount, sub_total, total, created_at, updated_at, created_by) 
-    SELECT $new_cloned_id, service, description, qty, rate, tax, tax_amount, sub_total, total, NOW(), NOW(), '" . Session::userId() . "' FROM `" . tbl_credit_note_items . "` WHERE credit_note_id = $credit_note_id");
-
-    fp__(tbl_credit_note_items, $mysqli->insert_id);
-
-
-    $success_message = 'Credit Note has been cloned successfully. Please click here to view. <a href="credit_note_overview.php?credit_note_id=' . $new_cloned_id . '"> ' . $credit_note_no . '</a>';
-
-    flash_success($success_message);
-    header("Location:credit_note_overview.php?credit_note_id=$new_cloned_id");
-    exit;
+    $error_message = 'Credit Note could not be cloned.';
 
 
 
@@ -176,327 +119,27 @@ if (($action == "convert_$module" && !empty($credit_note_id))) {
 */
 } else if (($action == "update_$module" && !empty($credit_note_id) && !empty($credit_note_status))) {
 
-    $result = $mysqli->query("UPDATE `$tbl_name` SET credit_note_status = '" . $credit_note_status . "' WHERE id=$credit_note_id");
+    $creditNoteService = Container::getInstance()->get(CreditNoteService::class);
+    $orgId = (int)Session::orgId();
+    $userId = (int)Session::userId();
 
-    if ($result) {
-        $success_message = "The $module_caption status has been updated successfully.";
-
-
-
-        // ------------ Credit Note Log -------------
-        // if (isset($_POST['credit_note_log_comments']) && !empty($_POST['credit_note_log_comments'])) {
-        //     $credit_note_log_comments     = e_s__($_POST['credit_note_log_comments']);
-
-        //     $mysqli->query("INSERT INTO `" . tbl_credit_note_logs . "` (credit_note_id, credit_note_status, comments) VALUES ('" . $credit_note_id . "', '" . $credit_note_status . "', '" . $credit_note_log_comments . "'); ");
-        //     fp__(tbl_credit_note_logs, $mysqli->insert_id);
-        // }
-
-
-        // =====================================================================
-        // CREATE REVERSING JOURNAL ENTRY WHEN STATUS IS 'VOID'
-        // =====================================================================
+    try {
         if ($credit_note_status === 'void') {
-            try {
-                // Define table names
-                $journals_table = defined('tbl_journals') ? tbl_journals : 'fls_journals';
-                $journal_items_table = defined('tbl_journal_items') ? tbl_journal_items : 'fls_journal_items';
-
-                // Avoid duplicate void entries
-                $void_check = $mysqli->query("SELECT id FROM `{$journals_table}` WHERE reference_type='credit_note_void' AND reference_id={$credit_note_id} LIMIT 1");
-                if ($void_check && $void_check->num_rows > 0) {
-                    $success_message .= " Note: Void journal entry already exists.";
-                } else {
-                    // Initialize Journal Manager
-                    $journal = new JournalService();
-                    
-                    // Get credit note data
-                    $credit_note_no = getTableAttr('credit_note_no', tbl_credit_notes, $credit_note_id);
-                    $grand_subtotal = getTableAttr('grand_subtotal', tbl_credit_notes, $credit_note_id);
-                    $grand_total = getTableAttr('grand_total', tbl_credit_notes, $credit_note_id);
-                    
-                    // Check if original journal entry exists
-                    $journal_check = $mysqli->query("SELECT id FROM `{$journals_table}` WHERE reference_type='credit_note' AND reference_id={$credit_note_id} LIMIT 1");
-                    
-                    if ($journal_check && $journal_check->num_rows > 0) {
-                        // Get original journal entries
-                        $original_journal = $journal_check->fetch_assoc();
-                        $original_journal_id = $original_journal['id'];
-                        
-                        // Get all original journal items
-                        $items_result = $mysqli->query("SELECT account, debit, credit FROM `{$journal_items_table}` WHERE journal_id={$original_journal_id}");
-                        
-                        // Build reversing entries (swap debit and credit)
-                        $reversing_entries = array();
-                        while ($item = $items_result->fetch_assoc()) {
-                            if ($item['debit'] > 0) {
-                                // Original debit becomes credit
-                                $reversing_entries[] = array(
-                                    'account' => $item['account'],
-                                    'amount'  => $item['debit'],
-                                    'type'    => 'credit'
-                                );
-                            }
-                            if ($item['credit'] > 0) {
-                                // Original credit becomes debit
-                                $reversing_entries[] = array(
-                                    'account' => $item['account'],
-                                    'amount'  => $item['credit'],
-                                    'type'    => 'debit'
-                                );
-                            }
-                        }
-                        
-                        if (count($reversing_entries) > 0) {
-                            // Create reversing journal entry
-                            $void_journal_result = $journal->createJournalEntry(
-                                array(
-                                    'reference_type'   => 'credit_note_void',
-                                    'reference_id'     => $credit_note_id,
-                                    'reference_no'     => $credit_note_no . ' (VOID)',
-                                    'journal_date'     => date('Y-m-d'),
-                                    'description'      => 'VOID - Reversal of Credit Note #' . $credit_note_no,
-                                    'currency'         => 'AED',
-                                    'grand_subtotal'   => -$grand_subtotal,
-                                    'grand_total'      => -$grand_total,
-                                    'reporting_method' => 'accrual'
-                                ),
-                                $reversing_entries
-                            );
-                            
-                            if ($void_journal_result['success']) {
-                                error_log("Void journal entry created: ID {$void_journal_result['journal_id']} for Credit Note {$credit_note_id}");
-                                $success_message .= " Reversing journal entry created successfully.";
-                            } else {
-                                error_log("Failed to create void journal for Credit Note {$credit_note_id}: " . $void_journal_result['message']);
-                                $success_message .= " Warning: " . $void_journal_result['message'];
-                            }
-                        }
-                    } else {
-                        error_log("No original journal found to reverse for Credit Note {$credit_note_id}");
-                        $success_message .= " Note: No journal entry found to reverse.";
-                    }
-                }
-            } catch (Exception $e) {
-                error_log("Void journal creation exception for Credit Note {$credit_note_id}: " . $e->getMessage());
-                $success_message .= " Note: Reversing journal entry not created (" . $e->getMessage() . ")";
-            }
+            $creditNoteService->voidNote((int)$credit_note_id, $orgId, $userId);
+        } elseif ($credit_note_status === 'open') {
+            $creditNoteService->openNote((int)$credit_note_id, $orgId, $userId);
+        } else {
+            $creditNoteService->updateStatus((int)$credit_note_id, (string)$credit_note_status, $orgId);
         }
-
-        // =====================================================================
-        // CREATE JOURNAL ENTRY WHEN STATUS IS 'OPEN'
-        // =====================================================================
-        else if ($credit_note_status === 'open') {
-            try {
-                // Define table names
-                $journals_table = defined('tbl_journals') ? tbl_journals : 'fls_journals';
-                $journal_items_table = defined('tbl_journal_items') ? tbl_journal_items : 'fls_journal_items';
-
-                // Check if journal entry already exists to avoid duplicates
-                $journal_check = $mysqli->query("SELECT id FROM `{$journals_table}` WHERE reference_type='credit_note' AND reference_id={$credit_note_id} LIMIT 1");
-                
-                if ($journal_check && $journal_check->num_rows > 0) {
-                    $success_message .= " Note: Journal entry already exists.";
-                } else {
-                    // Initialize Journal Manager
-                    $journal = new JournalService();
-                    
-                    // Get credit note data
-                    $credit_note_no = getTableAttr('credit_note_no', tbl_credit_notes, $credit_note_id);
-                    $customer_id = getTableAttr('customer_id', tbl_credit_notes, $credit_note_id);
-                    $grand_subtotal = getTableAttr('grand_subtotal', tbl_credit_notes, $credit_note_id);
-                    $grand_tax = getTableAttr('grand_tax', tbl_credit_notes, $credit_note_id);
-                    $grand_total = getTableAttr('grand_total', tbl_credit_notes, $credit_note_id);
-                    
-                    // Get account mappings from config
-
-                    // Accounts for Credit Note
-                    // DR: Sales Returns & Allowances (decrease revenue)
-                    // CR: Accounts Receivable (decrease what customer owes)
-                    $accounts_table = defined('tbl_accounts') ? tbl_accounts : 'fls_accounts';
-                    $sales_returns_code = defined('CREDIT_NOTE_SALES_RETURNS') ? CREDIT_NOTE_SALES_RETURNS : '4160';
-                    $ar_code = defined('ACCOUNTS_RECEIVABLE') ? ACCOUNTS_RECEIVABLE : '1200';
-
-                    // Lookup account IDs with flexible matching (codes and names)
-                    $sales_returns_account = $mysqli->query("
-                        SELECT id, account_code FROM `{$accounts_table}`
-                        WHERE account_code IN ('{$sales_returns_code}', '4160', '4150')
-                           OR account_name LIKE '%Returns%'
-                           OR account_name LIKE '%Allowances%'
-                        LIMIT 1
-                    ")->fetch_assoc();
-
-                    $ar_account = $mysqli->query("
-                        SELECT id, account_code FROM `{$accounts_table}`
-                        WHERE account_code IN ('{$ar_code}', '1200', '1210', '1100')
-                           OR account_name LIKE '%Receivable%'
-                        LIMIT 1
-                    ")->fetch_assoc();
-
-                    // Auto-create missing accounts from config (if possible)
-                    $ensure_account = function ($account_code) use ($mysqli, $accounts_table) {
-                        if (empty($account_code) || !function_exists('getAccountInfo')) {
-                            return null;
-                        }
-
-                        $code_esc = $mysqli->real_escape_string($account_code);
-                        $existing = $mysqli->query("SELECT id, account_code FROM `{$accounts_table}` WHERE account_code = '{$code_esc}' LIMIT 1");
-                        if ($existing && $existing->num_rows > 0) {
-                            return $existing->fetch_assoc();
-                        }
-
-                        $info = getAccountInfo($account_code);
-                        if (!$info || empty($info['name']) || empty($info['type'])) {
-                            return null;
-                        }
-
-                        $parent_code_map = array(
-                            'Assets'      => '1000',
-                            'Liabilities' => '2000',
-                            'Equity'      => '3000',
-                            'Income'      => '4000',
-                            'Expenses'    => '5000'
-                        );
-
-                        $parent_id = 0;
-                        $parent_label = isset($info['parent']) ? $info['parent'] : null;
-                        if (!empty($parent_label) && isset($parent_code_map[$parent_label])) {
-                            $parent_code = $parent_code_map[$parent_label];
-                            $parent_code_esc = $mysqli->real_escape_string($parent_code);
-                            $parent_row = $mysqli->query("SELECT id FROM `{$accounts_table}` WHERE account_code = '{$parent_code_esc}' LIMIT 1");
-                            if ($parent_row && $parent_row->num_rows > 0) {
-                                $parent_id = (int) $parent_row->fetch_assoc()['id'];
-                            } else {
-                                $parent_name = $mysqli->real_escape_string($parent_label);
-                                $parent_type = $mysqli->real_escape_string($info['type']);
-                                $mysqli->query("INSERT INTO `{$accounts_table}` (parent_id, account_type, account_name, account_code, description, level, is_active, created_at, updated_at) VALUES (0, '{$parent_type}', '{$parent_name}', '{$parent_code_esc}', '', 1, 1, NOW(), NOW())");
-                                $parent_id = (int) $mysqli->insert_id;
-                            }
-                        }
-
-                        $name_esc = $mysqli->real_escape_string($info['name']);
-                        $type_esc = $mysqli->real_escape_string($info['type']);
-                        $desc_value = isset($info['desc']) ? $info['desc'] : '';
-                        $desc_esc = $mysqli->real_escape_string($desc_value);
-                        $level = $parent_id > 0 ? 2 : 1;
-
-                        $insert_sql = "INSERT INTO `{$accounts_table}` (parent_id, account_type, account_name, account_code, description, level, is_active, created_at, updated_at)
-                                       VALUES ({$parent_id}, '{$type_esc}', '{$name_esc}', '{$code_esc}', '{$desc_esc}', {$level}, 1, NOW(), NOW())";
-
-                        if ($mysqli->query($insert_sql)) {
-                            return array('id' => $mysqli->insert_id, 'account_code' => $account_code);
-                        }
-
-                        return null;
-                    };
-
-                    if (!$sales_returns_account) {
-                        $sales_returns_account = $ensure_account($sales_returns_code);
-                    }
-
-                    if (!$ar_account) {
-                        $ar_account = $ensure_account($ar_code);
-                    }
-
-                    if ($sales_returns_account && $ar_account) {
-                        
-                        // Build journal entries
-                        $journal_entries = array(
-                            array(
-                                'account' => $sales_returns_account['id'],
-                                'amount'  => $grand_total,
-                                'type'    => 'debit'
-                            ),
-                            array(
-                                'account' => $ar_account['id'],
-                                'amount'  => $grand_total,
-                                'type'    => 'credit'
-                            )
-                        );
-                        
-                        // Create journal entry
-                        $journal_result = $journal->createJournalEntry(
-                            array(
-                                'reference_type'   => 'credit_note',
-                                'reference_id'     => $credit_note_id,
-                                'reference_no'     => $credit_note_no,
-                                'journal_date'     => date('Y-m-d'),
-                                'description'      => 'Credit Note #' . $credit_note_no . ' - Customer ID: ' . $customer_id,
-                                'currency'         => 'AED',
-                                'grand_subtotal'   => $grand_subtotal,
-                                'grand_total'      => $grand_total,
-                                'reporting_method' => 'accrual'
-                            ),
-                            $journal_entries
-                        );
-                        
-                        if ($journal_result['success']) {
-                            error_log("Credit Note journal entry created: ID {$journal_result['journal_id']} for Credit Note {$credit_note_id}");
-                            $success_message .= " Journal entry created successfully.";
-                        } else {
-                            error_log("Failed to create journal for Credit Note {$credit_note_id}: " . $journal_result['message']);
-                            $success_message .= " Warning: " . $journal_result['message'];
-                        }
-                    } else {
-                        $missing = array();
-                        if (!$sales_returns_account) $missing[] = "Sales Returns ({$sales_returns_code})";
-                        if (!$ar_account) $missing[] = "AR ({$ar_code})";
-                        $error_msg = "Missing accounts: " . implode(', ', $missing);
-                        error_log("Credit Note {$credit_note_id}: {$error_msg}");
-                        $success_message .= " Warning: {$error_msg}";
-                    }
-                }
-            } catch (Exception $e) {
-                error_log("Journal creation exception for Credit Note {$credit_note_id}: " . $e->getMessage());
-                $success_message .= " Note: Journal entry not created (" . $e->getMessage() . ")";
-            }
-        }
-
-
-        if ($credit_note_status == 'not_confirmed') {
-
-
-            // Delete PDF - Next Time System will Generate New with Confirmed Status 
-            $pdf        = getTableAttr('pdf', tbl_credit_notes, $credit_note_id);
-            unlink("../pdfs_credit_notes/" . $pdf . ".pdf");
-            $mysqli->query("UPDATE " . tbl_credit_notes . "  SET pdf = '' WHERE id=$credit_note_id");
-        } else if ($credit_note_status == 'confirmed') {
-
-
-            // Delete PDF - Next Time System will Generate New with Confirmed Status 
-            // $pdf        = getTableAttr('pdf', tbl_credit_notes, $credit_note_id);
-            // unlink("../pdfs_credit_notes/" . $pdf . ".pdf");
-            // $mysqli->query("UPDATE " . tbl_credit_notes . "  SET pdf = '' WHERE id=$credit_note_id");
-
-
-            // -----------------------------------------------------------------------------------------------------------------------------------------------
-            // DELETE TRIPS - IF Credit Note STATUS IS CANCELLED
-            // -----------------------------------------------------------------------------------------------------------------------------------------------
-        } else if ($credit_note_status == 'cancelled' || $credit_note_status == 'on_hold') {
-
-            // Delete PDF - Next Time System will Generate New 
-            // $pdf        = getTableAttr('pdf', tbl_credit_notes, $credit_note_id);
-            // unlink("../pdfs_credit_notes/" . $pdf . ".pdf");
-            // $mysqli->query("UPDATE " . tbl_credit_notes . "  SET pdf = '' WHERE id=$credit_note_id");
-
-
-            /* ---------------------- NOTIFICATIONS QUERY ---------------------- */
-        }
-
-
-        // --------------------------------------------------------------------------------
-        flash_success($success_message);
-        header("Location:credit_note_overview.php?credit_note_id=$credit_note_id");
-        exit;
-        // $error_message = "Sorry! $module Status Could Not Be Updated.";
-    } else {
-        $error_message = "Sorry! $module Status Could Not Be Updated.";
+        $success_message = "The $module_caption status has been updated successfully.";
+    } catch (\Throwable $e) {
+        $success_message = "The $module_caption status could not be updated: " . $e->getMessage();
     }
+
+    flash_success($success_message);
+    header("Location:credit_note_overview.php?credit_note_id=$credit_note_id");
+    exit;
 }
-
-
-
-
-
 /*
 |--------------------------------------------------------------------------
 |--------------------------------------------------------------------------
@@ -621,17 +264,28 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
 
 
                 // --- Customer Information
-                $rs = $mysqli->query("SELECT * FROM `" . tbl_customers . "` WHERE id=$customer_id");
+                $salutation     = '';
+                $first_name     = '';
+                $last_name      = '';
+                $company_name   = '';
+                $display_name   = '';
+                $email          = '';
+                $phone          = '';
+                $mobile         = '';
+                $trn            = '';
+                $rs = $mysqli->query("SELECT * FROM `" . DB::CUSTOMERS . "` WHERE id=$customer_id");
                 $row_customer = $rs->fetch_array();
-                $salutation             = s__($row_customer['salutation']);
-                $first_name             = s__($row_customer['first_name']);
-                $last_name              = s__($row_customer['last_name']);
-                $company_name           = s__($row_customer['company_name']);
-                $display_name           = s__($row_customer['display_name']);
-                $email                  = s__($row_customer['email']);
-                $phone                  = s__($row_customer['phone']);
-                $mobile                 = s__($row_customer['mobile']);
-                $trn                    = s__($row_customer['trn']);
+                if ($row_customer) {
+                    $salutation             = s__($row_customer['salutation']);
+                    $first_name             = s__($row_customer['first_name']);
+                    $last_name              = s__($row_customer['last_name']);
+                    $company_name           = s__($row_customer['company_name']);
+                    $display_name           = s__($row_customer['display_name']);
+                    $email                  = s__($row_customer['email']);
+                    $phone                  = s__($row_customer['phone']);
+                    $mobile                 = s__($row_customer['mobile']);
+                    $trn                    = s__($row_customer['trn']);
+                }
 
                 // Customer Billing Address 
                 $rs_billing     = $mysqli->query("SELECT * FROM `" . DB::CUSTOMER_ADDRESSES . "` WHERE addressable_type='Customer' AND addressable_id=$customer_id AND type='billing' ");
@@ -648,9 +302,9 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
                 $billing_fax            = (!empty($row_billing['fax']) ? s__($row_billing['fax']) : '');
 
 
-                $credit_note_date         = processDateYtoD($credit_note_date);
-                $expiry_date            = ($expiry_date == '1970-01-01') ? '' : processDateDtoY($expiry_date);
-                $expected_shipment_date = ($expected_shipment_date == '1970-01-01') ? '' : processDateDtoY($expected_shipment_date);
+                $credit_note_date         = ddm_($credit_note_date);
+                $expiry_date            = ($expiry_date == '1970-01-01' || empty($expiry_date)) ? '' : ddm_($expiry_date);
+                $expected_shipment_date = ($expected_shipment_date == '1970-01-01' || empty($expected_shipment_date)) ? '' : ddm_($expected_shipment_date);
 
 
                 // Initialize all arrays to avoid the "null given" error
@@ -665,7 +319,7 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
                 $total_arr               = [];
 
                 // ------------------ TOTAL ITEMS ------------------
-                $result_credit_note_items       = $mysqli->query("SELECT * FROM `" . tbl_credit_note_items . "` WHERE credit_note_id=$credit_note_id ORDER BY id");
+                $result_credit_note_items       = $mysqli->query("SELECT * FROM `" . DB::CREDIT_NOTE_ITEMS . "` WHERE credit_note_id=$credit_note_id ORDER BY id");
                 $total_rows                     = $result_credit_note_items->num_rows;
 
 
@@ -726,7 +380,7 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
 
                                 <?php
                                 $warehouse_information = '';
-                                $rs_warehouse   = $mysqli->query("SELECT * FROM `" . tbl_warehouses . "` WHERE id=1");
+                                $rs_warehouse   = $mysqli->query("SELECT * FROM `" . DB::WAREHOUSES . "` WHERE id=1");
                                 $row_warehouse  = $rs_warehouse->fetch_array();
 
                                 $warehouse_no       = s__($row_warehouse['warehouse_no']);
@@ -735,10 +389,10 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
                                 $street2            = s__($row_warehouse['street2']);
 
                                 $country            = s__($row_warehouse['country']);
-                                $country            = getTableAttr('country_name', tbl_geo_countries, $country);
+                                $country            = getTableAttr('country_name', DB::GEO_COUNTRIES, $country);
 
                                 $state              = s__($row_warehouse['state']);
-                                $state            = getTableAttr('state_name', tbl_geo_states, $state);
+                                $state            = getTableAttr('state_name', DB::GEO_STATES, $state);
 
                                 $phone              = s__($row_warehouse['phone']);
                                 $email              = s__($row_warehouse['email']);
@@ -798,7 +452,7 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
 
                                         <tr>
                                             <td>
-                                                <div class="fw-bold"><?php echo getTableAttr('item_name', tbl_items, $service_arr[$index]); ?></div>
+                                                <div class="fw-bold"><?php echo getTableAttr('item_name', DB::ITEMS, $service_arr[$index]); ?></div>
                                                 <span class="text-muted">
                                                     <?php
                                                     // ----------------------------------------------
@@ -909,7 +563,7 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
 
                 <?php
                 // ---------------------------------------------------------------------------------------------------------------------------------------
-                $journal_id = getTableAttrV('id', tbl_journals, " reference_type='credit_note' AND reference_id='$credit_note_id' ");
+                $journal_id = getTableAttrV('id', DB::JOURNALS, " reference_type='credit_note' AND reference_id='$credit_note_id' ");
                 // ---------------------------------------------------------------------------------------------------------------------------------------
 
                 if (!empty($journal_id)) {
@@ -951,11 +605,11 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
                                     // -------- JOURNAL ENTRIES 
                                     //-------------------------------------------------------------------
 
-                                    $result_journal_items     = $mysqli->query("SELECT * FROM `" . tbl_journal_items . "` WHERE journal_id=$journal_id");
+                                    $result_journal_items     = $mysqli->query("SELECT * FROM `" . DB::JOURNAL_ITEMS . "` WHERE journal_id=$journal_id");
                                     while ($row_journal_items = $result_journal_items->fetch_array()) {
 
                                         $account    = $row_journal_items['account'];
-                                        $account    = getTableAttr('account_name', tbl_accounts, $account);
+                                        $account    = getTableAttr('account_name', DB::ACCOUNTS, $account);
                                         $debit      = $row_journal_items['debit'];
                                         $credit     = $row_journal_items['credit'];
 

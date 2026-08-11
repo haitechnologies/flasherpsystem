@@ -40,7 +40,6 @@ class AccountReportCategoryService
         $item = new AccountReportCategory(
             id: 0,
             categoryName: $name,
-            description: (string)($data['description'] ?? ''),
             isActive: (bool)($data['is_active'] ?? true),
             createdBy: $createdBy,
         );
@@ -65,9 +64,9 @@ class AccountReportCategoryService
 
         return $this->repo->update($id, [
             'category_name' => $name,
-            'description' => (string)($data['description'] ?? $existing->description),
             'is_active' => (bool)($data['is_active'] ?? $existing->isActive) ? 1 : 0,
             'updated_by' => $updatedBy,
+            'updated_at' => date('Y-m-d H:i:s'),
         ]);
     }
 

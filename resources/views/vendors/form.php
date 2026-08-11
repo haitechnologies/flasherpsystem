@@ -35,6 +35,10 @@ declare(strict_types=1);
  * @var array $currencyList
  * @var string $currency
  * @var string $exchange_rate
+ * @var string $opening_balance
+ * @var string $payable_account_id
+ * @var string $credit_limit
+ * @var array $accountsList
  * @var string $sales_person
  * @var string $lead_category
  * @var string $cs_agent
@@ -312,6 +316,38 @@ include 'admin_elements/admin_header.php';
                                     <label class="col-lg-4 col-form-label">Exchange Rate:</label>
                                     <div class="col-lg-8">
                                         <input type="text" name="exchange_rate" id="exchange_rate" value="<?php echo $exchange_rate; ?>" class="form-control">
+                                    </div>
+                                </div>
+                                <div class="row mb-2 divider border-top mt-2"></div>
+                                <div class="row mb-2">
+                                    <label class="col-lg-4 col-form-label">Opening Balance:</label>
+                                    <div class="col-lg-8">
+                                        <div class="input-group">
+                                            <span class="input-group-text"><?php echo defined('BASE_CURRENCY') && is_array(BASE_CURRENCY) ? BASE_CURRENCY['code'] : 'AED'; ?></span>
+                                            <input type="number" step="0.01" min="0" name="opening_balance" id="opening_balance" value="<?php echo $opening_balance; ?>" class="form-control">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row mb-2">
+                                    <label class="col-lg-4 col-form-label">Credit Limit:</label>
+                                    <div class="col-lg-8">
+                                        <div class="input-group">
+                                            <span class="input-group-text"><?php echo defined('BASE_CURRENCY') && is_array(BASE_CURRENCY) ? BASE_CURRENCY['code'] : 'AED'; ?></span>
+                                            <input type="number" step="0.01" min="0" name="credit_limit" id="credit_limit" value="<?php echo $credit_limit; ?>" class="form-control">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row mb-2">
+                                    <label class="col-lg-4 col-form-label">Payable Account:</label>
+                                    <div class="col-lg-8">
+                                        <select class="form-select" name="payable_account_id" id="payable_account_id">
+                                            <option value='0'>Default (Accounts Payable)</option>
+                                            <?php foreach ($accountsList as $row): ?>
+                                                <option value="<?php echo $row['id']; ?>" <?php echo ((string)$row['id'] === (string)$payable_account_id) ? 'selected' : ''; ?>>
+                                                    <?php echo $row['account_name']; ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        </select>
                                     </div>
                                 </div>
                             </div>

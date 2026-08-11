@@ -66,6 +66,12 @@ class ExpenseController extends BaseController
             flash_error($error);
             return Response::redirect("expenses.php?id=$id&action=edit_expenses");
         } catch (\Throwable $e) {
+            log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
+                'module' => 'expenses',
+                'module_slug' => 'expenses',
+                'stack_trace' => $e->getTraceAsString(),
+                'error_code' => (string)$e->getCode(),
+            ]));
             flash_error($e->getMessage());
             return Response::redirect("expenses.php?id=$id&action=edit_expenses");
         }
@@ -85,6 +91,12 @@ class ExpenseController extends BaseController
             flash_error($error);
             return Response::redirect("expenses.php");
         } catch (\Throwable $e) {
+            log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
+                'module' => 'expenses',
+                'module_slug' => 'expenses',
+                'stack_trace' => $e->getTraceAsString(),
+                'error_code' => (string)$e->getCode(),
+            ]));
             flash_error($e->getMessage());
             return Response::redirect("expenses.php");
         }
@@ -136,11 +148,6 @@ class ExpenseController extends BaseController
         $session_user_id = $this->userId;
         $session_role_id = $this->roleId;
         $error_message = $request->getString('error_message');
-        if (empty($error_message)) {
-            foreach (\App\Core\FlashMessage::all() as $fm) {
-                if ($fm['type'] === 'danger') { $error_message = $fm['message']; break; }
-            }
-        }
         $action = $request->getString('action');
 
         $expense_date = date('d-m-Y');
@@ -190,6 +197,12 @@ class ExpenseController extends BaseController
                         $total_arr[] = $item->total;
                     }
                 } catch (\Throwable $e) {
+                    log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
+                        'module' => 'expenses',
+                        'module_slug' => 'expenses',
+                        'stack_trace' => $e->getTraceAsString(),
+                        'error_code' => (string)$e->getCode(),
+                    ]));
                     $error_message = $e->getMessage();
                 }
             }

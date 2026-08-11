@@ -66,6 +66,12 @@ class JournalController extends BaseController
             flash_error($error);
             return Response::redirect("journals.php?id=$id&action=edit_journals");
         } catch (\Throwable $e) {
+            log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
+                'module' => 'journals',
+                'module_slug' => 'journals',
+                'stack_trace' => $e->getTraceAsString(),
+                'error_code' => (string)$e->getCode(),
+            ]));
             flash_error($e->getMessage());
             return Response::redirect("journals.php?id=$id&action=edit_journals");
         }
@@ -85,6 +91,12 @@ class JournalController extends BaseController
             flash_error($error);
             return Response::redirect("journals.php");
         } catch (\Throwable $e) {
+            log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
+                'module' => 'journals',
+                'module_slug' => 'journals',
+                'stack_trace' => $e->getTraceAsString(),
+                'error_code' => (string)$e->getCode(),
+            ]));
             flash_error($e->getMessage());
             return Response::redirect("journals.php");
         }
@@ -202,6 +214,12 @@ class JournalController extends BaseController
                         $credit_arr[] = $item->credit;
                     }
                 } catch (\Throwable $e) {
+                    log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
+                        'module' => 'journals',
+                        'module_slug' => 'journals',
+                        'stack_trace' => $e->getTraceAsString(),
+                        'error_code' => (string)$e->getCode(),
+                    ]));
                     $error_message = $e->getMessage();
                 }
             }

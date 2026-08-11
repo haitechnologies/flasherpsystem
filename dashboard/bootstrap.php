@@ -46,8 +46,8 @@ if (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') {
 // Content-Security-Policy (CSP) - Strict but allows inline scripts/styles for compatibility
 header("Content-Security-Policy: " . implode('; ', [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://code.jquery.com https://cdn.datatables.net",
-    "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com https://cdn.datatables.net",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://code.jquery.com https://cdn.datatables.net https://www.gstatic.com",
+    "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com https://cdn.datatables.net https://www.gstatic.com",
     "font-src 'self' https://fonts.gstatic.com data:",
     "img-src 'self' data: https:",
     "connect-src 'self'",
@@ -138,6 +138,7 @@ $container->autowire(\App\Repository\BankRepository::class);
 $container->autowire(\App\Repository\CurrencyRepository::class);
 $container->autowire(\App\Repository\PaymentMethodRepository::class);
 $container->autowire(\App\Repository\InvoiceRepository::class);
+$container->autowire(\App\Repository\PaymentReceivedRepository::class);
 $container->autowire(\App\Repository\SetupGroupRepository::class);
 $container->autowire(\App\Repository\SetupSourceRepository::class);
 $container->autowire(\App\Repository\SetupStatusRepository::class);
@@ -186,7 +187,6 @@ $container->autowire(\App\Repository\PurchaseRepository::class);
 $container->autowire(\App\Repository\PurchaseOrderRepository::class);
 $container->autowire(\App\Repository\SaleOrderRepository::class);
 $container->autowire(\App\Repository\QuotationRepository::class);
-$container->autowire(\App\Repository\LeadQuotationRepository::class);
 $container->autowire(\App\Repository\JobRepository::class);
 $container->autowire(\App\Repository\JobItemRepository::class);
 $container->autowire(\App\Repository\ShippingAdviceRepository::class);
@@ -244,6 +244,7 @@ $container->autowire(\App\Service\RoleService::class);
 $container->autowire(\App\Service\AccountReportSubcategoryService::class);
 $container->autowire(\App\Service\CategoryHsCodeService::class);
 $container->autowire(\App\Service\ExpenseService::class);
+$container->autowire(\App\Service\PaymentReceivedService::class);
 $container->autowire(\App\Service\RecurringInvoiceService::class);
 $container->autowire(\App\Service\CreditNoteService::class);
 $container->autowire(\App\Service\DebitNoteService::class);
@@ -251,7 +252,6 @@ $container->autowire(\App\Service\PurchaseService::class);
 $container->autowire(\App\Service\PurchaseOrderService::class);
 $container->autowire(\App\Service\SaleOrderService::class);
 $container->autowire(\App\Service\QuotationService::class);
-$container->autowire(\App\Service\LeadQuotationService::class);
 $container->autowire(\App\Service\JobService::class);
 $container->autowire(\App\Service\JobItemService::class);
 $container->autowire(\App\Service\ShippingAdviceService::class);
@@ -792,6 +792,15 @@ $container->register(\App\Http\Controller\RecurringInvoiceController::class, fun
         $c->get(\App\Service\RecurringInvoiceService::class)
     );
 });
+$container->register(\App\Http\Controller\PaymentReceivedController::class, function (\App\Core\Container $c) {
+    return new \App\Http\Controller\PaymentReceivedController(
+        $c->get(\App\Core\Database::class),
+        $c->get(\App\Service\PaymentReceivedService::class),
+        \App\Core\Session::userId(),
+        \App\Core\Session::roleId(),
+        \App\Core\Session::orgId()
+    );
+});
 # --- P14e Phase 1 controllers: Credit Notes & Debit Notes ---
 $container->register(\App\Http\Controller\CreditNoteController::class, function (\App\Core\Container $c) {
     return new \App\Http\Controller\CreditNoteController(
@@ -847,16 +856,6 @@ $container->register(\App\Http\Controller\QuotationController::class, function (
         \App\Core\Session::roleId(),
         \App\Core\Session::orgId(),
         $c->get(\App\Service\QuotationService::class)
-    );
-});
-# --- P14e Phase 4 controller: Lead Quotations ---
-$container->register(\App\Http\Controller\LeadQuotationController::class, function (\App\Core\Container $c) {
-    return new \App\Http\Controller\LeadQuotationController(
-        $c->get(\App\Core\Database::class),
-        \App\Core\Session::userId(),
-        \App\Core\Session::roleId(),
-        \App\Core\Session::orgId(),
-        $c->get(\App\Service\LeadQuotationService::class)
     );
 });
 # --- P14e Phase 5 controller: Jobs ---
@@ -937,6 +936,34 @@ $container->register(\App\Http\Controller\CustomerAddressController::class, func
         $c->get(\App\Service\CustomerAddressService::class)
     );
 });
+# --- Vendor sub-module controllers ---
+$container->register(\App\Http\Controller\VendorContactController::class, function (\App\Core\Container $c) {
+    return new \App\Http\Controller\VendorContactController(
+        $c->get(\App\Core\Database::class),
+        $c->get(\App\Service\VendorService::class),
+        \App\Core\Session::userId(),
+        \App\Core\Session::roleId(),
+        \App\Core\Session::orgId()
+    );
+});
+$container->register(\App\Http\Controller\VendorCommentController::class, function (\App\Core\Container $c) {
+    return new \App\Http\Controller\VendorCommentController(
+        $c->get(\App\Core\Database::class),
+        \App\Core\Session::userId(),
+        \App\Core\Session::roleId(),
+        \App\Core\Session::orgId(),
+        $c->get(\App\Service\EntityNoteService::class)
+    );
+});
+$container->register(\App\Http\Controller\VendorAddressController::class, function (\App\Core\Container $c) {
+    return new \App\Http\Controller\VendorAddressController(
+        $c->get(\App\Core\Database::class),
+        \App\Core\Session::userId(),
+        \App\Core\Session::roleId(),
+        \App\Core\Session::orgId(),
+        $c->get(\App\Service\VendorService::class)
+    );
+});
 # --- Gratuity Settlement module ---
 $container->register(\App\Http\Controller\GratuitySettlementController::class, function (\App\Core\Container $c) {
     return new \App\Http\Controller\GratuitySettlementController(
@@ -998,6 +1025,11 @@ $session_user_id = $_SESSION[$project_pre]['DASHBOARD']['user_id'] ?? null;
 $session_full_name = $_SESSION[$project_pre]['DASHBOARD']['full_name'] ?? '';
 $session_email = $_SESSION[$project_pre]['DASHBOARD']['email'] ?? '';
 
+// Single-organization lock: always force organization ID 1.
+// This normalizes the raw session value so Session::orgId() can never leak a stale org.
+$_SESSION[$project_pre]['DASHBOARD']['organization_id'] = 1;
+$_SESSION[$project_pre]['DASHBOARD']['organization_name'] = 'Flash Logistics FZCO';
+
 if (!function_exists('dashboardGetSystemEntitlements')) {
     function dashboardGetSystemEntitlements(): array
     {
@@ -1050,8 +1082,8 @@ if (!function_exists('dashboardHasSystemAccess')) {
 if (!function_exists('dashboardCanCreateOrganizations')) {
     function dashboardCanCreateOrganizations(): bool
     {
-        $features = dashboardGetSubscriptionFeatures();
-        return !empty($features['can_create_organizations']) && $features['can_create_organizations'] !== '0';
+        // Organization creation permanently disabled — single-org system.
+        return false;
     }
 }
 
@@ -1109,30 +1141,7 @@ if (!function_exists('dashboardUserBelongsToOrganization')) {
 if (!function_exists('dashboardGetAccessibleOrganizations')) {
     function dashboardGetAccessibleOrganizations(?int $userId = null): array
     {
-        global $mysqli, $session_user_id;
-
-        if (!($mysqli instanceof mysqli)) {
-            return [];
-        }
-
-        $resolvedUserId = $userId !== null ? (int)$userId : (int)$session_user_id;
-        if ($resolvedUserId <= 0 && !Roles::currentUserHasFullAccess()) {
-            return [];
-        }
-
-        if (Roles::currentUserHasFullAccess()) {
-            $query = "SELECT id, warehouse_name, slug, status FROM `" . DB::ORGANIZATIONS . "` ORDER BY warehouse_name ASC";
-            $result = $mysqli->query($query);
-            $organizations = [];
-            while ($row = $result instanceof mysqli_result ? $result->fetch_assoc() : null) {
-                $organizations[] = $row;
-            }
-            if ($result instanceof mysqli_result) {
-                $result->free();
-            }
-            return $organizations;
-        }
-
+        // Single-organization lock: only Flash Logistics FZCO (org 1) exists.
         return [['id' => 1, 'warehouse_name' => 'Flash Logistics FZCO', 'slug' => 'flash-logistics', 'status' => 'active']];
     }
 }

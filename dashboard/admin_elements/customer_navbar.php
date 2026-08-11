@@ -33,6 +33,12 @@ if ($customer_id > 0):
                 </a>
             </li>
             <li class="nav-item">
+                <a href="listing_customer_sale_orders.php?customer_id=<?php echo $customer_id; ?>" 
+                   class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'listing_customer_sale_orders.php') ? 'active' : ''; ?>">
+                    <i class="ph-shopping-cart me-2"></i>Sale Orders
+                </a>
+            </li>
+            <li class="nav-item">
                 <a href="listing_customer_payments.php?customer_id=<?php echo $customer_id; ?>" 
                    class="nav-link <?php echo (basename($_SERVER['PHP_SELF']) == 'listing_customer_payments.php') ? 'active' : ''; ?>">
                     <i class="ph-currency-dollar me-2"></i>Payments

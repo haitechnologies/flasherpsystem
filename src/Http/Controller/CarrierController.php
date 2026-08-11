@@ -64,7 +64,8 @@ class CarrierController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("carrier_names.php?id=$id&action=edit_carrier_names");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("CarrierController::handleUpdate error: " . $e->getMessage());
             flash_error('The Carrier could not be updated.');
             return Response::redirect("carrier_names.php?id=$id&action=edit_carrier_names");
         }
@@ -84,7 +85,8 @@ class CarrierController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("carrier_names.php");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("CarrierController::handleCreate error: " . $e->getMessage());
             flash_error('The Carrier could not be saved.');
             return Response::redirect("carrier_names.php");
         }

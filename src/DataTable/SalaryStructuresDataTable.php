@@ -43,8 +43,8 @@ class SalaryStructuresDataTable extends BaseDataTable
     {
         $id = (int)$row['id'];
         $empId = (int)$row['employee_id'];
-        $effFrom = !empty($row['effective_from']) ? date('d-m-Y', strtotime($row['effective_from'])) : '-';
-        $effTo = !empty($row['effective_to']) ? date('d-m-Y', strtotime($row['effective_to'])) : '-';
+        $effFrom = !empty($row['effective_from']) ? date('d M Y', strtotime($row['effective_from'])) : '-';
+        $effTo = !empty($row['effective_to']) ? date('d M Y', strtotime($row['effective_to'])) : '-';
 
         return [
             $this->rowNumber,

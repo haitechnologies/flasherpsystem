@@ -56,7 +56,7 @@ if ($roleId === 6) {
                     'icon'  => 'ph-files',
                     'color' => 'primary',
                     'link'  => 'dashboard_crm.php',
-                    'modules' => ['leads', 'lead_quotations'],
+                    'modules' => ['leads'],
                 ],
                 'hr' => [
                     'label' => 'HR',

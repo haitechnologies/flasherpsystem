@@ -7,6 +7,7 @@ namespace App\Repository;
 use App\Core\Database;
 use App\Core\DB;
 use App\Model\AttendancePunch;
+use App\Core\ErrorCapture;
 
 class AttendancePunchRepository
 {
@@ -86,7 +87,7 @@ class AttendancePunchRepository
                 ]);
                 $inserted++;
             } catch (\Throwable $e) {
-                error_log("AttendancePunchRepository: batchInsert error: " . $e->getMessage());
+                ErrorCapture::record("AttendancePunchRepository: batchInsert error: " . $e->getMessage());
             }
         }
         return $inserted;
@@ -98,7 +99,7 @@ class AttendancePunchRepository
             $this->db->execute("UPDATE `" . DB::ATTENDANCE_PUNCHES . "` SET is_synced = 1 WHERE id = :id", ['id' => $id]);
             return true;
         } catch (\Throwable $e) {
-            error_log("AttendancePunchRepository: markSynced failed: " . $e->getMessage());
+            ErrorCapture::record("AttendancePunchRepository: markSynced failed: " . $e->getMessage());
             return false;
         }
     }
@@ -120,7 +121,7 @@ class AttendancePunchRepository
             $this->db->execute($sql, $params);
             return true;
         } catch (\Throwable $e) {
-            error_log("AttendancePunchRepository: markBatchSynced failed: " . $e->getMessage());
+            ErrorCapture::record("AttendancePunchRepository: markBatchSynced failed: " . $e->getMessage());
             return false;
         }
     }

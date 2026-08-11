@@ -64,7 +64,8 @@ class ContainerTypeController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("container_types.php?id=$id&action=edit_container_types");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("ContainerTypeController::handleUpdate error: " . $e->getMessage());
             flash_error('The Container Type could not be updated.');
             return Response::redirect("container_types.php?id=$id&action=edit_container_types");
         }
@@ -84,7 +85,8 @@ class ContainerTypeController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("container_types.php");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("ContainerTypeController::handleCreate error: " . $e->getMessage());
             flash_error('The Container Type could not be saved.');
             return Response::redirect("container_types.php");
         }

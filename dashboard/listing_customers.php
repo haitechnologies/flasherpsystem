@@ -40,6 +40,7 @@ if (($action == "delete_$module" && !empty($id)) && granted('delete', $module_id
         if (!$canDelete) {
             $error_message = "You do not have permission to delete this customer";
             log_error("IDOR attempt: User Session::userId() tried to delete customer $id", 'WARNING', __FILE__, __LINE__);
+            flash_error($error_message);
         } else {
             $customerService->deleteCustomer((int)$id, $activeOrganizationId);
             $success_message = "Customer deleted successfully.";
@@ -49,17 +50,11 @@ if (($action == "delete_$module" && !empty($id)) && granted('delete', $module_id
         }
     } catch (NotFoundException $e) {
         $error_message = $e->getMessage();
+        flash_error($error_message);
     } catch (\Throwable $e) {
-        $error_message = "An error occurred while deleting the customer.";
+        $error_message = "An error occurred while deleting the customer: " . $e->getMessage();
+        flash_error($error_message);
     }
-}
-
-$customerStatusHtml = '';
-$rsStatus = $mysqli->query("SELECT * FROM `" . DB::TAXONOMIES . "` WHERE is_active=1 AND type='customer_status' ORDER BY value LIMIT 50");
-while ($rows = $rsStatus->fetch_array()) {
-    $status = $rows['id'];
-    $rs = $mysqli->query("SELECT id FROM `" . DB::CUSTOMERS . "` WHERE customer_status=$status");
-    $customerStatusHtml .= '<span class="badge bg-light text-dark"><a href="listing_customers.php?customer_status=' . $status . '" class="text-black fw-normal">' . htmlspecialchars($rows['value']) . ' (' . $rs->num_rows . ')</a></span> ';
 }
 
 $listingConfig = [
@@ -72,21 +67,18 @@ $listingConfig = [
         <th class="col-center">RECEIVABLES (BCY)</th>
         <th class="col-center">STATUS</th>
         <th class="col-center">APPROVAL</th>
-        <th>ACTIONS</th>
     ',
     'columns' => [
         ['data' => 0, 'name' => 'display_name', 'title' => 'NAME'],
         ['data' => 1, 'name' => 'email', 'title' => 'EMAIL'],
         ['data' => 2, 'name' => 'phone', 'title' => 'WORK PHONE'],
-        ['data' => 3, 'name' => 'receivables', 'title' => 'RECEIVABLES (BCY)'],
+        ['data' => 3, 'name' => 'receivables', 'title' => 'RECEIVABLES (BCY)', 'orderable' => false],
         ['data' => 4, 'name' => 'is_active', 'title' => 'STATUS'],
         ['data' => 5, 'name' => 'approved', 'title' => 'APPROVAL'],
-        ['data' => 6, 'title' => 'ACTIONS', 'orderable' => false, 'searchable' => false],
     ],
     'order' => [[0, 'asc']],
     'page_length' => 10,
     'table_classes' => 'custom_datatables datatable-professional display responsive no-wrap table-hover',
-    'before_table' => '<div class="row mb-2 mt-2"><div class="col-lg-12">' . $customerStatusHtml . '</div></div>',
     'extra_js' => "
         var customerStatus = new URLSearchParams(window.location.search).get('customer_status') || '';
     ",

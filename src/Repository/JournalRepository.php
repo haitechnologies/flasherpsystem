@@ -210,6 +210,22 @@ class JournalRepository
         return $row !== null ? (string)$row['journal_no'] : null;
     }
 
+    /**
+     * Find journals by their reference (e.g. payment_received / payment_received_void).
+     */
+    public function findByReference(string $referenceType, int $referenceId, int $orgId): array
+    {
+        $sql = "SELECT * FROM `{DB::JOURNALS}`
+                WHERE reference_type = :reference_type AND reference_id = :reference_id AND organization_id = :org_id
+                ORDER BY id ASC";
+        $rows = $this->db->fetchAll($sql, ['reference_type' => $referenceType, 'reference_id' => $referenceId, 'org_id' => $orgId]);
+        $journals = [];
+        foreach ($rows as $row) {
+            $journals[] = $this->mapRowToJournal($row);
+        }
+        return $journals;
+    }
+
     private function mapRowToJournal(array $row): Journal
     {
         return new Journal(

@@ -64,7 +64,8 @@ class PurchaseTypeController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("purchase_types.php?id=$id&action=edit_purchase_types");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("PurchaseTypeController::handleUpdate error: " . $e->getMessage());
             flash_error('The Purchase Type could not be updated.');
             return Response::redirect("purchase_types.php?id=$id&action=edit_purchase_types");
         }
@@ -84,7 +85,8 @@ class PurchaseTypeController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("purchase_types.php");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("PurchaseTypeController::handleCreate error: " . $e->getMessage());
             flash_error('The Purchase Type could not be saved.');
             return Response::redirect("purchase_types.php");
         }

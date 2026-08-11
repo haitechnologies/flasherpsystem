@@ -41,10 +41,16 @@ if (!function_exists('fetchAccountsDropdown')) {
 
 		$accountTypes = is_array($accountType) ? $accountType : [$accountType];
 
+		// Legacy callers pass numeric type codes (1=Assets, 2=Liability, 3=Equity, 4=Income, 5=Expense)
+		$typeMap = ['1' => 'Assets', '2' => 'Liability', '3' => 'Equity', '4' => 'Income', '5' => 'Expense'];
+
 		// Escape string values for IN clause
 		$escaped = [];
 		foreach ($accountTypes as $t) {
 			$t = (string)$t;
+			if (isset($typeMap[$t])) {
+				$t = $typeMap[$t];
+			}
 			if ($t !== '') {
 				$escaped[] = "'" . $mysqli->real_escape_string($t) . "'";
 			}
@@ -479,7 +485,7 @@ $adminHeaderQuickAccessSections = [
 			['href' => 'listing_invoices.php', 'label' => 'Invoices', 'icon' => 'ph-receipt', 'perm' => 'invoices'],
 			['href' => 'listing_payments_received.php', 'label' => 'Payments Received', 'icon' => 'ph-arrow-circle-down', 'perm' => 'payments_received'],
 			['href' => 'listing_credit_notes.php', 'label' => 'Credit Notes', 'icon' => 'ph-file-minus', 'perm' => 'credit_notes'],
-			['href' => 'recurring_invoices.php', 'label' => 'Recurring Invoices', 'icon' => 'ph-repeat', 'perm' => 'recurring_invoices'],
+			['href' => 'listing_recurring_invoices.php', 'label' => 'Recurring Invoices', 'icon' => 'ph-repeat', 'perm' => 'recurring_invoices'],
 			['href' => 'listing_customers.php', 'label' => 'Customers', 'icon' => 'ph-user-circle', 'perm' => 'customers'],
 			['href' => 'listing_vendors.php', 'label' => 'Vendors', 'icon' => 'ph-truck', 'perm' => 'vendors'],
 			['href' => 'listing_expenses.php', 'label' => 'Expenses', 'icon' => 'ph-wallet', 'perm' => 'expenses'],
@@ -1315,7 +1321,7 @@ if (!function_exists('renderEmailQuickbar')) {
 				</li> -->
 
 
-				<?php if (!empty($systemsMegaSections)): ?>
+				<?php if (!empty($systemsMegaSections) && Roles::hasFullAccess($session_role_id)): ?>
 					<li class="nav-item nav-item-dropdown-lg dropdown ms-lg-2">
 						<a href="#" class="navbar-nav-link rounded-pill px-2 py-1 d-flex align-items-center" data-bs-toggle="dropdown" aria-expanded="false" aria-controls="importantSystemsMenuLeft" title="Systems">
 							<i class="ph-diamonds-four me-1" aria-hidden="true"></i>

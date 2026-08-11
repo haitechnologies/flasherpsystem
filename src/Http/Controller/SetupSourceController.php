@@ -68,6 +68,7 @@ class SetupSourceController extends BaseController
             flash_error($error);
             return Response::redirect("setup_sources.php?id=$id&action=edit_setup_sources");
         } catch (\Throwable $e) {
+            $this->logError("SetupSourceController::handleUpdate error: " . $e->getMessage());
             flash_error('The Source could not be updated.');
             return Response::redirect("setup_sources.php?id=$id&action=edit_setup_sources");
         }
@@ -90,6 +91,7 @@ class SetupSourceController extends BaseController
             flash_error($error);
             return Response::redirect("setup_sources.php");
         } catch (\Throwable $e) {
+            $this->logError("SetupSourceController::handleCreate error: " . $e->getMessage());
             flash_error('The Source could not be saved.');
             return Response::redirect("setup_sources.php");
         }

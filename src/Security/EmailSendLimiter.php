@@ -7,6 +7,7 @@ namespace App\Security;
 use App\Core\Database;
 use App\Core\Container;
 use App\Core\DB;
+use App\Core\ErrorCapture;
 use Throwable;
 
 /**
@@ -61,7 +62,7 @@ class EmailSendLimiter
             $row = $db->fetchOne($sql, [$windowStart, $windowStart]);
             return ((int)($row['sent_count'] ?? 0) < self::LIMIT);
         } catch (Throwable $e) {
-            error_log('EmailSendLimiter::canSend() - Query failed: ' . $e->getMessage());
+            ErrorCapture::record('EmailSendLimiter::canSend() - Query failed: ' . $e->getMessage());
             return false; // Fail safe: block send
         }
     }

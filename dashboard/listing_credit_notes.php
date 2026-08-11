@@ -2,69 +2,202 @@
 
 declare(strict_types=1);
 
+use App\Core\Container;
 use App\Core\DB;
 use App\Core\Session;
+use App\Service\CreditNoteService;
 
 include('admin_elements/admin_header.php');
 
 $module = 'credit_notes';
 $module_caption = 'Credit Note';
+$module_id = getModuleIdBySlug($module, $mysqli);
 $tbl_name = DB::CREDIT_NOTES;
 $error_message = '';
 $success_message = '';
-
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\SMTP;
-use PHPMailer\PHPMailer\Exception;
-
-require '../vendor/autoload.php';
+$page = $_GET['page'] ?? '';
 
 include('admin_elements/permissions.php');
 
 $activeOrganizationId = dashboardRequireActiveOrganization();
 
-if (($action == "delete_$module" && !empty($id))) {
-    if (Session::roleId() == '1') {
-        $mysqli->query("DELETE FROM `" . DB::CREDIT_NOTE_ITEMS . "` WHERE credit_note_id=$id");
-        $mysqli->query("DELETE FROM `$tbl_name` WHERE id=$id ");
-    } else {
-        $mysqli->query("DELETE FROM `" . DB::CREDIT_NOTE_ITEMS . "` WHERE credit_note_id=$id");
-        $mysqli->query("DELETE FROM `$tbl_name` WHERE id=$id AND created_by='" . Session::userId() . "'");
-    }
-
-    if ($mysqli->affected_rows > 0) {
-        $success_message = "$module_caption Deleted Successfully.";
-        flash_success($success_message);
-        header("Location:listing_$module.php?page=$page");
-    } else {
-        $error_message = "Sorry! $module Could Not Be Deleted. Only Super Administrator can delete this record.";
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && !empty($action)) {
+    if (!validate_csrf_token($_POST['csrf_token'] ?? '')) {
+        $error_message = 'Invalid security token. Please refresh the page and try again.';
+        log_error('CSRF token validation failed in listing_credit_notes.php', 'WARNING', __FILE__, __LINE__);
+        $action = '';
     }
 }
 
-$listingConfig = [
-    'module' => $module,
-    'module_caption' => $module_caption,
-    'thead' => '
-        <th width="100">DATE</th>
-        <th width="150">CREDIT NOTE #</th>
-        <th>REFERENCE #</th>
-        <th>CUSTOMER NAME</th>
-        <th width="100" class="col-center">STATUS</th>
-        <th width="100" class="text-end">AMOUNT</th>
-    ',
-    'columns' => [
-        ['data' => 0],
-        ['data' => 1],
-        ['data' => 2],
-        ['data' => 3],
-        ['data' => 4, 'className' => 'col-center'],
-        ['data' => 5, 'className' => 'text-end'],
-        ['data' => 6, 'visible' => false],
-    ],
-    'order' => [[0, 'desc']],
-    'page_length' => 25,
-    'search_placeholder' => 'Search credit notes...',
-];
+if (($action == "delete_$module" && !empty($id)) && granted('delete', $module_id)) {
+    try {
+        $creditNoteService = Container::getInstance()->get(CreditNoteService::class);
+        $creditNote = $creditNoteService->getCreditNote((int)$id, (int)$activeOrganizationId);
 
-include('admin_elements/listing_template.php');
-include('admin_elements/admin_footer.php');
+        $canDelete = has_full_access() || (int)$creditNote->createdBy === (int)Session::userId();
+        if (!$canDelete) {
+            flash_error("You do not have permission to delete this credit note");
+            log_error("IDOR attempt: User " . Session::userId() . " tried to delete credit note $id", 'WARNING', __FILE__, __LINE__);
+        } else {
+            $creditNoteService->deleteNote((int)$id, (int)$activeOrganizationId);
+            $success_message = "$module_caption Deleted Successfully.";
+            flash_success($success_message);
+            header("Location:listing_$module.php?page=$page");
+            exit;
+        }
+    } catch (\Throwable $e) {
+        flash_error($e->getMessage());
+    }
+}
+?>
+
+<style>
+.hover-primary:hover {
+    color: #0d6efd !important;
+}
+.fs-7 {
+    font-size: 0.85rem !important;
+}
+.fs-8 {
+    font-size: 0.75rem !important;
+}
+.badge.bg-opacity-10 {
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+.dropdown-menu {
+    border-radius: 8px;
+}
+.dropdown-item {
+    transition: background-color 0.15s ease;
+}
+.dropdown-item:hover {
+    background-color: #f8f9fa;
+}
+</style>
+
+<div class="content-wrapper">
+
+    <!-- Standardized Navbar/Header -->
+    <div class="page-header page-header-light shadow mb-4 carriers-page-header">
+        <div class="page-header-content border-top py-2 px-3 carriers-page-header-content">
+            <!-- Left Side: Heading & Subtitle -->
+            <div class="my-1">
+                <h1 class="h5 mb-0 d-inline-flex align-items-center gap-2">
+                    <a href="listing_<?php echo $module; ?>.php" class="text-dark">All <?php echo ucwords(str_ireplace('_', " ", $module)); ?></a>
+                </h1>
+            </div>
+
+            <!-- Right Side: Action Buttons -->
+            <div class="my-1 d-flex align-items-center gap-2">
+                <?php if (isset($module_id) && granted('create', $module_id)): ?>
+                    <a href="credit_notes.php" class="btn btn-primary btn-sm d-inline-flex align-items-center">
+                        <i class="ph-plus ph-sm me-2 opacity-75"></i>New
+                    </a>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="content datatable-enhanced px-4">
+
+        <?php include('admin_elements/breadcrumb.php'); ?>
+
+        <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
+            <div class="card-body p-0">
+                <!-- CSRF Protection Token -->
+                <input type="hidden" name="csrf_token" value="<?php echo csrf_token(); ?>">
+
+                <div class="table-responsive">
+<table id="grid-<?php echo $module; ?>" class="table table-hover align-middle mb-0 custom_datatables datatable-professional display responsive nowrap" width="100%">
+                    <thead class="table-light border-bottom text-uppercase fs-8 fw-semibold text-muted">
+                        <tr>
+                            <th class="ps-4">Credit Note</th>
+                            <th>Reference</th>
+                            <th>Customer</th>
+                            <th class="text-end">Amount</th>
+                            <th class="text-center">Status</th>
+                        </tr>
+                    </thead>
+                </table>
+</div>
+            </div>
+        </div>
+
+    </div>
+
+    <?php include('admin_elements/copyright.php'); ?>
+</div>
+
+<script>
+$(document).ready(function() {
+
+    window.HAIDatatableInitializer.init('#grid-<?php echo $module; ?>', '<?php echo $module; ?>', {
+        stateSave: false,
+        deferRender: true,
+        retrieve: false,
+        ajax: {
+            url: 'datatables.php',
+            type: 'POST',
+            data: function(d) {
+                d.csrf_token = window.HAI_CSRF_TOKEN || $('input[name="csrf_token"]').first().val() || '';
+                d.action = '<?php echo $action; ?>';
+                d.edit_permission = <?php echo granted('edit', $module_id) ? '1' : '0'; ?>;
+                d.delete_permission = <?php echo granted('delete', $module_id) ? '1' : '0'; ?>;
+                d.session_user_id = '<?php echo Session::userId() ?? ''; ?>';
+                d.dt_session_role_id = '<?php echo Session::roleId() ?? ''; ?>';
+                return d;
+            },
+            error: function(xhr, status, error) {
+                console.error('[Credit Note] DataTable AJAX error:', error);
+                console.error('[Credit Note] Response:', xhr.responseText);
+            }
+        },
+        columns: [
+            { data: null }, // col 0: Credit Note info
+            { data: 2 }, // col 1: Reference
+            { data: null }, // col 2: Customer
+            { data: 5, className: 'text-end fw-semibold text-dark' }, // col 3: Amount
+            { data: 4, className: 'text-center' } // col 4: Status
+        ],
+        columnDefs: [
+            {
+                targets: 0,
+                render: function(data, type, row) {
+                    var cnDate = row[0] || '-';
+                    var cnNo = row[1] || '';
+                    var id = row[6] || '';
+                    var html = '<div class="d-flex flex-column">';
+                    html += '<a href="credit_note_overview.php?credit_note_id=' + id + '" class="fw-semibold text-primary text-decoration-none hover-primary">' + cnNo + '</a>';
+                    html += '<span class="text-muted fs-8">' + cnDate + '</span>';
+                    html += '</div>';
+                    return html;
+                }
+            },
+            {
+                targets: 2,
+                render: function(data, type, row) {
+                    var custName = row[3] || '';
+                    var id = row[6] || '';
+                    return '<div class="d-flex flex-column">' +
+                           '<a href="credit_note_overview.php?credit_note_id=' + id + '" class="text-dark fw-medium text-decoration-none hover-primary">' + custName + '</a>' +
+                           '</div>';
+                }
+            },
+            {
+                targets: 4,
+                render: function(data, type, row) {
+                    return row[4] || '<span class="badge bg-secondary bg-opacity-10 text-secondary">Draft</span>';
+                }
+            },
+        ],
+        order: [[0, 'desc']],
+        pageLength: 25,
+        lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+        dom: "<'dt-header d-flex justify-content-between align-items-center mb-3'<'dt-head-left'f><'dt-head-right'l>>rt<'dt-footer d-flex justify-content-between align-items-center mt-3'<'dt-foot-left'i><'dt-foot-right'p>>"
+    });
+
+});
+</script>
+
+<?php include('admin_elements/admin_footer.php'); ?>

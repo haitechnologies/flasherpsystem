@@ -40,7 +40,15 @@ while ($row = $r->fetch_array()) {
     $name = getTableAttr("display_name", DB::CUSTOMERS, $row["customer_id"]);
     $date = ddm_($row["invoice_date"]);
     $amt = number_format($row["grand_total"], 2);
-    $st = strtoupper($row["invoice_status"]);
+    $status_class = match($row["invoice_status"]) {
+        'accepted', 'approved', 'paid' => 'text-success',
+        'declined', 'void', 'expired' => 'text-danger',
+        'draft', 'pending' => 'text-secondary',
+        'locked' => 'text-warning',
+        'sent' => 'text-info',
+        default => 'text-info'
+    };
+    $st = '<span class="' . $status_class . '">' . strtoupper($row["invoice_status"]) . '</span>';
 ?>
     <tr id="<?php echo $row["id"]; ?>" class="<?php echo $sel; ?>">
         <td><a href="recurring_invoice_overview.php?recurring_invoice_id=<?php echo $row["id"]; ?>" class="text-black text-decoration-none d-block">

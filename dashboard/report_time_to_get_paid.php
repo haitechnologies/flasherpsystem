@@ -20,6 +20,7 @@ $success_message = '';
 */
 include('admin_elements/permissions.php');
 
+$activeOrganizationId = dashboardRequireActiveOrganization();
 
 $limit              = 10;
 $stages             = 2;
@@ -94,7 +95,7 @@ $search_query = '';
 $result = $mysqli->query("SELECT COUNT(DISTINCT c.id) as total FROM `" . tbl_customers . "` c 
                           INNER JOIN `" . tbl_invoices . "` i ON c.id = i.customer_id 
                           LEFT JOIN `" . tbl_payment_received_items . "` pri ON i.id = pri.invoice_id
-                          WHERE i.id > 0 AND pri.amount_received > 0");
+                          WHERE i.id > 0 AND pri.amount_received > 0 AND i.organization_id = " . (int)$activeOrganizationId . " AND c.organization_id = " . (int)$activeOrganizationId);
 $row = $result->fetch_array();
 $total_rows = $row['total'];
 
@@ -107,7 +108,7 @@ $result_customers = $mysqli->query("SELECT c.id, c.display_name,
     FROM `" . tbl_customers . "` c
     INNER JOIN `" . tbl_invoices . "` i ON c.id = i.customer_id
     LEFT JOIN `" . tbl_payment_received_items . "` pri ON i.id = pri.invoice_id
-    WHERE i.id > 0
+    WHERE i.id > 0 AND i.organization_id = " . (int)$activeOrganizationId . " AND c.organization_id = " . (int)$activeOrganizationId . "
     GROUP BY c.id, c.display_name
     HAVING (days_0_15 + days_16_30 + days_31_45 + days_above_45) > 0
     ORDER BY c.display_name ASC
@@ -122,7 +123,7 @@ $result_customers_ = $mysqli->query("SELECT c.id, c.display_name,
     FROM `" . tbl_customers . "` c
     INNER JOIN `" . tbl_invoices . "` i ON c.id = i.customer_id
     LEFT JOIN `" . tbl_payment_received_items . "` pri ON i.id = pri.invoice_id
-    WHERE i.id > 0
+    WHERE i.id > 0 AND i.organization_id = " . (int)$activeOrganizationId . " AND c.organization_id = " . (int)$activeOrganizationId . "
     GROUP BY c.id, c.display_name
     HAVING (days_0_15 + days_16_30 + days_31_45 + days_above_45) > 0
     ORDER BY c.display_name ASC");

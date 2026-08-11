@@ -1,5 +1,6 @@
 <?php
 
+use App\Core\Session;
 use App\Service\JournalService;
 
 include('admin_elements/admin_header.php');
@@ -14,6 +15,8 @@ $allowed_file_formats       = $GLOBALS['DOCUMENT']['FORMATS'] ?? '.doc, .docx, .
 
 $error_message = '';
 $success_message = '';
+
+$activeOrganizationId = dashboardRequireActiveOrganization();
 
 
 
@@ -126,8 +129,8 @@ if (($action == "delete_$module" && !empty($expense_id)) && granted('delete', $m
     if (is_SystemAdmin() || is_SuperAdmin()) {
 
         $filename = getTableAttr('filename', tbl_expense_attachments, $attachment_id);
-        $result = $mysqli->query("DELETE FROM `$tbl_name` WHERE id=$attachment_id");
-        unlink($file_upload_path  . $filename);
+        $result = $mysqli->query("DELETE FROM `" . tbl_expense_attachments . "` WHERE id=$attachment_id AND organization_id=" . (int)$activeOrganizationId);
+        if (!empty($filename)) unlink($file_upload_path  . $filename);
 
         // expense Logs
         // updateExpenseLogs($expense_id, 'file', 'deleted');
@@ -135,8 +138,8 @@ if (($action == "delete_$module" && !empty($expense_id)) && granted('delete', $m
 
     } else {
         $filename = getTableAttr('filename', tbl_expense_attachments, $attachment_id);
-        $result = $mysqli->query("DELETE FROM `$tbl_name` WHERE id=$attachment_id AND created_by='" . Session::userId() . "'");
-        unlink($file_upload_path  . $filename);
+        $result = $mysqli->query("DELETE FROM `" . tbl_expense_attachments . "` WHERE id=$attachment_id AND organization_id=" . (int)$activeOrganizationId . " AND created_by='" . Session::userId() . "'");
+        if (!empty($filename)) unlink($file_upload_path  . $filename);
 
         // expense Logs
         // updateexpenseLogs($expense_id, 'file', 'deleted');
@@ -184,7 +187,7 @@ if ($action == "add_$module" && granted('create', $module_id)) {
         if (move_uploaded_file($_FILES['document']['tmp_name'], $file_upload_path . $filename)) {
 
             /* ---------------------- QUERY ---------------------- */
-            $insert_row = $mysqli->query("INSERT INTO `" . tbl_expense_attachments . "`(expense_id, filename) VALUES ('" . $expense_id . "', '" . $filename . "'); ");
+            $insert_row = $mysqli->query("INSERT INTO `" . tbl_expense_attachments . "`(expense_id, filename, organization_id, created_by) VALUES ('" . $expense_id . "', '" . $filename . "', " . (int)$activeOrganizationId . ", '" . Session::userId() . "'); ");
 
             $filename = '';
 
@@ -213,9 +216,9 @@ if ($action == "add_$module" && granted('create', $module_id)) {
 if (($action == "clone_$module" && !empty($expense_id))) {
 
     // 1. Clone the Parent Expense
-    $result = $mysqli->query("INSERT INTO `fls_expenses` (expense_date, paid_through, vendor_id, reference_no, customer_id, grand_total, expense_status, is_active, created_at, updated_at, created_by)
-    SELECT expense_date, paid_through, vendor_id, reference_no, customer_id, grand_total, 'draft', is_active, NOW(), NOW(), '" . Session::userId() . "'
-    FROM `fls_expenses`
+    $result = $mysqli->query("INSERT INTO `" . tbl_expenses . "` (expense_date, paid_through, vendor_id, reference_no, customer_id, grand_total, expense_status, is_active, organization_id, created_at, updated_at, created_by)
+    SELECT expense_date, paid_through, vendor_id, reference_no, customer_id, grand_total, 'draft', is_active, organization_id, NOW(), NOW(), '" . Session::userId() . "'
+    FROM `" . tbl_expenses . "`
     WHERE id = $expense_id;");
 
     $new_cloned_id = $mysqli->insert_id;
@@ -224,9 +227,9 @@ if (($action == "clone_$module" && !empty($expense_id))) {
 
 
     // 2. Clone the Expense Items
-    $result = $mysqli->query("INSERT INTO `fls_expense_items` (expense_id, expense_account, description, total, created_at, updated_at, created_by)
-    SELECT $new_cloned_id, expense_account, description, total, NOW(), NOW(), '" . Session::userId() . "'
-    FROM `fls_expense_items`
+    $result = $mysqli->query("INSERT INTO `" . tbl_expense_items . "` (expense_id, expense_account, description, total, organization_id, created_at, updated_at, created_by)
+    SELECT $new_cloned_id, expense_account, description, total, organization_id, NOW(), NOW(), '" . Session::userId() . "'
+    FROM `" . tbl_expense_items . "`
     WHERE expense_id = $expense_id");
 
     // If you have a fingerprint function:
@@ -281,9 +284,9 @@ if (($action == "convert_to_invoice" && !empty($expense_id))) {
 
             // Create Invoice
             $insert_invoice = $mysqli->query("INSERT INTO `" . tbl_invoices . "`
-                (invoice_no, customer_id, invoice_status, invoice_date, reference_no, warehouse_id, grand_total, is_active)
+                (invoice_no, customer_id, invoice_status, invoice_date, reference_no, warehouse_id, grand_total, is_active, organization_id)
                 VALUES
-                ('$invoice_no', '$customer_id', 'draft', '$expense_date', '$reference_no', 0, '$grand_total', 1)");
+                ('$invoice_no', '$customer_id', 'draft', '$expense_date', '$reference_no', 0, '$grand_total', 1, '$activeOrganizationId')");
 
             if (!$insert_invoice) {
                 $error_message = "Failed to create invoice: " . $mysqli->error;
@@ -304,9 +307,9 @@ if (($action == "convert_to_invoice" && !empty($expense_id))) {
                         $total = (float) $item['total'];
 
                         $insert_item = $mysqli->query("INSERT INTO `" . tbl_invoice_items . "`
-                            (invoice_id, service, description, qty, rate, sub_total, tax, tax_amount, total)
+                            (invoice_id, service, description, qty, rate, sub_total, tax, tax_amount, total, organization_id)
                             VALUES
-                            ('$new_invoice_id', '', '$description', 1, '$total', '$total', 0, 0, '$total')");
+                            ('$new_invoice_id', 0, '$description', 1, '$total', '$total', 0, 0, '$total', '$activeOrganizationId')");
 
                         if ($insert_item) {
                             $items_created++;
@@ -321,61 +324,62 @@ if (($action == "convert_to_invoice" && !empty($expense_id))) {
                         $customer_display_name = getTableAttr('display_name', tbl_customers, $customer_id);
 
                         // Initialize Journal Manager
-                        $journal = new JournalService();
+                        $journal = \App\Core\Container::getInstance()->get(JournalService::class);
 
                         // Prepare journal entries for INVOICE
                         $journal_entries = array();
 
                         // Get accounts for AR and Sales
-                        $ar_account_result = $mysqli->query("SELECT id FROM `" . tbl_accounts . "` WHERE account_code='1200' LIMIT 1");
+                        $ar_account_result = $mysqli->query("SELECT id FROM `" . tbl_accounts . "` WHERE account_code IN ('1200','1210','1100') OR account_name LIKE '%Receivable%' LIMIT 1");
                         $ar_account = $ar_account_result->fetch_assoc();
 
-                        $sales_account_result = $mysqli->query("SELECT id FROM `" . tbl_accounts . "` WHERE account_code='4100' LIMIT 1");
+                        $sales_account_result = $mysqli->query("SELECT id FROM `" . tbl_accounts . "` WHERE account_code='4100' OR account_name LIKE '%Sales Revenue%' LIMIT 1");
                         $sales_account = $sales_account_result->fetch_assoc();
 
                         if ($ar_account && $sales_account) {
                             // DR: Accounts Receivable
                             $journal_entries[] = array(
-                                'account' => $ar_account['id'],
-                                'amount' => $total_invoice_amount,
-                                'type' => 'debit',
+                                'account' => (int)$ar_account['id'],
+                                'debit' => (float)$total_invoice_amount,
+                                'credit' => 0.0,
                                 'description' => 'Converted from Expense #' . $expense_id
                             );
 
                             // CR: Sales Revenue
                             $journal_entries[] = array(
-                                'account' => $sales_account['id'],
-                                'amount' => $total_invoice_amount,
-                                'type' => 'credit',
+                                'account' => (int)$sales_account['id'],
+                                'debit' => 0.0,
+                                'credit' => (float)$total_invoice_amount,
                                 'description' => 'Converted from Expense #' . $expense_id
                             );
 
                             // Create journal entry
-                            $journal_result = $journal->createJournalEntry(
+                            $journal->createJournal(
                                 array(
-                                    'reference_type' => 'invoice',
-                                    'reference_id' => $new_invoice_id,
-                                    'reference_no' => $invoice_no,
                                     'journal_date' => date('Y-m-d', strtotime($expense_date)),
-                                    'description' => 'Invoice from Expense - ' . $customer_display_name,
+                                    'journal_status' => 'posted',
+                                    'reference_no' => $invoice_no,
+                                    'notes' => 'Invoice from Expense - ' . $customer_display_name,
+                                    'reporting_method' => 'accrual',
+                                    'reference_type' => 'invoice',
+                                    'reference_id' => (int)$new_invoice_id,
                                     'currency' => 'AED',
-                                    'grand_total' => $total_invoice_amount
+                                    'warehouse_id' => 0,
                                 ),
-                                $journal_entries
+                                $journal_entries,
+                                (int)$activeOrganizationId,
+                                (int)Session::userId()
                             );
-
-                            if ($journal_result['success']) {
-                                error_log("Journal entry created for converted invoice: ID {$journal_result['journal_id']} from Expense {$expense_id}");
-                                $success_message = "Expense converted to Invoice successfully. Invoice #<a href='invoice_overview.php?invoice_id={$new_invoice_id}'>{$invoice_no}</a>";
-                            } else {
-                                error_log("Failed to create journal for converted invoice: " . $journal_result['message']);
-                                $error_message = "Invoice created but journal entry failed: " . $journal_result['message'];
-                            }
+                            $success_message = "Expense converted to Invoice successfully. Invoice #<a href='invoice_overview.php?invoice_id={$new_invoice_id}'>{$invoice_no}</a>";
                         } else {
                             $error_message = "Required accounts not found. Cannot create journal entry.";
                         }
-                    } catch (Exception $e) {
-                        error_log("Exception converting expense to invoice: " . $e->getMessage());
+                    } catch (\Throwable $e) {
+                        log_error("Exception converting expense to invoice: " . $e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
+                            'module' => $module,
+                            'module_slug' => $module,
+                            'expense_id' => $expense_id ?? null,
+                        ]));
                         $error_message = "Error creating journal entry: " . $e->getMessage();
                     }
                 } else {
@@ -459,6 +463,15 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
                 |--------------------------------------------------------------------------
                 |
                 */
+                $billable = '';
+                $expense_date = '';
+                $paid_through = '';
+                $vendor_id = '';
+                $reference_no = '';
+                $customer_id = '';
+                $grand_total = 0;
+                $total_rows = 0;
+
                 if (!empty($expense_id)) {
 
                     $result = $mysqli->query("SELECT * FROM `$tbl_name` WHERE id=$expense_id");
@@ -504,7 +517,7 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
                                 <div class="col-lg-6">
                                     <div class="mb-4">
                                         <span class="text-muted">Expense Amount</span><br />
-                                        <span class="text-danger mt-lg-2 fs-2"><?php echo BASE_CURRENCY['code']; ?><?php echo $grand_total; ?></span><span class="text-muted"> on <?php echo dd_($expense_date); ?></span><br />
+                                        <span class="text-danger mt-lg-2 fs-2"><?php echo BASE_CURRENCY['code']; ?><?php echo $grand_total; ?></span><span class="text-muted"> on <?php echo ddm_($expense_date); ?></span><br />
                                         <span class="text-muted fs-6"><?php echo $billable; ?></span>
                                     </div>
 
@@ -578,7 +591,8 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
                                             |--------------------------------------------------------------------------
                                             |
                                             // */
-                                            $rs     = $mysqli->query("SELECT * FROM `" . tbl_expense_attachments . "` WHERE expense_id=$expense_id");
+                                            if (!empty($expense_id)) {
+                                            $rs     = $mysqli->query("SELECT * FROM `" . tbl_expense_attachments . "` WHERE expense_id=$expense_id AND organization_id=" . (int)$activeOrganizationId);
                                             while ($row    = $rs->fetch_array()) {
                                                 $attachment_id          = $row['id'];
                                                 $filename               = $row['filename'];
@@ -602,6 +616,7 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
 
                                             <?php
                                             } // while
+                                            } // if
                                             //----------------------------------------------------------------------------------------
                                             ?>
                                         </div>
@@ -632,8 +647,8 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
                                     $grand_total = 0;
 
                                     for ($expense_item = 1; $expense_item <= $total_rows; $expense_item++) {
-                                        $index = $expense_item;
-                                        $index = $index - 1;
+                                        $index = $expense_item - 1;
+                                        if (!isset($expense_item_id_arr[$index])) continue;
                                         $expense_item_id                = $expense_item_id_arr[$index];
 
                                         $total          = $total_arr[$index];
@@ -642,7 +657,7 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
                                     ?>
 
                                         <tr>
-                                            <td><?php echo getTableAttr('item_name', tbl_items, $expense_account_arr[$index]); ?></td>
+                                            <td><?php echo getTableAttr('account_name', tbl_accounts, $expense_account_arr[$index]); ?></td>
                                             <td class="text-center"><?php echo BASE_CURRENCY['code']; ?><?php echo $total; ?></td>
                                         </tr>
                                     <?php

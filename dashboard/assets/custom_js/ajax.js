@@ -337,20 +337,41 @@
                 let dropdown = document.getElementById(""+port_type+"_country");
 
                 if (dropdown && country_id && country_name) {
-                    let option = document.createElement("option");
-                    option.value = country_id;
-                    option.textContent = country_name;
+                    let option = null;
+                    for (let i = 0; i < dropdown.options.length; i++) {
+                        if (dropdown.options[i].value === String(country_id)) {
+                            option = dropdown.options[i];
+                            break;
+                        }
+                    }
+                    if (!option) {
+                        option = document.createElement("option");
+                        option.value = country_id;
+                        option.textContent = country_name;
 
-                    dropdown.appendChild(option);
+                        dropdown.appendChild(option);
+                    }
 
                     dropdown.value = country_id;
+
+                    dropdown.disabled = true;
 
                     dropdown.style.pointerEvents = "none";
 
                     dropdown.classList.add("bg-light");
 
+                    let hidden = document.getElementById(""+port_type+"_country_hidden");
+                    if (!hidden) {
+                        hidden = document.createElement("input");
+                        hidden.type = "hidden";
+                        hidden.id = ""+port_type+"_country_hidden";
+                        hidden.name = dropdown.name;
+                        dropdown.parentNode.appendChild(hidden);
+                    }
+                    hidden.value = country_id;
+
                 } else {
-                    console.error("Dropdown not found or no consignee data");
+                    console.error("Dropdown not found or no country data");
                 }
 
             }

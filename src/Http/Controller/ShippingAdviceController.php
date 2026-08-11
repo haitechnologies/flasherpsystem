@@ -66,6 +66,12 @@ class ShippingAdviceController extends BaseController
             flash_error($error);
             return Response::redirect("shipping_advices.php?id=$id&action=edit_shipping_advices");
         } catch (\Throwable $e) {
+            log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
+                'module' => 'shipping_advices',
+                'module_slug' => 'shipping_advices',
+                'stack_trace' => $e->getTraceAsString(),
+                'error_code' => (string)$e->getCode(),
+            ]));
             flash_error($e->getMessage());
             return Response::redirect("shipping_advices.php?id=$id&action=edit_shipping_advices");
         }
@@ -85,6 +91,12 @@ class ShippingAdviceController extends BaseController
             flash_error($error);
             return Response::redirect("shipping_advices.php");
         } catch (\Throwable $e) {
+            log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
+                'module' => 'shipping_advices',
+                'module_slug' => 'shipping_advices',
+                'stack_trace' => $e->getTraceAsString(),
+                'error_code' => (string)$e->getCode(),
+            ]));
             flash_error($e->getMessage());
             return Response::redirect("shipping_advices.php");
         }
@@ -207,6 +219,12 @@ class ShippingAdviceController extends BaseController
                         $total_arr[] = $item->total;
                     }
                 } catch (\Throwable $e) {
+                    log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
+                        'module' => 'shipping_advices',
+                        'module_slug' => 'shipping_advices',
+                        'stack_trace' => $e->getTraceAsString(),
+                        'error_code' => (string)$e->getCode(),
+                    ]));
                     $error_message = $e->getMessage();
                 }
             }

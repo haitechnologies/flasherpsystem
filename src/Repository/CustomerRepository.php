@@ -18,6 +18,28 @@ use App\Model\CustomerAddress;
  */
 class CustomerRepository
 {
+    private const CUSTOMER_COLUMNS = '
+        id, organization_id, lead_id, customer_owner, customer_type, customer_status,
+        customer_source, assigned_to, salutation, first_name, last_name,
+        company_name, display_name, address, email, phone, mobile,
+        payment_term, tax_treatment, trn, corporate_tax_number, license_number, license_expiry,
+        sales_person, lead_category, cs_agent, rating, currency,
+        opening_balance, receivable_account_id, exchange_rate, website, department, designation,
+        x, facebook, instagram, photo, description, tags, contacted_date,
+        approved, approved_by, approved_at, publish, is_active,
+        created_at, updated_at, updated_by, created_by, credit_limit,
+        discount_type, discount_type_value, subscription_tier, subscription_expires_at';
+
+    private const CONTACT_COLUMNS = '
+        id, organization_id, contactable_type, contactable_id, is_primary,
+        first_name, last_name, position, email, phone, notes,
+        publish, is_active, created_at, updated_at, updated_by, created_by';
+
+    private const ADDRESS_COLUMNS = '
+        id, organization_id, addressable_type, addressable_id, type,
+        attention, country, address_line1, address_line2, city, state, zipcode,
+        phone, fax, publish, is_active, created_at, updated_at, updated_by, created_by';
+
     private Database $db;
 
     public function __construct(Database $db)
@@ -30,7 +52,7 @@ class CustomerRepository
      */
     public function find(int $id, int $orgId): ?Customer
     {
-        $sql = "SELECT * FROM `{DB::CUSTOMERS}` WHERE id = :id AND organization_id = :org_id";
+        $sql = "SELECT " . self::CUSTOMER_COLUMNS . " FROM `{DB::CUSTOMERS}` WHERE id = :id AND organization_id = :org_id";
         $row = $this->db->fetchOne($sql, ['id' => $id, 'org_id' => $orgId]);
         if ($row === null) {
             return null;
@@ -43,7 +65,7 @@ class CustomerRepository
      */
     public function findByEmail(string $email, int $orgId): ?Customer
     {
-        $sql = "SELECT * FROM `{DB::CUSTOMERS}` WHERE email = :email AND organization_id = :org_id";
+        $sql = "SELECT " . self::CUSTOMER_COLUMNS . " FROM `{DB::CUSTOMERS}` WHERE email = :email AND organization_id = :org_id";
         $row = $this->db->fetchOne($sql, ['email' => trim($email), 'org_id' => $orgId]);
         if ($row === null) {
             return null;
@@ -74,7 +96,7 @@ class CustomerRepository
      */
     public function findAll(int $orgId): array
     {
-        $sql = "SELECT * FROM `{DB::CUSTOMERS}` WHERE organization_id = :org_id ORDER BY display_name ASC";
+        $sql = "SELECT " . self::CUSTOMER_COLUMNS . " FROM `{DB::CUSTOMERS}` WHERE organization_id = :org_id ORDER BY display_name ASC";
         $rows = $this->db->fetchAll($sql, ['org_id' => $orgId]);
         $customers = [];
         foreach ($rows as $row) {
@@ -203,38 +225,122 @@ class CustomerRepository
     }
 
     /**
-     * Delete customer and cascade deletions to related tables under a transaction
+     * Delete customer and cascade deletions to all related tables under a transaction
      */
     public function delete(int $id, int $orgId): bool
     {
         try {
             $this->db->beginTransaction();
 
-            // 1. Delete addresses
+            $params = ['customer_id' => $id, 'org_id' => $orgId];
+
+            // --- Child items (delete via parent FK subquery) ---
+
+            $this->db->execute(
+                "DELETE FROM `{DB::INVOICE_ITEMS}` WHERE invoice_id IN (SELECT id FROM `{DB::INVOICES}` WHERE customer_id = :customer_id AND organization_id = :org_id)",
+                $params
+            );
+
+            $this->db->execute(
+                "DELETE FROM `{DB::QUOTATION_ITEMS}` WHERE quotation_id IN (SELECT id FROM `{DB::QUOTATIONS}` WHERE customer_id = :customer_id AND organization_id = :org_id)",
+                $params
+            );
+
+            $this->db->execute(
+                "DELETE FROM `{DB::SALE_ORDER_ITEMS}` WHERE sale_order_id IN (SELECT id FROM `{DB::SALE_ORDERS}` WHERE customer_id = :customer_id AND organization_id = :org_id)",
+                $params
+            );
+
+            $this->db->execute(
+                "DELETE FROM `{DB::CREDIT_NOTE_ITEMS}` WHERE credit_note_id IN (SELECT id FROM `{DB::CREDIT_NOTES}` WHERE customer_id = :customer_id AND organization_id = :org_id)",
+                $params
+            );
+
+            $this->db->execute(
+                "DELETE FROM `{DB::JOB_ITEMS}` WHERE job_id IN (SELECT id FROM `{DB::JOBS}` WHERE customer_id = :customer_id AND organization_id = :org_id)",
+                $params
+            );
+
+            $this->db->execute(
+                "DELETE FROM `{DB::EXPENSE_ITEMS}` WHERE expense_id IN (SELECT id FROM `{DB::EXPENSES}` WHERE customer_id = :customer_id AND organization_id = :org_id)",
+                $params
+            );
+
+            $this->db->execute(
+                "DELETE FROM `{DB::SHIPPING_ADVICE_ITEMS}` WHERE advice_id IN (SELECT id FROM `{DB::SHIPPING_ADVICES}` WHERE customer_id = :customer_id AND organization_id = :org_id)",
+                $params
+            );
+
+            $this->db->execute(
+                "DELETE FROM `{DB::SHIPPING_INVOICE_ITEMS}` WHERE shipping_invoice_id IN (SELECT id FROM `{DB::SHIPPING_INVOICES}` WHERE customer_id = :customer_id AND organization_id = :org_id)",
+                $params
+            );
+
+            // --- Journal entries referencing this customer's documents ---
+
+            $journalParams = [
+                'journal_org_id' => $orgId,
+                'journal_customer_id' => $id,
+                'invoice_customer_id' => $id,
+                'invoice_org_id' => $orgId,
+            ];
+
+            $this->db->execute(
+                "DELETE FROM `{DB::JOURNAL_ITEMS}` WHERE journal_id IN (
+                    SELECT id FROM `{DB::JOURNALS}` WHERE organization_id = :journal_org_id AND (
+                        reference_type = 'customer_opening_balance' AND reference_id = :journal_customer_id
+                        OR reference_type IN ('invoice', 'invoice_void', 'invoice_writeoff')
+                            AND reference_id IN (SELECT id FROM `{DB::INVOICES}` WHERE customer_id = :invoice_customer_id AND organization_id = :invoice_org_id)
+                    )
+                )",
+                $journalParams
+            );
+
+            $this->db->execute(
+                "DELETE FROM `{DB::JOURNALS}` WHERE organization_id = :journal_org_id AND (
+                    reference_type = 'customer_opening_balance' AND reference_id = :journal_customer_id
+                    OR reference_type IN ('invoice', 'invoice_void', 'invoice_writeoff')
+                        AND reference_id IN (SELECT id FROM `{DB::INVOICES}` WHERE customer_id = :invoice_customer_id AND organization_id = :invoice_org_id)
+                )",
+                $journalParams
+            );
+
+            // --- Parent records ---
+
+            $this->db->execute("DELETE FROM `{DB::INVOICES}` WHERE customer_id = :customer_id AND organization_id = :org_id", $params);
+            $this->db->execute("DELETE FROM `{DB::QUOTATIONS}` WHERE customer_id = :customer_id AND organization_id = :org_id", $params);
+            $this->db->execute("DELETE FROM `{DB::SALE_ORDERS}` WHERE customer_id = :customer_id AND organization_id = :org_id", $params);
+            $this->db->execute("DELETE FROM `{DB::CREDIT_NOTES}` WHERE customer_id = :customer_id AND organization_id = :org_id", $params);
+            $this->db->execute("DELETE FROM `{DB::JOBS}` WHERE customer_id = :customer_id AND organization_id = :org_id", $params);
+            $this->db->execute("DELETE FROM `{DB::EXPENSES}` WHERE customer_id = :customer_id AND organization_id = :org_id", $params);
+            $this->db->execute("DELETE FROM `{DB::SHIPPING_ADVICES}` WHERE customer_id = :customer_id AND organization_id = :org_id", $params);
+            $this->db->execute("DELETE FROM `{DB::SHIPPING_INVOICES}` WHERE customer_id = :customer_id AND organization_id = :org_id", $params);
+            $this->db->execute("DELETE FROM `{DB::CUSTOMER_TRANSACTIONS}` WHERE customer_id = :customer_id AND organization_id = :org_id", $params);
+            $this->db->execute("DELETE FROM `{DB::PAYMENTS_RECEIVED}` WHERE customer_id = :customer_id AND organization_id = :org_id", $params);
+
+            // --- Polymorphic dependent records ---
+
             $this->db->execute(
                 "DELETE FROM `{DB::CUSTOMER_ADDRESSES}` WHERE addressable_type = 'Customer' AND addressable_id = :customer_id AND organization_id = :org_id",
-                ['customer_id' => $id, 'org_id' => $orgId]
+                $params
             );
 
-            // 2. Delete contacts
             $this->db->execute(
                 "DELETE FROM `{DB::CUSTOMER_CONTACTS}` WHERE contactable_type = 'Customer' AND contactable_id = :customer_id AND organization_id = :org_id",
-                ['customer_id' => $id, 'org_id' => $orgId]
+                $params
             );
 
-            // 3. Delete notes
             $this->db->execute(
                 "DELETE FROM `{DB::ENTITY_NOTES}` WHERE entity_type = 'customer' AND entity_id = :entity_id",
                 ['entity_id' => $id]
             );
 
-            // 4. Delete logs
             $this->db->execute(
                 "DELETE FROM `{DB::ENTITY_LOGS}` WHERE entity_type = 'customer' AND entity_id = :entity_id",
                 ['entity_id' => $id]
             );
 
-            // 5. Delete customer profile
+            // --- Customer profile ---
             $stmt = $this->db->execute(
                 "DELETE FROM `{DB::CUSTOMERS}` WHERE id = :id AND organization_id = :org_id",
                 ['id' => $id, 'org_id' => $orgId]
@@ -253,7 +359,7 @@ class CustomerRepository
      */
     public function findContact(int $id, int $orgId): ?CustomerContact
     {
-        $sql = "SELECT * FROM `{DB::CUSTOMER_CONTACTS}` WHERE id = :id AND contactable_type = 'Customer' AND organization_id = :org_id";
+        $sql = "SELECT " . self::CONTACT_COLUMNS . " FROM `{DB::CUSTOMER_CONTACTS}` WHERE id = :id AND contactable_type = 'Customer' AND organization_id = :org_id";
         $row = $this->db->fetchOne($sql, ['id' => $id, 'org_id' => $orgId]);
         if ($row === null) {
             return null;
@@ -266,7 +372,7 @@ class CustomerRepository
      */
     public function findContactsByCustomer(int $customerId, int $orgId): array
     {
-        $sql = "SELECT * FROM `{DB::CUSTOMER_CONTACTS}` WHERE contactable_type = 'Customer' AND contactable_id = :customer_id AND organization_id = :org_id ORDER BY is_primary DESC, id ASC";
+        $sql = "SELECT " . self::CONTACT_COLUMNS . " FROM `{DB::CUSTOMER_CONTACTS}` WHERE contactable_type = 'Customer' AND contactable_id = :customer_id AND organization_id = :org_id ORDER BY is_primary DESC, id ASC";
         $rows = $this->db->fetchAll($sql, ['customer_id' => $customerId, 'org_id' => $orgId]);
         return array_map([$this, 'mapRowToContact'], $rows);
     }
@@ -340,7 +446,7 @@ class CustomerRepository
      */
     public function findAddress(int $id, int $orgId): ?CustomerAddress
     {
-        $sql = "SELECT * FROM `{DB::CUSTOMER_ADDRESSES}` WHERE id = :id AND addressable_type = 'Customer' AND organization_id = :org_id";
+        $sql = "SELECT " . self::ADDRESS_COLUMNS . " FROM `{DB::CUSTOMER_ADDRESSES}` WHERE id = :id AND addressable_type = 'Customer' AND organization_id = :org_id";
         $row = $this->db->fetchOne($sql, ['id' => $id, 'org_id' => $orgId]);
         if ($row === null) {
             return null;
@@ -353,7 +459,7 @@ class CustomerRepository
      */
     public function findAddressesByCustomer(int $customerId, int $orgId): array
     {
-        $sql = "SELECT * FROM `{DB::CUSTOMER_ADDRESSES}` WHERE addressable_type = 'Customer' AND addressable_id = :customer_id AND organization_id = :org_id ORDER BY id ASC";
+        $sql = "SELECT " . self::ADDRESS_COLUMNS . " FROM `{DB::CUSTOMER_ADDRESSES}` WHERE addressable_type = 'Customer' AND addressable_id = :customer_id AND organization_id = :org_id ORDER BY id ASC";
         $rows = $this->db->fetchAll($sql, ['customer_id' => $customerId, 'org_id' => $orgId]);
         return array_map([$this, 'mapRowToAddress'], $rows);
     }
@@ -445,7 +551,7 @@ class CustomerRepository
             taxTreatment: $row['tax_treatment'] !== null ? (int)$row['tax_treatment'] : null,
             trn: $row['trn'] !== null ? (string)$row['trn'] : null,
             corporateTaxNumber: $row['corporate_tax_number'] !== null ? (string)$row['corporate_tax_number'] : null,
-            licenseNumber: $row['license_number'] !== null ? (int)$row['license_number'] : null,
+            licenseNumber: $row['license_number'] !== null ? (string)$row['license_number'] : null,
             licenseExpiry: $row['license_expiry'] !== null ? (string)$row['license_expiry'] : null,
             salesPerson: $row['sales_person'] !== null ? (int)$row['sales_person'] : null,
             leadCategory: $row['lead_category'] !== null ? (string)$row['lead_category'] : null,
@@ -454,7 +560,7 @@ class CustomerRepository
             currency: $row['currency'] !== null ? (int)$row['currency'] : null,
             openingBalance: (float)($row['opening_balance'] ?? 0.00),
             receivableAccountId: $row['receivable_account_id'] !== null ? (int)$row['receivable_account_id'] : null,
-            exchangeRate: (int)($row['exchange_rate'] ?? 1),
+            exchangeRate: (float)($row['exchange_rate'] ?? 1.0),
             website: $row['website'] !== null ? (string)$row['website'] : null,
             department: $row['department'] !== null ? (string)$row['department'] : null,
             designation: $row['designation'] !== null ? (string)$row['designation'] : null,
@@ -544,7 +650,7 @@ class CustomerRepository
                 FROM `{DB::INVOICES}` 
                 WHERE customer_id = :customer_id 
                 AND organization_id = :org_id 
-                AND invoice_status IN ('sent', 'partially_paid', 'overdue')";
+                AND invoice_status NOT IN ('draft', 'void', 'cancelled', 'writeoff')";
         $row = $this->db->fetchOne($sql, ['customer_id' => $customerId, 'org_id' => $orgId]);
         $invoiceTotal = (float)($row['total'] ?? 0.00);
 
@@ -554,7 +660,23 @@ class CustomerRepository
         );
         $openingBalance = (float)($cust['ob'] ?? 0.00);
 
-        return $invoiceTotal + $openingBalance;
+        $paidSql = "SELECT COALESCE(SUM(total_amount_received), 0) as total 
+                FROM `{DB::PAYMENTS_RECEIVED}` 
+                WHERE customer_id = :customer_id 
+                AND organization_id = :org_id 
+                AND payment_status != 'void'";
+        $paidRow = $this->db->fetchOne($paidSql, ['customer_id' => $customerId, 'org_id' => $orgId]);
+        $paidTotal = (float)($paidRow['total'] ?? 0.00);
+
+        $crSql = "SELECT COALESCE(SUM(grand_total), 0) as total 
+                FROM `{DB::CREDIT_NOTES}` 
+                WHERE customer_id = :customer_id 
+                AND organization_id = :org_id 
+                AND credit_note_status NOT IN ('draft', 'void')";
+        $crRow = $this->db->fetchOne($crSql, ['customer_id' => $customerId, 'org_id' => $orgId]);
+        $creditTotal = (float)($crRow['total'] ?? 0.00);
+
+        return $openingBalance + $invoiceTotal - $paidTotal - $creditTotal;
     }
 
     /**

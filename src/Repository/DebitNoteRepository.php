@@ -28,10 +28,10 @@ class DebitNoteRepository
         return $this->mapRowToDebitNote($row);
     }
 
-    public function findItems(int $parentId, int $orgId): array
+    public function findItems(int $parentId): array
     {
-        $sql = "SELECT * FROM `{DB::DEBIT_NOTE_ITEMS}` WHERE debit_note_id = :debit_note_id AND organization_id = :org_id ORDER BY id ASC";
-        $rows = $this->db->fetchAll($sql, ['debit_note_id' => $parentId, 'org_id' => $orgId]);
+        $sql = "SELECT * FROM `{DB::DEBIT_NOTE_ITEMS}` WHERE debit_note_id = :debit_note_id ORDER BY id ASC";
+        $rows = $this->db->fetchAll($sql, ['debit_note_id' => $parentId]);
         $items = [];
         foreach ($rows as $row) {
             $items[] = $this->mapRowToDebitNoteItem($row);
@@ -39,10 +39,10 @@ class DebitNoteRepository
         return $items;
     }
 
-    public function findItem(int $id, int $orgId): ?DebitNoteItem
+    public function findItem(int $id): ?DebitNoteItem
     {
-        $sql = "SELECT * FROM `{DB::DEBIT_NOTE_ITEMS}` WHERE id = :id AND organization_id = :org_id";
-        $row = $this->db->fetchOne($sql, ['id' => $id, 'org_id' => $orgId]);
+        $sql = "SELECT * FROM `{DB::DEBIT_NOTE_ITEMS}` WHERE id = :id";
+        $row = $this->db->fetchOne($sql, ['id' => $id]);
         if ($row === null) {
             return null;
         }
@@ -52,9 +52,9 @@ class DebitNoteRepository
     public function getLastNoteNoForMonth(string $prefix, int $orgId): ?string
     {
         $sql = "SELECT debit_note_no FROM `{DB::DEBIT_NOTES}` 
-                WHERE debit_note_no LIKE :prefix AND organization_id = :org_id 
+                WHERE debit_note_no LIKE :prefix 
                 ORDER BY debit_note_no DESC LIMIT 1";
-        $row = $this->db->fetchOne($sql, ['prefix' => $prefix . '-%', 'org_id' => $orgId]);
+        $row = $this->db->fetchOne($sql, ['prefix' => $prefix . '-%']);
         return $row !== null ? (string)$row['debit_note_no'] : null;
     }
 
@@ -147,21 +147,21 @@ class DebitNoteRepository
     private function insertItem(DebitNoteItem $item): DebitNoteItem
     {
         $sql = "INSERT INTO `{DB::DEBIT_NOTE_ITEMS}` (
-                    organization_id, debit_note_id, service, description, qty, rate,
+                    debit_note_id, service, description, qty, rate,
                     sub_total, tax, tax_amount, total,
                     created_at, updated_at, updated_by, created_by
                 ) VALUES (
-                    :organization_id, :debit_note_id, :service, :description, :qty, :rate,
+                    :debit_note_id, :service, :description, :qty, :rate,
                     :sub_total, :tax, :tax_amount, :total,
                     NOW(), NOW(), :updated_by, :created_by
                 )";
 
         $params = $item->toArray();
-        unset($params['id'], $params['created_at'], $params['updated_at']);
+        unset($params['id'], $params['organization_id'], $params['created_at'], $params['updated_at']);
 
         $insertId = (int)$this->db->insert($sql, $params);
 
-        $inserted = $this->findItem($insertId, $item->organizationId);
+        $inserted = $this->findItem($insertId);
         if ($inserted === null) {
             throw new \RuntimeException("Failed to retrieve inserted debit note item.");
         }
@@ -182,14 +182,14 @@ class DebitNoteRepository
                     total = :total,
                     updated_at = NOW(),
                     updated_by = :updated_by
-                WHERE id = :id AND organization_id = :organization_id";
+                WHERE id = :id";
 
         $params = $item->toArray();
-        unset($params['debit_note_id'], $params['created_at'], $params['updated_at'], $params['created_by']);
+        unset($params['debit_note_id'], $params['organization_id'], $params['created_at'], $params['updated_at'], $params['created_by']);
 
         $this->db->execute($sql, $params);
 
-        $updated = $this->findItem((int)$item->id, $item->organizationId);
+        $updated = $this->findItem((int)$item->id);
         if ($updated === null) {
             throw new \RuntimeException("Failed to retrieve updated debit note item.");
         }
@@ -199,26 +199,26 @@ class DebitNoteRepository
 
     public function delete(int $id, int $orgId): bool
     {
-        $this->deleteItemsByParent($id, $orgId);
+        $this->deleteItemsByParent($id);
         $sql = "DELETE FROM `{DB::DEBIT_NOTES}` WHERE id = :id AND organization_id = :org_id";
         $stmt = $this->db->execute($sql, ['id' => $id, 'org_id' => $orgId]);
         return $stmt->rowCount() > 0;
     }
 
-    public function deleteItemsByParent(int $parentId, int $orgId): bool
+    public function deleteItemsByParent(int $parentId): bool
     {
-        $sql = "DELETE FROM `{DB::DEBIT_NOTE_ITEMS}` WHERE debit_note_id = :debit_note_id AND organization_id = :org_id";
-        $this->db->execute($sql, ['debit_note_id' => $parentId, 'org_id' => $orgId]);
+        $sql = "DELETE FROM `{DB::DEBIT_NOTE_ITEMS}` WHERE debit_note_id = :debit_note_id";
+        $this->db->execute($sql, ['debit_note_id' => $parentId]);
         return true;
     }
 
-    public function deleteItemsByIds(array $ids, int $parentId, int $orgId): void
+    public function deleteItemsByIds(array $ids, int $parentId): void
     {
         if (empty($ids)) {
             return;
         }
         $placeholders = [];
-        $params = ['debit_note_id' => $parentId, 'org_id' => $orgId];
+        $params = ['debit_note_id' => $parentId];
         foreach ($ids as $index => $id) {
             $key = 'id_' . $index;
             $placeholders[] = ':' . $key;
@@ -226,7 +226,7 @@ class DebitNoteRepository
         }
         $inClause = implode(', ', $placeholders);
         $sql = "DELETE FROM `{DB::DEBIT_NOTE_ITEMS}` 
-                WHERE id IN ($inClause) AND debit_note_id = :debit_note_id AND organization_id = :org_id";
+                WHERE id IN ($inClause) AND debit_note_id = :debit_note_id";
         $this->db->execute($sql, $params);
     }
 
@@ -265,7 +265,7 @@ class DebitNoteRepository
     {
         return new DebitNoteItem(
             id: (int)$row['id'],
-            organizationId: (int)$row['organization_id'],
+            organizationId: 0,
             debitNoteId: (int)$row['debit_note_id'],
             service: (int)$row['service'],
             description: $row['description'] !== null ? (string)$row['description'] : null,

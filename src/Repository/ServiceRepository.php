@@ -7,6 +7,7 @@ namespace App\Repository;
 use App\Core\Database;
 use App\Core\DB;
 use App\Model\Service;
+use App\Core\ErrorCapture;
 
 class ServiceRepository
 {
@@ -68,7 +69,7 @@ class ServiceRepository
             $this->db->execute($sql, $params);
             return true;
         } catch (\Throwable $e) {
-            error_log("ServiceRepository: Update failed: " . $e->getMessage());
+            ErrorCapture::record("ServiceRepository: Update failed: " . $e->getMessage());
             return false;
         }
     }

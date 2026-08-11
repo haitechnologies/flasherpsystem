@@ -14,6 +14,7 @@ namespace App\DataTable;
 use App\Core\DB;
 use App\Helper\BadgeHelper;
 use App\Helper\ActionButtonHelper;
+use App\Core\ErrorCapture;
 
 class CategoriesDataTable extends BaseDataTable
 {
@@ -53,7 +54,7 @@ class CategoriesDataTable extends BaseDataTable
                 $this->relatedDataCache['subcategories'][(int)$subRow['category_id']] = (int)$subRow['cnt'];
             }
         } catch (\Throwable $e) {
-            error_log("CategoriesDataTable::prepareRelatedData subcategories error: " . $e->getMessage());
+            ErrorCapture::record("CategoriesDataTable::prepareRelatedData subcategories error: " . $e->getMessage());
         }
 
         $this->relatedDataCache['items'] = [];
@@ -72,7 +73,7 @@ class CategoriesDataTable extends BaseDataTable
                     $this->relatedDataCache['items'][(int)$itemRow['category_id']] = (int)$itemRow['cnt'];
                 }
             } catch (\Throwable $e) {
-                error_log("CategoriesDataTable::prepareRelatedData items error: " . $e->getMessage());
+                ErrorCapture::record("CategoriesDataTable::prepareRelatedData items error: " . $e->getMessage());
             }
         }
 
@@ -92,7 +93,7 @@ class CategoriesDataTable extends BaseDataTable
                     $this->relatedDataCache['companies'][(int)$companyRow['primary_category_id']] = (int)$companyRow['cnt'];
                 }
             } catch (\Throwable $e) {
-                error_log("CategoriesDataTable::prepareRelatedData companies error: " . $e->getMessage());
+                ErrorCapture::record("CategoriesDataTable::prepareRelatedData companies error: " . $e->getMessage());
             }
         }
     }

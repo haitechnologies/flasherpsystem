@@ -44,9 +44,7 @@ class OrganizationsDataTable extends BaseDataTable
         if ($this->isGranted('edit', $module)) {
             $actions .= ActionButtonHelper::editButton($id, 'organizations.php', $module, 'Edit', false);
         }
-        if ($this->isGranted('delete', $module)) {
-            $actions .= ' ' . ActionButtonHelper::deleteButton($id, $module);
-        }
+        $actions .= ' <a href="#" title="Delete — permanently disabled" class="action-btn action-delete disabled text-muted" style="pointer-events:none;opacity:.35;cursor:not-allowed"><i class="ph-trash"></i></a>';
         return $actions;
     }
 }

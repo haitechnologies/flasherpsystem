@@ -31,6 +31,8 @@ $hard_delete = (bool)($handler_config['hard_delete'] ?? false);
 $ownership_check = (bool)($handler_config['ownership_check'] ?? false);
 $redirect_on_success = (bool)($handler_config['redirect_on_success'] ?? false);
 
+$db = DB::pdo();
+
 // Publish
 if ($action === "publish_{$module}" && !empty($id) && granted('edit', $module_id)) {
     $db->execute("UPDATE `{$tbl_name}` SET is_active = 1 WHERE id = :id", ['id' => $id]);

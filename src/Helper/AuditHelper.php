@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 namespace App\Helper;
+use App\Core\ErrorCapture;
 
 /**
  * Audit Helper Class
@@ -79,7 +80,7 @@ class AuditHelper
 
         if ($user_id === null) {
             // Log warning but don't fail
-            error_log('AuditHelper: No user ID found in session for audit column');
+            ErrorCapture::record('AuditHelper: No user ID found in session for audit column');
             return false;
         }
 

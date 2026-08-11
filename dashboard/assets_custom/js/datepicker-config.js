@@ -169,6 +169,20 @@
             changeYear: true
         });
 
+        // === QUOTATION DATES ===
+        $("#quotation_date").datepicker({
+            dateFormat: 'dd-mm-yy',
+            changeMonth: true,
+            changeYear: true
+        });
+
+        // === CREDIT NOTE DATES ===
+        $("#credit_note_date").datepicker({
+            dateFormat: 'dd-mm-yy',
+            changeMonth: true,
+            changeYear: true
+        });
+
         // === USER DOCUMENT DATES (Employee Profile) ===
         $("#doc-issued").datepicker({
             dateFormat: 'dd-mm-yy',

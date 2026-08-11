@@ -64,7 +64,8 @@ class StorageTypeController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("storage_types.php?id=$id&action=edit_storage_types");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("StorageTypeController::handleUpdate error: " . $e->getMessage());
             flash_error('The Storage Type could not be updated.');
             return Response::redirect("storage_types.php?id=$id&action=edit_storage_types");
         }
@@ -84,7 +85,8 @@ class StorageTypeController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("storage_types.php");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("StorageTypeController::handleCreate error: " . $e->getMessage());
             flash_error('The Storage Type could not be saved.');
             return Response::redirect("storage_types.php");
         }

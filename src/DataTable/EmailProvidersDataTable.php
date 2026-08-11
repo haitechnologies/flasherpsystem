@@ -13,6 +13,7 @@ namespace App\DataTable;
 use App\Core\DB;
 use App\Helper\BadgeHelper;
 use App\Helper\ActionButtonHelper;
+use App\Core\ErrorCapture;
 
 class EmailProvidersDataTable extends BaseDataTable
 {
@@ -60,7 +61,7 @@ class EmailProvidersDataTable extends BaseDataTable
                 }
             }
         } catch (\Throwable $e) {
-            error_log("EmailProvidersDataTable::prepareRelatedData error: " . $e->getMessage());
+            ErrorCapture::record("EmailProvidersDataTable::prepareRelatedData error: " . $e->getMessage());
         }
     }
 
@@ -149,7 +150,7 @@ class EmailProvidersDataTable extends BaseDataTable
             $totalProvidersResult = $this->db->fetchOne("SELECT COUNT(*) as cnt FROM `" . DB::EMAIL_PROVIDERS . "`");
             $totalProviders = (int)($totalProvidersResult['cnt'] ?? 0);
         } catch (\Throwable $e) {
-            error_log("EmailProvidersDataTable error getting count: " . $e->getMessage());
+            ErrorCapture::record("EmailProvidersDataTable error getting count: " . $e->getMessage());
         }
         $canDelete = !$isPrimary && $totalProviders > 1;
 

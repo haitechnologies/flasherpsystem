@@ -6,6 +6,7 @@ namespace App\Http\Controller;
 
 use App\Core\Container;
 use App\Core\Database;
+use App\Core\ErrorCapture;
 use App\Core\View;
 use App\Http\Request;
 use App\Http\Response;
@@ -71,6 +72,14 @@ abstract class BaseController
             return function_exists('validate_csrf_token') && validate_csrf_token($token);
         }
         return true;
+    }
+
+    protected function logError(string $message, string $severity = 'ERROR', array $context = []): void
+    {
+        ErrorCapture::record($message, $severity, null, null, array_merge([
+            'module' => $this->moduleSlug,
+            'module_id' => $this->moduleId,
+        ], $context));
     }
 
     abstract public function __invoke(Request $request): Response;

@@ -59,11 +59,15 @@ foreach ($warehouseOptions as $w) {
         <div class="page-header-content border-top py-2 px-3 carriers-page-header-content">
             <div class="my-1 d-flex align-items-center gap-2">
                 <h5 class="mb-0"><?php echo ($id > 0) ? 'Edit' : 'New'; ?> <?php echo $moduleCaption; ?></h5>
+                <?php if ($id > 0 && !empty($purchase_no)): ?>
+                    <span class="badge bg-light text-primary border-primary ms-2"><?php echo e_s__($purchase_no); ?></span>
+                <?php endif; ?>
                 <span class="badge bg-light text-primary border-primary ms-2"><?php echo ((!empty($purchase_status)) ? ucwords($purchase_status) : ''); ?></span>
             </div>
             <div class="my-1">
                 <?php if ($canCreate || $canEdit): ?>
                     <button type="submit" form="frm<?php echo $module; ?>" class="btn btn-primary btn-sm">Save</button>
+                    <button type="submit" form="frm<?php echo $module; ?>" class="btn btn-outline-primary btn-sm" onclick="document.getElementById('purchase_status').value='sent'; this.form.submit();">Save and Send</button>
                 <?php endif; ?>
                 <?php if ($id > 0): ?>
                     <a href="purchase_overview.php?purchase_id=<?php echo $id; ?>" class="btn btn-light btn-sm">Cancel</a>
@@ -91,6 +95,7 @@ foreach ($warehouseOptions as $w) {
                     <input type="hidden" name="action" id="action" value="add_<?php echo $module; ?>" />
                 <?php endif; ?>
                 <input type="hidden" name="purchase_status" id="purchase_status" value="<?php echo $purchase_status; ?>" />
+                <input type="hidden" name="csrf_token" value="<?php echo csrf_token(); ?>">
 
                 <div class="col-xl-12">
                     <div class="row">

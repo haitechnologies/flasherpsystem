@@ -12,6 +12,7 @@ namespace App\DataTable;
 
 use App\Core\DB;
 use App\Helper\ActionButtonHelper;
+use App\Core\ErrorCapture;
 
 class InvoicesDataTable extends BaseDataTable
 {
@@ -47,7 +48,7 @@ class InvoicesDataTable extends BaseDataTable
      */
     protected function buildBaseQuery($requestData)
     {
-        $query = "SELECT * FROM `" . $this->table . "` WHERE id > 0 AND recurring = 0" . $this->getOrgIdWhereClause();
+        $query = "SELECT id, invoice_no, invoice_date, expiry_date, sale_order_id, customer_id, invoice_status, grand_total, balance_due, reference_no FROM `" . $this->table . "` WHERE id > 0 AND recurring = 0" . $this->getOrgIdWhereClause();
 
         $customerId = isset($requestData['customer_id']) ? (int)$requestData['customer_id'] : 0;
         $invoiceStatus = $requestData['invoice_status'] ?? '';
@@ -92,7 +93,7 @@ class InvoicesDataTable extends BaseDataTable
                 return " AND customer_id = :search_customer_id";
             }
         } catch (\Throwable $e) {
-            error_log("InvoicesDataTable::buildSearchClause() customer search failed: " . $e->getMessage());
+            ErrorCapture::record("InvoicesDataTable::buildSearchClause() customer search failed: " . $e->getMessage());
         }
 
         // If no customer found, search by invoice number or reference
@@ -138,7 +139,7 @@ class InvoicesDataTable extends BaseDataTable
                 $this->relatedDataCache['customers'][(int)$cRow['id']] = $cRow['display_name'] ?? '-';
             }
         } catch (\Throwable $e) {
-            error_log("InvoicesDataTable::prepareRelatedData() failed: " . $e->getMessage());
+            ErrorCapture::record("InvoicesDataTable::prepareRelatedData() failed: " . $e->getMessage());
         }
     }
 
@@ -150,7 +151,7 @@ class InvoicesDataTable extends BaseDataTable
         $id = (int)$row['id'];
         $invoiceDate = $row['invoice_date'] ?? '';
         $invoiceNo = $row['invoice_no'] ?? '';
-        $saleOrderNo = $row['sale_order_no'] ?? ($row['sale_order_id'] ?? '');
+        $saleOrderNo = $row['sale_order_id'] ?? '';
         $customerId = (int)$row['customer_id'];
         $invoiceStatus = $row['invoice_status'] ?? 'draft';
         $grandTotal = (float)($row['grand_total'] ?? 0.0);
@@ -159,12 +160,12 @@ class InvoicesDataTable extends BaseDataTable
 
         $customerName = $this->relatedDataCache['customers'][$customerId] ?? '-';
 
-        // 1. Format Dates according to strict standards: DD MMM YYYY, hh:mm A
+        // 1. Format Dates according to strict standards: DD MMM YYYY
         $dateDisplay = '-';
         if (!empty($invoiceDate) && $invoiceDate !== '1970-01-01') {
             try {
                 $dt = new \DateTime($invoiceDate);
-                $dateDisplay = $dt->format('d M Y, h:i A');
+                $dateDisplay = $dt->format('d M Y');
             } catch (\Throwable $e) {
                 $dateDisplay = $invoiceDate;
             }
@@ -174,7 +175,7 @@ class InvoicesDataTable extends BaseDataTable
         if (!empty($expiryDate) && $expiryDate !== '1970-01-01') {
             try {
                 $dt = new \DateTime($expiryDate);
-                $expiryDisplay = $dt->format('d M Y, h:i A');
+                $expiryDisplay = $dt->format('d M Y');
             } catch (\Throwable $e) {
                 $expiryDisplay = $expiryDate;
             }

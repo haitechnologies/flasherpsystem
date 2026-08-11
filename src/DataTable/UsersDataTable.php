@@ -7,6 +7,7 @@ namespace App\DataTable;
 use App\Core\DB;
 use App\Helper\BadgeHelper;
 use App\Helper\ActionButtonHelper;
+use App\Core\ErrorCapture;
 
 class UsersDataTable extends BaseDataTable
 {
@@ -105,7 +106,7 @@ class UsersDataTable extends BaseDataTable
                 }
             }
         } catch (\Throwable $e) {
-            error_log("UsersDataTable::prepareRelatedData() failed: " . $e->getMessage());
+            ErrorCapture::record("UsersDataTable::prepareRelatedData() failed: " . $e->getMessage());
         }
     }
 
@@ -133,7 +134,7 @@ class UsersDataTable extends BaseDataTable
             ? $this->relatedDataCache['designations'][$desigId] : '-';
 
         $dojDisplay = !empty($dateOfJoining) && $dateOfJoining !== '1970-01-01'
-            ? date('d-m-Y', strtotime($dateOfJoining)) : '-';
+            ? date('d M Y', strtotime($dateOfJoining)) : '-';
 
         $activeBadge = $isActive === 1
             ? BadgeHelper::success('Active')
@@ -156,7 +157,7 @@ class UsersDataTable extends BaseDataTable
         $nameHtml .= '<div class="text-muted small"><i class="ph-phone"></i> ' . htmlspecialchars($contact1 ?: '-') . '</div>';
 
         $airTicketDisplay = !empty($airTicketDate)
-            ? date('d-m-Y', strtotime($airTicketDate)) : '-';
+            ? date('d M Y', strtotime($airTicketDate)) : '-';
 
         return [
             $this->rowNumber,

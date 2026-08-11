@@ -69,6 +69,12 @@ class VendorController extends BaseController
             flash_error($e->getMessage());
             return Response::redirect("vendors.php?id=$id&action=edit_vendors");
         } catch (\Throwable $e) {
+            log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
+                'module' => 'vendors',
+                'module_slug' => 'vendors',
+                'stack_trace' => $e->getTraceAsString(),
+                'error_code' => (string)$e->getCode(),
+            ]));
             flash_error('The Vendor could not be updated.');
             return Response::redirect("vendors.php?id=$id&action=edit_vendors");
         }
@@ -87,6 +93,12 @@ class VendorController extends BaseController
             flash_error($error);
             return Response::redirect("vendors.php");
         } catch (\Throwable $e) {
+            log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
+                'module' => 'vendors',
+                'module_slug' => 'vendors',
+                'stack_trace' => $e->getTraceAsString(),
+                'error_code' => (string)$e->getCode(),
+            ]));
             flash_error('The Vendor could not be saved.');
             return Response::redirect("vendors.php");
         }
@@ -94,7 +106,7 @@ class VendorController extends BaseController
 
     private function buildVendorData(Request $request, bool $isCreate): array
     {
-        return [
+        $data = [
             'vendor_owner' => $request->getString('vendor_owner'),
             'payment_term' => $request->getString('payment_term'),
             'vendor_status' => $request->getString('vendor_status'),
@@ -107,6 +119,9 @@ class VendorController extends BaseController
             'display_name' => $request->getString('display_name'),
             'company_name' => $request->getString('company_name'),
             'address' => $request->getString('address'),
+            'opening_balance' => $request->getString('opening_balance', '0'),
+            'payable_account_id' => $request->getString('payable_account_id'),
+            'credit_limit' => $request->getString('credit_limit', '0'),
             'email' => $request->getString('email'),
             'phone' => $request->getString('phone'),
             'mobile' => $request->getString('mobile'),
@@ -131,10 +146,15 @@ class VendorController extends BaseController
             'facebook' => $request->getString('facebook'),
             'instagram' => $request->getString('instagram'),
             'photo' => $request->getString('photo'),
-            'is_active' => $request->get('publish') ? true : false,
-            'approved' => $request->get('approved') ? true : false,
-            'publish' => $request->get('publish') ? true : true,
+            'is_active' => $isCreate ? true : ($request->get('publish') ? true : false),
+            'publish' => $isCreate ? true : ($request->get('publish') ? true : false),
         ];
+
+        if (!$isCreate && $request->has('approved')) {
+            $data['approved'] = (bool)$request->get('approved');
+        }
+
+        return $data;
     }
 
     private function buildTagsString(Request $request): string
@@ -170,6 +190,9 @@ class VendorController extends BaseController
         $display_name = '';
         $company_name = '';
         $address = '';
+        $opening_balance = '0';
+        $payable_account_id = '';
+        $credit_limit = '0';
         $email = '';
         $phone = '';
         $mobile = '';
@@ -211,6 +234,9 @@ class VendorController extends BaseController
                 $display_name = $item->displayName;
                 $company_name = (string)$item->companyName;
                 $address = $item->address;
+                $opening_balance = (string)$item->openingBalance;
+                $payable_account_id = $item->payableAccountId !== null ? (string)$item->payableAccountId : '';
+                $credit_limit = (string)$item->creditLimit;
                 $email = (string)$item->email;
                 $phone = (string)$item->phone;
                 $mobile = (string)$item->mobile;
@@ -218,14 +244,14 @@ class VendorController extends BaseController
                 $trn = (string)$item->trn;
                 $corporate_tax_number = (string)$item->corporateTaxNumber;
                 $license_number = (string)$item->licenseNumber;
-                $license_expiry = $item->licenseExpiry === '1970-01-01' ? '' : DateHelper::toDbDate($item->licenseExpiry);
+                $license_expiry = $item->licenseExpiry === '1970-01-01' ? '' : DateHelper::toInputDate($item->licenseExpiry);
                 $currency = (string)$item->currency;
                 $exchange_rate = (string)$item->exchangeRate;
                 $sales_person = (string)$item->salesPerson;
                 $cs_agent = (string)$item->csAgent;
                 $lead_category = (string)$item->leadCategory;
                 $rating = (string)$item->rating;
-                $contacted_date = $item->contactedDate ? DateHelper::toDbDateTime($item->contactedDate) : '';
+                $contacted_date = $item->contactedDate ? DateHelper::toDisplayDateTime($item->contactedDate) : '';
                 $description = (string)$item->description;
                 $tags_value = (string)$item->tags;
                 if ($tags_value !== '') {
@@ -264,7 +290,7 @@ class VendorController extends BaseController
             $usersList = [];
         }
         try {
-            $departmentsList = $this->db->fetchAll("SELECT id, department, email FROM `" . DB::DEPARTMENTS . "` WHERE is_active=1 ORDER BY department");
+            $departmentsList = $this->db->fetchAll("SELECT id, department, email FROM `" . DB::DEPARTMENTS . "` WHERE publish=1 ORDER BY department");
         } catch (\Throwable $e) {
             $departmentsList = [];
         }
@@ -277,6 +303,11 @@ class VendorController extends BaseController
             $currencyList = $this->db->fetchAll("SELECT id, currency FROM `" . DB::CURRENCIES . "` WHERE is_active=1 ORDER BY id ASC");
         } catch (\Throwable $e) {
             $currencyList = [];
+        }
+        try {
+            $accountsList = $this->db->fetchAll("SELECT id, account_name FROM `" . DB::ACCOUNTS . "` WHERE is_active=1 ORDER BY account_name");
+        } catch (\Throwable $e) {
+            $accountsList = [];
         }
 
         return Response::html($this->view->render('vendors/form.php', [
@@ -291,6 +322,10 @@ class VendorController extends BaseController
             'last_name' => $last_name,
             'display_name' => $display_name,
             'address' => $address,
+            'opening_balance' => $opening_balance,
+            'payable_account_id' => $payable_account_id,
+            'credit_limit' => $credit_limit,
+            'accountsList' => $accountsList,
             'email' => $email,
             'phone' => $phone,
             'mobile' => $mobile,

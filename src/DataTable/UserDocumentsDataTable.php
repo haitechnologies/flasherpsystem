@@ -86,7 +86,7 @@ class UserDocumentsDataTable extends BaseDataTable
             return '';
         }
         $ts = strtotime($date);
-        return $ts !== false ? date('d-m-Y', $ts) : $date;
+        return $ts !== false ? date('d M Y', $ts) : $date;
     }
 
     private function getStatusBadge(string $expiryDate): string

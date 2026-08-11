@@ -144,6 +144,12 @@ foreach ($destinations as $d) {
         <div class="content">
             <?php include('admin_elements/breadcrumb.php'); ?>
 
+            <div class="alert alert-info alert-dismissible fade show" role="alert">
+                <i class="ph-info me-2"></i>
+                <strong>How this works:</strong> Recurring invoices are templates that auto-generate invoices on a schedule. The profile itself does not affect accounting — each generated instance becomes a real invoice.
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+
             <form class="steps-basic clearfix" method="post" id="frminvoices" name="frminvoices" action="recurring_invoices.php" enctype="multipart/form-data">
                 <input type="hidden" name="invoice_status" id="invoice_status" value="draft" />
                 <input type="hidden" name="save_and_send" id="save_and_send" value="0" />

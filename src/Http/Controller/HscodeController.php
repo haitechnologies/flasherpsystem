@@ -66,7 +66,8 @@ class HscodeController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("hscodes.php?id=$id&action=edit_hscodes");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("HscodeController::handleUpdate error: " . $e->getMessage());
             flash_error('HS Code could not be updated.');
             return Response::redirect("hscodes.php?id=$id&action=edit_hscodes");
         }
@@ -88,7 +89,8 @@ class HscodeController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("hscodes.php");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("HscodeController::handleCreate error: " . $e->getMessage());
             flash_error('HS Code could not be saved.');
             return Response::redirect("hscodes.php");
         }

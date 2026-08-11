@@ -7,6 +7,7 @@ namespace App\DataTable;
 use App\Core\DB;
 use App\Helper\BadgeHelper;
 use App\Helper\ActionButtonHelper;
+use App\Core\ErrorCapture;
 
 class PortsDataTable extends BaseDataTable
 {
@@ -55,7 +56,7 @@ class PortsDataTable extends BaseDataTable
                 $this->relatedDataCache['countries'][(int)$cRow['id']] = (string)($cRow['country_name'] ?? '');
             }
         } catch (\Throwable $e) {
-            error_log("PortsDataTable::prepareRelatedData error: " . $e->getMessage());
+            ErrorCapture::record("PortsDataTable::prepareRelatedData error: " . $e->getMessage());
         }
     }
 

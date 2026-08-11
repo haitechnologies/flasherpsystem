@@ -24,6 +24,7 @@ $success_message = '';
 */
 include('admin_elements/permissions.php');
 
+$activeOrganizationId = dashboardRequireActiveOrganization();
 
 $limit              = 50;
 $stages             = 2;
@@ -169,6 +170,8 @@ if ($page_no) {
 $search_query = '';
 // -------------------
 
+$search_query .= " AND organization_id = " . (int)$activeOrganizationId;
+
 // ----------------------------------------------------------------------------------------------------
 
 
@@ -221,16 +224,16 @@ $mysqli->query("UPDATE `" . tbl_accounts_report_subcategories . "` SET last_visi
                     <div class="col-lg-6">
                         <div class="text-muted">Receivables</div>
                         <div class="mb-0">
-                            <span class="fw-semibold">AR Aging Summary</span> - <span class="fw-normal">As of <?php echo dd_($as_of_date); ?></span>
+                            <span class="fw-semibold">AR Aging Summary</span> - <span class="fw-normal">As of <?php echo ddm_($as_of_date); ?></span>
                             <?php if (!empty($date_from) || !empty($date_to)) { ?>
                                 <br><span class="small text-muted">Invoice Date:
                                 <?php
                                 if (!empty($date_from) && !empty($date_to)) {
-                                    echo dd_($date_from) . ' to ' . dd_($date_to);
+                                    echo ddm_($date_from) . ' to ' . ddm_($date_to);
                                 } elseif (!empty($date_from)) {
-                                    echo 'From ' . dd_($date_from);
+                                    echo 'From ' . ddm_($date_from);
                                 } elseif (!empty($date_to)) {
-                                    echo 'To ' . dd_($date_to);
+                                    echo 'To ' . ddm_($date_to);
                                 }
                                 ?>
                                 </span>
@@ -355,17 +358,17 @@ $mysqli->query("UPDATE `" . tbl_accounts_report_subcategories . "` SET last_visi
             <div class="card-header text-center">
                 <p class="text-muted">Flash Logistics FZC</p>
                 <h5 class="mb-0">AR Aging Summary</h5>
-                <p class="small"><span class="text-muted">As of</span> <?php echo dd_($as_of_date); ?></p>
+                <p class="small"><span class="text-muted">As of</span> <?php echo ddm_($as_of_date); ?></p>
                 <?php if (!empty($date_from) || !empty($date_to)) { ?>
                     <p class="small text-muted">
                         Invoice Date:
                         <?php
                         if (!empty($date_from) && !empty($date_to)) {
-                            echo dd_($date_from) . ' to ' . dd_($date_to);
+                            echo ddm_($date_from) . ' to ' . ddm_($date_to);
                         } elseif (!empty($date_from)) {
-                            echo 'From ' . dd_($date_from);
+                            echo 'From ' . ddm_($date_from);
                         } elseif (!empty($date_to)) {
-                            echo 'To ' . dd_($date_to);
+                            echo 'To ' . ddm_($date_to);
                         }
                         ?>
                     </p>
@@ -411,6 +414,7 @@ $mysqli->query("UPDATE `" . tbl_accounts_report_subcategories . "` SET last_visi
                         if (!empty($date_to_sql)) {
                             $invoice_date_filter .= " AND i.invoice_date <= '" . $date_to_sql . "'";
                         }
+                        $invoice_date_filter .= " AND i.organization_id = " . (int)$activeOrganizationId;
 
                         // Get customers who have invoices
                         $result_customers = $mysqli->query("

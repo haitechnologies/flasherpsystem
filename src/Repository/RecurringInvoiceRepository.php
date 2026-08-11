@@ -66,7 +66,7 @@ class RecurringInvoiceRepository
                     destination, no_of_packs, gross_weight, chargeable_weight, volume,
                     terms_and_conditions, grand_subtotal, grand_discount_type, grand_discount_type_value,
                     grand_discount_amount, grand_after_discount, customer_notes, grand_tax, grand_total,
-                    publish, is_active, created_at, updated_at, updated_by, created_by
+                    publish, is_active, pdf, next_invoice_date, recurring_status, created_at, updated_at, updated_by, created_by
                 ) VALUES (
                     :organization_id, :recurring, :invoice_no, :customer_id, :invoice_status, :invoice_date, :expiry_date,
                     :reference_no, :warehouse_id, :profile_name, :frequency, :start_date, :end_date,
@@ -75,7 +75,7 @@ class RecurringInvoiceRepository
                     :destination, :no_of_packs, :gross_weight, :chargeable_weight, :volume,
                     :terms_and_conditions, :grand_subtotal, :grand_discount_type, :grand_discount_type_value,
                     :grand_discount_amount, :grand_after_discount, :customer_notes, :grand_tax, :grand_total,
-                    :publish, :is_active, NOW(), NOW(), :updated_by, :created_by
+                    :publish, :is_active, :pdf, :next_invoice_date, 1, NOW(), NOW(), :updated_by, :created_by
                 )";
 
         $params = $invoice->toArray();
@@ -83,6 +83,7 @@ class RecurringInvoiceRepository
         if (($params['expected_shipment_date'] ?? null) === null) {
             $params['expected_shipment_date'] = '1970-01-01';
         }
+        $params['next_invoice_date'] = $invoice->startDate !== '' ? $invoice->startDate : $invoice->invoiceDate;
 
         $insertId = (int)$this->db->insert($sql, $params);
 
@@ -138,7 +139,7 @@ class RecurringInvoiceRepository
                 WHERE id = :id AND organization_id = :organization_id";
 
         $params = $invoice->toArray();
-        unset($params['created_at'], $params['updated_at'], $params['created_by'], $params['recurring']);
+        unset($params['created_at'], $params['updated_at'], $params['created_by'], $params['recurring'], $params['publish'], $params['pdf']);
         if (($params['expected_shipment_date'] ?? null) === null) {
             $params['expected_shipment_date'] = '1970-01-01';
         }

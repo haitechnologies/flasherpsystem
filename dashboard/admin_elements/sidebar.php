@@ -319,7 +319,7 @@ $menuConfig = [
                 'href' => '#accounting-sales-submenu',
                 'label' => 'Sales',
                 'icon' => 'ph-shopping-cart',
-                'pages' => ['listing_customers.php', 'customers.php', 'customer_overview.php', 'customer_billing_addresses.php', 'customer_shipping_addresses.php', 'customer_comments.php', 'customer_transactions.php', 'customer_mails.php', 'customer_statement.php', 'customer_logs.php', 'customer_contacts.php', 'listing_quotations.php', 'quotations.php', 'quotation_overview.php', 'listing_sale_orders.php', 'sale_orders.php', 'sale_order_overview.php', 'listing_invoices.php', 'invoices.php', 'invoice_overview.php', 'listing_payments_received.php', 'payments_received.php', 'payment_received_overview.php', 'listing_credit_notes.php', 'credit_notes.php', 'credit_note_overview.php', 'recurring_invoices.php', 'recurring_invoice_overview.php'],
+                'pages' => ['listing_customers.php', 'customers.php', 'customer_overview.php', 'customer_billing_addresses.php', 'customer_shipping_addresses.php', 'customer_comments.php', 'customer_transactions.php', 'customer_mails.php', 'customer_statement.php', 'customer_logs.php', 'customer_contacts.php', 'listing_quotations.php', 'quotations.php', 'quotation_overview.php', 'listing_sale_orders.php', 'sale_orders.php', 'sale_order_overview.php', 'listing_invoices.php', 'invoices.php', 'invoice_overview.php', 'listing_payments_received.php', 'payments_received.php', 'payment_received_overview.php', 'listing_credit_notes.php', 'credit_notes.php', 'credit_note_overview.php', 'listing_recurring_invoices.php', 'recurring_invoices.php', 'recurring_invoice_overview.php'],
                 'type' => 'submenu',
                 'condition' => function() {
                     return has_full_access()
@@ -336,7 +336,7 @@ $menuConfig = [
                     ['href' => 'listing_sale_orders.php', 'label' => 'Sale Orders', 'pages' => ['listing_sale_orders.php', 'sale_orders.php', 'sale_order_overview.php'], 'condition' => function() { return has_full_access() || hasModuleAccess('sale_orders'); }],
                     ['href' => 'listing_invoices.php', 'label' => 'Invoices', 'pages' => ['listing_invoices.php', 'invoices.php', 'invoice_overview.php'], 'condition' => function() { return has_full_access() || hasModuleAccess('invoices'); }],
                     ['href' => 'listing_payments_received.php', 'label' => 'Payments Received', 'pages' => ['listing_payments_received.php', 'payments_received.php', 'payment_received_overview.php'], 'condition' => function() { return has_full_access() || hasModuleAccess('payments_received'); }],
-                    ['href' => 'recurring_invoices.php', 'label' => 'Recurring Invoices', 'pages' => ['recurring_invoices.php', 'recurring_invoice_overview.php'], 'condition' => function() { return has_full_access() || hasModuleAccess('invoices'); }],
+                    ['href' => 'listing_recurring_invoices.php', 'label' => 'Recurring Invoices', 'pages' => ['listing_recurring_invoices.php', 'recurring_invoices.php', 'recurring_invoice_overview.php'], 'condition' => function() { return has_full_access() || hasModuleAccess('invoices'); }],
                     ['href' => 'listing_credit_notes.php', 'label' => 'Credit Notes', 'pages' => ['listing_credit_notes.php', 'credit_notes.php', 'credit_note_overview.php'], 'condition' => function() { return has_full_access() || hasModuleAccess('credit_notes'); }],
                 ]
             ],
@@ -412,13 +412,6 @@ $menuConfig = [
                 'condition' => function() { return has_full_access() || hasModuleAccess('leads'); }
             ],
             [
-                'href' => 'listing_lead_quotations.php',
-                'label' => 'Lead Quotations',
-                'icon' => 'ph-file-text',
-                'pages' => ['listing_lead_quotations.php', 'lead_quotations.php', 'lead_quotation.php'],
-                'condition' => function() { return has_full_access() || hasModuleAccess('lead_quotations'); }
-            ],
-            [
                 'href' => 'listing_projects.php',
                 'label' => 'Projects',
                 'icon' => 'ph-briefcase',
@@ -457,7 +450,7 @@ $sectionSystemMap = [
 $sectionModuleMap = [
     'shipping' => ['shipping_advices', 'shipping_invoices', 'shipping_stocks', 'shipping_customers', 'hscodes', 'geo_countries', 'ports', 'carriers', 'consignees', 'shippers'],
     'accounting' => ['items', 'banks', 'customers', 'quotations', 'sale_orders', 'invoices', 'payments_received', 'credit_notes', 'vendors', 'expenses', 'purchase_orders', 'purchases', 'payments_made', 'debit_notes', 'journals', 'accounts'],
-    'crm' => ['leads', 'lead_quotations', 'projects', 'jobs', 'job_statuses'],
+    'crm' => ['leads', 'projects', 'jobs', 'job_statuses'],
     'hr' => ['departments', 'designations', 'attendance', 'leave_requests', 'leave_types', 'annual_leave_entitlements', 'payroll_components', 'salary_structures', 'employee_salaries', 'payroll_runs', 'payslips', 'user_documents', 'document_categories', 'air_tickets', 'gratuity_settlements', 'report_hr'],
 ];
 

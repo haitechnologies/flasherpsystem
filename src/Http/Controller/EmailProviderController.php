@@ -70,7 +70,8 @@ class EmailProviderController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("email_providers.php?id=$id&action=edit_email_providers");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("EmailProviderController::handleUpdate error: " . $e->getMessage());
             flash_error('Email Provider could not be updated.');
             return Response::redirect("email_providers.php?id=$id&action=edit_email_providers");
         }
@@ -96,7 +97,8 @@ class EmailProviderController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("email_providers.php");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("EmailProviderController::handleCreate error: " . $e->getMessage());
             flash_error('Email Provider could not be saved.');
             return Response::redirect("email_providers.php");
         }

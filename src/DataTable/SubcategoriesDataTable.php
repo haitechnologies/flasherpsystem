@@ -7,6 +7,7 @@ namespace App\DataTable;
 use App\Core\DB;
 use App\Helper\BadgeHelper;
 use App\Helper\ActionButtonHelper;
+use App\Core\ErrorCapture;
 
 class SubcategoriesDataTable extends BaseDataTable
 {
@@ -67,7 +68,7 @@ class SubcategoriesDataTable extends BaseDataTable
                     $this->relatedDataCache['items'][(int)$itemRow['subcategory_id']] = (int)$itemRow['cnt'];
                 }
             } catch (\Throwable $e) {
-                error_log("SubcategoriesDataTable::prepareRelatedData items error: " . $e->getMessage());
+                ErrorCapture::record("SubcategoriesDataTable::prepareRelatedData items error: " . $e->getMessage());
             }
         }
 
@@ -87,7 +88,7 @@ class SubcategoriesDataTable extends BaseDataTable
                     $this->relatedDataCache['companies'][(int)$companyRow['primary_subcategory_id']] = (int)$companyRow['cnt'];
                 }
             } catch (\Throwable $e) {
-                error_log("SubcategoriesDataTable::prepareRelatedData companies error: " . $e->getMessage());
+                ErrorCapture::record("SubcategoriesDataTable::prepareRelatedData companies error: " . $e->getMessage());
             }
         }
     }

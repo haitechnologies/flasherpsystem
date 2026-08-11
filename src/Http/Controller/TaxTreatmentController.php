@@ -64,7 +64,8 @@ class TaxTreatmentController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("tax_treatments.php?id=$id&action=edit_tax_treatments");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("TaxTreatmentController::handleUpdate error: " . $e->getMessage());
             flash_error('The Tax Treatment could not be updated.');
             return Response::redirect("tax_treatments.php?id=$id&action=edit_tax_treatments");
         }
@@ -84,7 +85,8 @@ class TaxTreatmentController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("tax_treatments.php");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("TaxTreatmentController::handleCreate error: " . $e->getMessage());
             flash_error('The Tax Treatment could not be saved.');
             return Response::redirect("tax_treatments.php");
         }

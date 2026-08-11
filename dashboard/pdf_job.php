@@ -100,19 +100,19 @@ $created_by_name        = getUsernameByID((int)($row['created_by'] ?? 0));
 $modified_by_name       = getUsernameByID((int)($row['modified_by'] ?? 0));
 
 $job_date = $row['job_date'] ?? '';
-$job_date = ($job_date === '1970-01-01') ? '' : processDateYtoD($job_date);
+$job_date = ($job_date === '1970-01-01') ? '' : ddm_($job_date);
 $etd = $row['etd'] ?? '';
-$etd = ($etd === '1970-01-01') ? '' : processDateYtoD($etd);
+$etd = ($etd === '1970-01-01') ? '' : ddm_($etd);
 $eta = $row['eta'] ?? '';
-$eta = ($eta === '1970-01-01') ? '' : processDateYtoD($eta);
+$eta = ($eta === '1970-01-01') ? '' : ddm_($eta);
 $vessel_departure = $row['vessel_departure_date'] ?? '';
-$vessel_departure = ($vessel_departure === '1970-01-01' || empty($vessel_departure)) ? '' : processDateYtoD($vessel_departure);
+$vessel_departure = ($vessel_departure === '1970-01-01' || empty($vessel_departure)) ? '' : ddm_($vessel_departure);
 $flight_departure = $row['flight_departure_date'] ?? '';
-$flight_departure = ($flight_departure === '1970-01-01' || empty($flight_departure)) ? '' : processDateYtoD($flight_departure);
+$flight_departure = ($flight_departure === '1970-01-01' || empty($flight_departure)) ? '' : ddm_($flight_departure);
 $shipping_date = $row['shipping_date'] ?? '';
-$shipping_date = ($shipping_date === '1970-01-01' || empty($shipping_date)) ? '' : processDateYtoD($shipping_date);
+$shipping_date = ($shipping_date === '1970-01-01' || empty($shipping_date)) ? '' : ddm_($shipping_date);
 $job_completion = $row['job_completion_date'] ?? '';
-$job_completion = ($job_completion === '1970-01-01' || empty($job_completion)) ? '' : processDateYtoD($job_completion);
+$job_completion = ($job_completion === '1970-01-01' || empty($job_completion)) ? '' : ddm_($job_completion);
 $approved_time = $row['approved_time'] ?? '';
 
 // Services: stored as comma-separated IDs, resolve to names

@@ -64,7 +64,8 @@ class ModuleController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("module_names.php?id=$id&action=edit_module_names");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("ModuleController::handleUpdate error: " . $e->getMessage());
             flash_error('The Module could not be updated.');
             return Response::redirect("module_names.php?id=$id&action=edit_module_names");
         }
@@ -84,7 +85,8 @@ class ModuleController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("module_names.php");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("ModuleController::handleCreate error: " . $e->getMessage());
             flash_error('The Module could not be saved.');
             return Response::redirect("module_names.php");
         }

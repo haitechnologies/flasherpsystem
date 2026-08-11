@@ -87,6 +87,7 @@ class BankController extends BaseController
             flash_error($e->getMessage());
             return Response::redirect("banks.php?id=$id&action=edit_banks");
         } catch (\Throwable $e) {
+            $this->logError("BankController::handleUpdate error: " . $e->getMessage());
             flash_error('The Bank Account could not be updated.');
             return Response::redirect("banks.php?id=$id&action=edit_banks");
         }
@@ -119,6 +120,7 @@ class BankController extends BaseController
             flash_error($error);
             return Response::redirect("banks.php");
         } catch (\Throwable $e) {
+            $this->logError("BankController::handleCreate error: " . $e->getMessage());
             flash_error('The Bank Account could not be saved.');
             return Response::redirect("banks.php");
         }
@@ -172,6 +174,7 @@ class BankController extends BaseController
                 "SELECT id, currency FROM `" . DB::CURRENCIES . "` WHERE is_active=1 ORDER BY currency"
             );
         } catch (\Throwable $e) {
+            $this->logError("BankController::showForm error: " . $e->getMessage());
             $allCurrencies = [];
         }
 
@@ -181,6 +184,7 @@ class BankController extends BaseController
                 "SELECT id, account_name, account_code FROM `" . DB::ACCOUNTS . "` WHERE is_active=1 AND account_type IN ('Assets') ORDER BY account_name"
             );
         } catch (\Throwable $e) {
+            $this->logError("BankController::showForm error: " . $e->getMessage());
             $allAccounts = [];
         }
 

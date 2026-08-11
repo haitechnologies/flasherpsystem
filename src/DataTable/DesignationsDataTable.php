@@ -7,6 +7,7 @@ namespace App\DataTable;
 use App\Core\DB;
 use App\Helper\BadgeHelper;
 use App\Helper\ActionButtonHelper;
+use App\Core\ErrorCapture;
 
 class DesignationsDataTable extends BaseDataTable
 {
@@ -34,7 +35,7 @@ class DesignationsDataTable extends BaseDataTable
                 $this->relatedDataCache['employees'][(int)$empRow['designation_id']] = (int)$empRow['cnt'];
             }
         } catch (\Throwable $e) {
-            error_log("DesignationsDataTable::prepareRelatedData error: " . $e->getMessage());
+            ErrorCapture::record("DesignationsDataTable::prepareRelatedData error: " . $e->getMessage());
         }
     }
 

@@ -64,7 +64,8 @@ class ServiceController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("service_names.php?id=$id&action=edit_service_names");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("ServiceController::handleUpdate error: " . $e->getMessage());
             flash_error('The Service could not be updated.');
             return Response::redirect("service_names.php?id=$id&action=edit_service_names");
         }
@@ -84,7 +85,8 @@ class ServiceController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("service_names.php");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("ServiceController::handleCreate error: " . $e->getMessage());
             flash_error('The Service could not be saved.');
             return Response::redirect("service_names.php");
         }

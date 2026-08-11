@@ -53,15 +53,25 @@ if ($expenses_ordering !== 'all' && isset($status_map[$expenses_ordering])) {
 } else {
     $where = '';
 }
-$r = $mysqli->query("SELECT t.id, t.expense_status, t.expense_date, t.grand_total, t.customer_id FROM `" . DB::EXPENSES . "` t WHERE t.id > 0 AND t.customer_id != '' $where ORDER BY t.id DESC LIMIT 25");
-$c = $mysqli->query("SELECT COUNT(*) FROM `" . DB::EXPENSES . "` t WHERE t.id > 0 AND t.customer_id != '' $where")->fetch_row();
+$r = $mysqli->query("SELECT t.id, t.expense_status, t.expense_date, t.grand_total, t.customer_id, t.vendor_id FROM `" . DB::EXPENSES . "` t WHERE t.id > 0 $where ORDER BY t.id DESC LIMIT 25");
+$c = $mysqli->query("SELECT COUNT(*) FROM `" . DB::EXPENSES . "` t WHERE t.id > 0 $where")->fetch_row();
 $total = $c[0] ?? 0;
 while ($row = $r->fetch_array()) {
     $sel = $row["id"] == $current_id ? "table-primary shadow-sm" : "";
-    $name = getTableAttr("display_name", DB::CUSTOMERS, $row["customer_id"]);
+    $name = !empty($row["customer_id"]) ? getTableAttr("display_name", DB::CUSTOMERS, $row["customer_id"]) : getTableAttr("company_name", DB::VENDORS, $row["vendor_id"]);
     $date = ddm_($row["expense_date"]);
     $amt = number_format($row["grand_total"], 2);
-    $st = strtoupper((string)($row["expense_status"] ?? ''));
+    $expense_status = (string)($row["expense_status"] ?? '');
+    $status_class = match($expense_status) {
+        'approved', 'paid', 'reimbursed' => 'text-success',
+        'rejected' => 'text-danger',
+        'draft' => 'text-secondary',
+        'submitted' => 'text-warning',
+        'invoiced' => 'text-info',
+        'unbilled' => 'text-muted',
+        default => 'text-info'
+    };
+    $st = '<span class="' . $status_class . '">' . strtoupper($expense_status) . '</span>';
 ?>
     <tr id="<?php echo $row["id"]; ?>" class="<?php echo $sel; ?>">
         <td><a href="expense_overview.php?expense_id=<?php echo $row["id"]; ?>" class="text-black text-decoration-none d-block">

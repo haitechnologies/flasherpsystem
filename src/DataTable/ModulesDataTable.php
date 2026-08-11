@@ -12,6 +12,7 @@ namespace App\DataTable;
 use App\Core\DB;
 use App\Helper\BadgeHelper;
 use App\Helper\ActionButtonHelper;
+use App\Core\ErrorCapture;
 
 class ModulesDataTable extends BaseDataTable
 {
@@ -119,7 +120,7 @@ class ModulesDataTable extends BaseDataTable
             $row = $this->db->fetchOne($sql, ['module_id' => $moduleId]);
             return (int)($row['count'] ?? 0);
         } catch (\Throwable $e) {
-            error_log('[ModulesDataTable] Failed permission count query: ' . $e->getMessage());
+            ErrorCapture::record('[ModulesDataTable] Failed permission count query: ' . $e->getMessage());
             return 0;
         }
     }

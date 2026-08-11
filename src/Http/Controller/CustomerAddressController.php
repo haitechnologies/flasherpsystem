@@ -83,13 +83,21 @@ class CustomerAddressController extends BaseController
 
         try {
             $this->addressService->upsert($customerId, $this->addressType, $data, $this->orgId, $this->userId);
+            updateCustomerLogs($customerId, 'address', 'edit', 0);
             flash_success("The {$this->moduleCaption} has been updated successfully.");
             return Response::redirect("customer_overview.php?customer_id={$customerId}");
         } catch (ValidationException $e) {
+            $error = current($e->getErrors());
             flash_error($error);
             $page = $this->addressType === 'billing' ? 'customer_billing_addresses' : 'customer_shipping_addresses';
             return Response::redirect("{$page}.php?customer_id={$customerId}");
         } catch (\Throwable $e) {
+            log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
+                'module' => $this->moduleSlug,
+                'module_slug' => $this->moduleSlug,
+                'stack_trace' => $e->getTraceAsString(),
+                'error_code' => (string)$e->getCode(),
+            ]));
             $page = $this->addressType === 'billing' ? 'customer_billing_addresses' : 'customer_shipping_addresses';
             flash_error($e->getMessage());
             return Response::redirect("{$page}.php?customer_id={$customerId}");
@@ -147,6 +155,12 @@ class CustomerAddressController extends BaseController
                 }
             }
         } catch (\Throwable $e) {
+            log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
+                'module' => $this->moduleSlug,
+                'module_slug' => $this->moduleSlug,
+                'stack_trace' => $e->getTraceAsString(),
+                'error_code' => (string)$e->getCode(),
+            ]));
             $error_message = $e->getMessage();
         }
 

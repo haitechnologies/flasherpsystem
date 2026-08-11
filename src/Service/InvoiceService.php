@@ -8,6 +8,7 @@ use App\Model\Invoice;
 use App\Model\InvoiceItem;
 use App\Repository\InvoiceRepository;
 use App\Repository\CustomerRepository;
+use App\Repository\JournalRepository;
 use App\Core\Database;
 use App\Exception\NotFoundException;
 use App\Exception\ValidationException;
@@ -21,12 +22,16 @@ class InvoiceService
 {
     private InvoiceRepository $invoiceRepo;
     private CustomerRepository $customerRepo;
+    private JournalRepository $journalRepo;
+    private JournalService $journalService;
     private Database $db;
 
-    public function __construct(InvoiceRepository $invoiceRepo, CustomerRepository $customerRepo, Database $db)
+    public function __construct(InvoiceRepository $invoiceRepo, CustomerRepository $customerRepo, JournalRepository $journalRepo, JournalService $journalService, Database $db)
     {
         $this->invoiceRepo = $invoiceRepo;
         $this->customerRepo = $customerRepo;
+        $this->journalRepo = $journalRepo;
+        $this->journalService = $journalService;
         $this->db = $db;
     }
 
@@ -100,25 +105,18 @@ class InvoiceService
             }
             $invoiceNo = $prefix . '-' . str_pad((string)$newSerial, 4, '0', STR_PAD_LEFT);
 
-            // Date parsing
-            $invoiceDate = (string)($data['invoice_date'] ?? date('Y-m-d'));
-            if (strpos($invoiceDate, '-') === false) {
-                $invoiceDate = \App\Helper\DateHelper::toDisplayDate($invoiceDate) ?: $invoiceDate;
-            }
+            // Date parsing (accepts d-m-Y / d/m/Y / Y-m-d)
+            $invoiceDate = $this->normalizeDate((string)($data['invoice_date'] ?? date('Y-m-d')));
             $expiryDate = (string)($data['expiry_date'] ?? '');
             if (!empty($expiryDate)) {
-                if (strpos($expiryDate, '-') === false) {
-                    $expiryDate = \App\Helper\DateHelper::toDisplayDate($expiryDate) ?: $expiryDate;
-                }
+                $expiryDate = $this->normalizeDate($expiryDate);
             } else {
                 $expiryDate = '1970-01-01';
             }
 
             $expectedShipmentDate = (string)($data['expected_shipment_date'] ?? '');
             if (!empty($expectedShipmentDate)) {
-                if (strpos($expectedShipmentDate, '-') === false) {
-                    $expectedShipmentDate = \App\Helper\DateHelper::toDisplayDate($expectedShipmentDate) ?: $expectedShipmentDate;
-                }
+                $expectedShipmentDate = $this->normalizeDate($expectedShipmentDate);
             } else {
                 $expectedShipmentDate = '1970-01-01';
             }
@@ -142,17 +140,21 @@ class InvoiceService
                 salesPerson: !empty($data['sales_person']) ? (int)$data['sales_person'] : 0,
                 jobReferenceNo: !empty($data['job_reference_no']) ? trim((string)$data['job_reference_no']) : null,
                 masterAwbNo: !empty($data['master_awb_no']) ? trim((string)$data['master_awb_no']) : null,
+                hwbHbol: !empty($data['hwb_hbol']) ? trim((string)$data['hwb_hbol']) : null,
+                leadId: !empty($data['lead_id']) ? (int)$data['lead_id'] : 0,
                 shipper: !empty($data['shipper']) ? (int)$data['shipper'] : 0,
                 consignee: !empty($data['consignee']) ? (int)$data['consignee'] : 0,
                 origin: !empty($data['origin']) ? (int)$data['origin'] : 0,
+                originCountry: !empty($data['origin_country']) ? (int)$data['origin_country'] : 0,
                 destination: !empty($data['destination']) ? (int)$data['destination'] : 0,
+                destinationCountry: !empty($data['destination_country']) ? (int)$data['destination_country'] : 0,
                 noOfPacks: !empty($data['no_of_packs']) ? (int)$data['no_of_packs'] : 0,
                 grossWeight: !empty($data['gross_weight']) ? (float)$data['gross_weight'] : 0.0,
                 chargeableWeight: !empty($data['chargeable_weight']) ? (float)$data['chargeable_weight'] : 0.0,
                 volume: !empty($data['volume']) ? (float)$data['volume'] : 0.0,
                 termsAndConditions: !empty($data['terms_and_conditions']) ? trim((string)$data['terms_and_conditions']) : null,
                 grandSubtotal: $grandSubtotal,
-                grandDiscountType: !empty($data['grand_discount_type']) ? trim((string)$data['grand_discount_type']) : '0.00',
+                grandDiscountType: !empty($data['grand_discount_type']) ? trim((string)$data['grand_discount_type']) : '',
                 grandDiscountTypeValue: !empty($data['grand_discount_type_value']) ? (float)$data['grand_discount_type_value'] : 0.0,
                 grandDiscountAmount: !empty($data['grand_discount_amount']) ? (float)$data['grand_discount_amount'] : 0.0,
                 grandAfterDiscount: !empty($data['grand_after_discount']) ? (float)$data['grand_after_discount'] : 0.0,
@@ -221,25 +223,18 @@ class InvoiceService
 
         $this->db->beginTransaction();
         try {
-            // Date parsing
-            $invoiceDate = isset($data['invoice_date']) ? (string)$data['invoice_date'] : $invoice->invoiceDate;
-            if (strpos($invoiceDate, '-') === false) {
-                $invoiceDate = \App\Helper\DateHelper::toDisplayDate($invoiceDate) ?: $invoiceDate;
-            }
+            // Date parsing (accepts d-m-Y / d/m/Y / Y-m-d)
+            $invoiceDate = isset($data['invoice_date']) ? $this->normalizeDate((string)$data['invoice_date']) : $invoice->invoiceDate;
             $expiryDate = isset($data['expiry_date']) ? (string)$data['expiry_date'] : $invoice->expiryDate;
             if (!empty($expiryDate)) {
-                if (strpos($expiryDate, '-') === false) {
-                    $expiryDate = \App\Helper\DateHelper::toDisplayDate($expiryDate) ?: $expiryDate;
-                }
+                $expiryDate = $this->normalizeDate($expiryDate);
             } else {
                 $expiryDate = '1970-01-01';
             }
 
             $expectedShipmentDate = isset($data['expected_shipment_date']) ? (string)$data['expected_shipment_date'] : $invoice->expectedShipmentDate;
             if (!empty($expectedShipmentDate)) {
-                if (strpos($expectedShipmentDate, '-') === false) {
-                    $expectedShipmentDate = \App\Helper\DateHelper::toDisplayDate($expectedShipmentDate) ?: $expectedShipmentDate;
-                }
+                $expectedShipmentDate = $this->normalizeDate($expectedShipmentDate);
             } else {
                 $expectedShipmentDate = '1970-01-01';
             }
@@ -263,10 +258,14 @@ class InvoiceService
                 salesPerson: isset($data['sales_person']) ? (int)$data['sales_person'] : $invoice->salesPerson,
                 jobReferenceNo: isset($data['job_reference_no']) ? (!empty($data['job_reference_no']) ? trim((string)$data['job_reference_no']) : null) : $invoice->jobReferenceNo,
                 masterAwbNo: isset($data['master_awb_no']) ? (!empty($data['master_awb_no']) ? trim((string)$data['master_awb_no']) : null) : $invoice->masterAwbNo,
+                hwbHbol: isset($data['hwb_hbol']) ? (!empty($data['hwb_hbol']) ? trim((string)$data['hwb_hbol']) : null) : $invoice->hwbHbol,
+                leadId: isset($data['lead_id']) ? (int)$data['lead_id'] : $invoice->leadId,
                 shipper: isset($data['shipper']) ? (int)$data['shipper'] : $invoice->shipper,
                 consignee: isset($data['consignee']) ? (int)$data['consignee'] : $invoice->consignee,
                 origin: isset($data['origin']) ? (int)$data['origin'] : $invoice->origin,
+                originCountry: isset($data['origin_country']) ? (int)$data['origin_country'] : $invoice->originCountry,
                 destination: isset($data['destination']) ? (int)$data['destination'] : $invoice->destination,
+                destinationCountry: isset($data['destination_country']) ? (int)$data['destination_country'] : $invoice->destinationCountry,
                 noOfPacks: isset($data['no_of_packs']) ? (int)$data['no_of_packs'] : $invoice->noOfPacks,
                 grossWeight: isset($data['gross_weight']) ? (float)$data['gross_weight'] : $invoice->grossWeight,
                 chargeableWeight: isset($data['chargeable_weight']) ? (float)$data['chargeable_weight'] : $invoice->chargeableWeight,
@@ -282,7 +281,7 @@ class InvoiceService
                 grandTotal: $grandTotal,
                 balanceDue: isset($data['balance_due']) ? (float)$data['balance_due'] : ($invoice->balanceDue ?? $grandTotal),
                 publish: isset($data['publish']) ? (bool)$data['publish'] : $invoice->publish,
-                isActive: isset($data['is_active']) ? (bool)$data['is_active'] : $invoice->publish,
+                isActive: isset($data['is_active']) ? (bool)$data['is_active'] : $invoice->isActive,
                 createdAt: $invoice->createdAt,
                 createdBy: $invoice->createdBy,
                 updatedBy: $userId,
@@ -361,6 +360,7 @@ class InvoiceService
 
         $this->db->beginTransaction();
         try {
+            $this->deleteInvoiceJournal($id);
             $result = $this->invoiceRepo->delete($id, $orgId);
             $this->db->commit();
             return $result;
@@ -407,10 +407,14 @@ class InvoiceService
                 salesPerson: $invoice->salesPerson,
                 jobReferenceNo: $invoice->jobReferenceNo,
                 masterAwbNo: $invoice->masterAwbNo,
+                hwbHbol: $invoice->hwbHbol,
+                leadId: $invoice->leadId,
                 shipper: $invoice->shipper,
                 consignee: $invoice->consignee,
                 origin: $invoice->origin,
+                originCountry: $invoice->originCountry,
                 destination: $invoice->destination,
+                destinationCountry: $invoice->destinationCountry,
                 noOfPacks: $invoice->noOfPacks,
                 grossWeight: $invoice->grossWeight,
                 chargeableWeight: $invoice->chargeableWeight,
@@ -481,11 +485,28 @@ class InvoiceService
      */
     public function updateStatus(int $id, string $status, int $orgId): bool
     {
-        $allowedStatuses = ['draft', 'sent', 'paid', 'partially_paid', 'overdue', 'cancelled', 'confirmed'];
+        $allowedStatuses = ['draft', 'sent', 'paid', 'partially_paid', 'overdue', 'cancelled', 'confirmed', 'writeoff', 'void'];
         if (!in_array($status, $allowedStatuses, true)) {
             throw new ValidationException(['status' => "Invalid status: {$status}"]);
         }
-        return $this->invoiceRepo->updateStatus($id, $status, $orgId);
+
+        $invoice = $this->getInvoice($id, $orgId);
+
+        $this->db->beginTransaction();
+        try {
+            if ($status === 'sent' && $invoice->grandTotal > 0) {
+                $this->postInvoiceJournal($id, $orgId);
+            } elseif ($status === 'void') {
+                $this->voidInvoiceJournal($id, $orgId);
+            }
+
+            $result = $this->invoiceRepo->updateStatus($id, $status, $orgId);
+            $this->db->commit();
+            return $result;
+        } catch (\Throwable $e) {
+            $this->db->rollBack();
+            throw $e;
+        }
     }
 
     /**
@@ -516,5 +537,128 @@ class InvoiceService
         if ($customer === null) {
             throw new ValidationException(['customer_id' => "Selected customer does not exist in your organization."]);
         }
+    }
+
+    /**
+     * Normalize a date from display/input formats (d-m-Y, d/m/Y) to DB format (Y-m-d).
+     * Already-normalized Y-m-d values pass through unchanged.
+     */
+    private function normalizeDate(string $date): string
+    {
+        $date = trim($date);
+        if ($date === '' || $date === '1970-01-01') {
+            return $date;
+        }
+
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+            return $date;
+        }
+
+        $converted = \App\Helper\DateHelper::toDbDate($date);
+        return $converted !== '' ? $converted : $date;
+    }
+
+    private function deleteInvoiceJournal(int $invoiceId): void
+    {
+        $journalId = $this->db->fetchOne(
+            "SELECT id FROM `{DB::JOURNALS}` WHERE reference_type IN ('invoice', 'invoice_void') AND reference_id = :ref_id LIMIT 1",
+            ['ref_id' => $invoiceId]
+        );
+
+        if ($journalId !== null) {
+            $jid = (int)$journalId['id'];
+            $this->db->execute("DELETE FROM `{DB::JOURNAL_ITEMS}` WHERE journal_id = :jid", ['jid' => $jid]);
+            $this->db->execute("DELETE FROM `{DB::JOURNALS}` WHERE id = :jid", ['jid' => $jid]);
+        }
+    }
+
+    private function postInvoiceJournal(int $invoiceId, int $orgId): void
+    {
+        $existing = $this->journalRepo->findByReference('invoice', $invoiceId, $orgId);
+        if (!empty($existing)) {
+            return;
+        }
+
+        $invoice = $this->getInvoice($invoiceId, $orgId);
+        if ($invoice->grandTotal <= 0) {
+            return;
+        }
+
+        $ar = $this->db->fetchOne(
+            "SELECT id FROM `{DB::ACCOUNTS}` WHERE account_code IN ('1200','1210','1100') OR account_name LIKE '%Receivable%' LIMIT 1"
+        );
+        $revenue = $this->db->fetchOne(
+            "SELECT id FROM `{DB::ACCOUNTS}` WHERE account_code IN ('4000','4100') OR account_name LIKE '%Revenue%' OR account_name LIKE '%Income%' OR account_name LIKE '%Sales%' LIMIT 1"
+        );
+
+        if ($ar !== null && $revenue !== null) {
+            $items = [
+                ['account' => (int)$ar['id'], 'debit' => $invoice->grandTotal, 'credit' => 0.0, 'description' => 'Invoice #' . $invoice->invoiceNo],
+                ['account' => (int)$revenue['id'], 'debit' => 0.0, 'credit' => $invoice->grandTotal, 'description' => 'Invoice #' . $invoice->invoiceNo],
+            ];
+
+            $this->journalService->createJournal(
+                [
+                    'journal_date' => $invoice->invoiceDate,
+                    'journal_status' => 'posted',
+                    'reference_no' => $invoice->invoiceNo,
+                    'notes' => 'Invoice #' . $invoice->invoiceNo . ' - Customer ID: ' . $invoice->customerId,
+                    'reporting_method' => 'accrual',
+                    'reference_type' => 'invoice',
+                    'reference_id' => $invoiceId,
+                    'currency' => 'AED',
+                    'warehouse_id' => $invoice->warehouseId,
+                    'grand_subtotal' => $invoice->grandTotal,
+                    'grand_total' => $invoice->grandTotal,
+                ],
+                $items,
+                $orgId,
+                0
+            );
+        }
+    }
+
+    private function voidInvoiceJournal(int $invoiceId, int $orgId): void
+    {
+        $existing = $this->journalRepo->findByReference('invoice_void', $invoiceId, $orgId);
+        if (!empty($existing)) {
+            return;
+        }
+
+        $original = $this->journalRepo->findByReference('invoice', $invoiceId, $orgId);
+        if (empty($original)) {
+            return;
+        }
+
+        $journal = $original[0];
+        $originalItems = $this->journalRepo->findItemsByJournal($journal->id, $orgId);
+        $reversalItems = [];
+        foreach ($originalItems as $ji) {
+            $reversalItems[] = [
+                'account' => $ji->account,
+                'debit' => $ji->credit,
+                'credit' => $ji->debit,
+                'description' => 'VOID - Reversal of Invoice #' . $journal->referenceNo,
+            ];
+        }
+
+        $this->journalService->createJournal(
+            [
+                'journal_date' => date('Y-m-d'),
+                'journal_status' => 'posted',
+                'reference_no' => ($journal->referenceNo ?? '') . ' (VOID)',
+                'notes' => 'VOID - Reversal of Invoice #' . $journal->referenceNo,
+                'reporting_method' => 'accrual',
+                'reference_type' => 'invoice_void',
+                'reference_id' => $invoiceId,
+                'currency' => 'AED',
+                'warehouse_id' => $journal->warehouseId,
+                'grand_subtotal' => -$journal->grandSubtotal,
+                'grand_total' => -$journal->grandTotal,
+            ],
+            $reversalItems,
+            $orgId,
+            0
+        );
     }
 }

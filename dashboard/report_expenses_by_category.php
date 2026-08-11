@@ -6,9 +6,11 @@ require '../vendor/autoload.php';
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
-$module = 'customers';
+$module = 'expenses';
 $module_caption = 'Expense by Category';
 $tbl_name = $tbl_prefix . $module;
+$TBL_EXPENSES = \App\Core\DB::EXPENSES;
+$TBL_VENDORS = \App\Core\DB::VENDORS;
 $error_message = '';
 $success_message = '';
 
@@ -20,6 +22,7 @@ $success_message = '';
 */
 include('admin_elements/permissions.php');
 
+$activeOrganizationId = dashboardRequireActiveOrganization();
 
 $limit              = 10;
 $stages             = 2;
@@ -47,6 +50,71 @@ $filter_by              = ((isset($_REQUEST['filter_by']) && !empty($_REQUEST['f
 $date_from              = ((isset($_REQUEST['date_from']) && !empty($_REQUEST['date_from'])) ? e_s__($_REQUEST['date_from']) : '');
 $date_to                = ((isset($_REQUEST['date_to']) && !empty($_REQUEST['date_to'])) ? e_s__($_REQUEST['date_to']) : '');
 $report_basis           = ((isset($_REQUEST['report_basis']) && !empty($_REQUEST['report_basis'])) ? e_s__($_REQUEST['report_basis']) : '');
+
+
+if (!empty($filter_by) && $filter_by != '0') {
+    if (!function_exists('getDateRangeByFilter')) {
+        function getDateRangeByFilter($filter_by)
+        {
+            $today = new DateTimeImmutable('today');
+            $start = null;
+            $end   = null;
+            switch ($filter_by) {
+                case 'today':
+                    $start = $today;
+                    $end   = $today;
+                    break;
+                case 'this_week':
+                    $start = $today->modify('monday this week');
+                    $end   = $today->modify('sunday this week');
+                    break;
+                case 'this_month':
+                    $start = $today->modify('first day of this month');
+                    $end   = $today->modify('last day of this month');
+                    break;
+                case 'this_quarter':
+                    $quarterStart = (int)floor(($today->format('n') - 1) / 3) * 3 + 1;
+                    $start = $today->setDate($today->format('Y'), $quarterStart, 1);
+                    $end   = $start->modify('+2 months')->modify('last day of this month');
+                    break;
+                case 'this_year':
+                    $start = $today->setDate($today->format('Y'), 1, 1);
+                    $end   = $today->setDate($today->format('Y'), 12, 31);
+                    break;
+                case 'yesterday':
+                    $start = $today->modify('-1 day');
+                    $end   = $start;
+                    break;
+                case 'previous_week':
+                    $start = $today->modify('monday last week');
+                    $end   = $today->modify('sunday last week');
+                    break;
+                case 'previous_month':
+                    $start = $today->modify('first day of last month');
+                    $end   = $today->modify('last day of last month');
+                    break;
+                case 'previous_quarter':
+                    $quarterStart = (int)floor(($today->format('n') - 1) / 3) * 3 + 1 - 3;
+                    $year = $today->format('Y');
+                    if ($quarterStart < 1) {
+                        $quarterStart += 12;
+                        $year--;
+                    }
+                    $start = $today->setDate((int)$year, $quarterStart, 1);
+                    $end   = $start->modify('+2 months')->modify('last day of this month');
+                    break;
+                case 'previous_year':
+                    $start = $today->setDate((int)($today->format('Y') - 1), 1, 1);
+                    $end   = $today->setDate((int)($today->format('Y') - 1), 12, 31);
+                    break;
+                default:
+                    break;
+            }
+            return [$start ? $start->format('d-m-Y') : null, $end ? $end->format('d-m-Y') : null];
+        }
+    }
+    list($date_from, $date_to) = getDateRangeByFilter($filter_by);
+}
 
 
 /*
@@ -77,31 +145,17 @@ if ($page_no) {
 $search_query = '';
 // -------------------
 
-
-$date_from             = processDateDtoY($date_from);
-$date_to             = processDateDtoY($date_to);
-
-
-
-$date_from             = processDateYtoD($date_from);
-$date_to             = processDateYtoD($date_to);
-
-// Ensure dates are in YYYY-MM-DD format for MySQL queries
-if (!empty($date_from) && $date_from != '0000-00-00') {
-    // Try to parse the date - if it's DD-MM-YYYY format, convert it
-    if (preg_match('/^\d{2}-\d{2}-\d{4}$/', $date_from)) {
-        $date_parts = explode('-', $date_from);
-        $date_from = $date_parts[2] . '-' . $date_parts[1] . '-' . $date_parts[0];
+if (!function_exists('normalizeDateToYmd')) {
+    function normalizeDateToYmd($date)
+    {
+        if (empty($date)) return '';
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) return $date;
+        if (!preg_match('/^\d{1,2}-\d{1,2}-\d{4}$/', $date)) return '';
+        return processDateDtoY($date);
     }
 }
-
-if (!empty($date_to) && $date_to != '0000-00-00') {
-    // Try to parse the date - if it's DD-MM-YYYY format, convert it
-    if (preg_match('/^\d{2}-\d{2}-\d{4}$/', $date_to)) {
-        $date_parts = explode('-', $date_to);
-        $date_to = $date_parts[2] . '-' . $date_parts[1] . '-' . $date_parts[0];
-    }
-}
+$date_from = normalizeDateToYmd($date_from);
+$date_to = normalizeDateToYmd($date_to);
 
 // ----------------------------------------------------------------------------------------------------
 
@@ -123,9 +177,10 @@ if (!empty($date_from) && $date_from != '0000-00-00') {
 if (!empty($date_to) && $date_to != '0000-00-00') {
     $expense_search_query .= " AND e.expense_date <= '" . $date_to . "'";
 }
+$expense_search_query .= " AND e.organization_id = " . (int)$activeOrganizationId;
 
 //COUNT QUERY - Get distinct categories count
-$result         = $mysqli->query("SELECT COUNT(DISTINCT 'General') as category_count FROM `fls_expenses` e WHERE e.id>0 " . $expense_search_query);
+$result         = $mysqli->query("SELECT COUNT(DISTINCT 'General') as category_count FROM `{$TBL_EXPENSES}` e WHERE e.id>0 " . $expense_search_query);
 $count_row = $result->fetch_array(MYSQLI_ASSOC);
 $total_rows     = isset($count_row['category_count']) ? $count_row['category_count'] : 0;
 
@@ -134,7 +189,7 @@ $result_categories  = $mysqli->query("SELECT
                                 'General' as category_name,
                                 SUM(e.grand_total) as total_amount,
                                 SUM(0) as total_tax
-                            FROM `fls_expenses` e 
+                            FROM `{$TBL_EXPENSES}` e 
                             WHERE e.id > 0 " . $expense_search_query . "
                             GROUP BY category_name
                             ORDER BY category_name ASC LIMIT $start, $limit");
@@ -144,7 +199,7 @@ $result_categories_ = $mysqli->query("SELECT
                                 'General' as category_name,
                                 SUM(e.grand_total) as total_amount,
                                 SUM(0) as total_tax
-                            FROM `fls_expenses` e 
+                            FROM `{$TBL_EXPENSES}` e 
                             WHERE e.id > 0 " . $expense_search_query . "
                             GROUP BY category_name
                             ORDER BY category_name ASC");
@@ -177,7 +232,7 @@ $mysqli->query("UPDATE `" . tbl_accounts_report_subcategories . "` SET last_visi
                     <div class="col-lg-6">
                         <div class="text-muted">Purchases and Expenses</div>
                         <div class="mb-0">
-                            <span class="fw-semibold">Expense by Category</span> - <span class="small">From <?php echo dd_($date_from); ?> To <?php echo dd_($date_to); ?></span>
+                            <span class="fw-semibold">Expense by Category</span> - <span class="small">From <?php echo ddm_($date_from); ?> To <?php echo ddm_($date_to); ?></span>
                         </div>
                     </div>
 
@@ -297,7 +352,7 @@ $mysqli->query("UPDATE `" . tbl_accounts_report_subcategories . "` SET last_visi
             <div class="card-header text-center">
                 <p class="text-muted">Flash Logistics FZC</p>
                 <h5 class="mb-0">Expense by Category</h5>
-                <p class="small"><span class="text-muted">From</span> <?php echo dd_($date_from); ?> <span class="text-muted">To</span> <?php echo dd_($date_to); ?></p>
+                <p class="small"><span class="text-muted">From</span> <?php echo ddm_($date_from); ?> <span class="text-muted">To</span> <?php echo ddm_($date_to); ?></p>
             </div>
 
             <div class="table-responsive">

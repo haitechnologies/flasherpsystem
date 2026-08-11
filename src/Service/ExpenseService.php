@@ -164,7 +164,7 @@ class ExpenseService
             }
 
             $this->deleteJournalEntry($id);
-            $this->createJournalEntry($id, $expenseDate, (int)($data['paid_through'] ?? $expense->paidThrough), (int)($data['vendor_id'] ?? $expense->vendorId), $expense->billable, (float)($data['grand_total'] ?? $expense->grandTotal));
+            $this->createJournalEntry($id, $expenseDate, (int)($data['paid_through'] ?? $expense->paidThrough), (int)($data['vendor_id'] ?? $expense->vendorId), $updatedExpense->billable, (float)($data['grand_total'] ?? $expense->grandTotal));
 
             $this->db->commit();
 
@@ -220,7 +220,7 @@ class ExpenseService
             $debitAccountId = $item->expenseAccount;
             if ($billable) {
                 $arRow = $this->db->fetchOne(
-                    "SELECT id FROM `{DB::ACCOUNTS}` WHERE account_code = '1200' LIMIT 1"
+                    "SELECT id FROM `{DB::ACCOUNTS}` WHERE account_code IN ('1200','1210','1100') OR account_name LIKE '%Receivable%' LIMIT 1"
                 );
                 $debitAccountId = $arRow !== null ? (int)$arRow['id'] : $item->expenseAccount;
             }

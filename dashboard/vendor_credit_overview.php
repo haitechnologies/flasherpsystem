@@ -31,7 +31,7 @@ if (isset($_REQUEST['vendor_credit_id']) && !empty($_REQUEST['vendor_credit_id']
 // Validate vendor credit exists
 $vendor_credit = $mysqli->query("SELECT id FROM `$tbl_name` WHERE id=$vendor_credit_id")->fetch_assoc();
 if (!$vendor_credit) {
-    header("Location:listing_vendor_credits.php");
+    header("Location:listing_vendors.php");
     exit;
 }
 
@@ -137,17 +137,14 @@ $items_result = $mysqli->query($items_query);
                     <h6 class="mb-0">Vendor Credit: <?php echo $vendor_credit_data['vendor_credit_no']; ?></h6>
                     <div class="float-end">
                         <span class="badge bg-info"><?php echo ucfirst(str_replace('_', ' ', $vendor_credit_data['vendor_credit_status'])); ?></span>
-                        <a href="vendor_credits.php?action=update_vendor_credits&id=<?php echo $vendor_credit_id; ?>" class="btn btn-primary btn-sm ms-2">
-                            <i class="ph-pencil"></i> Edit
-                        </a>
-                        <a href="listing_vendor_credits.php" class="btn btn-secondary btn-sm ms-2">Back</a>
+                        <a href="listing_vendors.php" class="btn btn-secondary btn-sm ms-2">Back</a>
                     </div>
                 </div>
                 <div class="card-body">
                     <div class="row mb-4">
                         <div class="col-md-3">
                             <strong>Vendor Credit Date:</strong><br>
-                            <?php echo date('d-m-Y', strtotime($vendor_credit_data['vendor_credit_date'])); ?>
+                            <?php echo ddm_(($vendor_credit_data['vendor_credit_date'] ?? '') ?: null); ?>
                         </div>
                         <div class="col-md-3">
                             <strong>Vendor:</strong><br>

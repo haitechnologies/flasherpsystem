@@ -7,6 +7,7 @@ namespace App\Repository;
 use App\Core\Database;
 use App\Core\DB;
 use App\Model\PaymentTerm;
+use App\Core\ErrorCapture;
 
 class PaymentTermRepository
 {
@@ -68,7 +69,7 @@ class PaymentTermRepository
             $this->db->execute($sql, $params);
             return true;
         } catch (\Throwable $e) {
-            error_log("PaymentTermRepository: Update failed: " . $e->getMessage());
+            ErrorCapture::record("PaymentTermRepository: Update failed: " . $e->getMessage());
             return false;
         }
     }

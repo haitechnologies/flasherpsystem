@@ -59,26 +59,22 @@ $listingConfig = [
     'module' => $module,
     'module_caption' => $module_caption,
     'thead' => '
-        <th width="40">SR.</th>
         <th width="100">DATE</th>
         <th>PURCHASE ORDER #</th>
         <th>REFERENCE #</th>
         <th>VENDOR NAME</th>
         <th width="100" class="col-center">STATUS</th>
         <th width="100" class="text-end">AMOUNT</th>
-        <th width="90" class="col-center">ACTIONS</th>
     ',
     'columns' => [
-        ['data' => 0, 'orderable' => false, 'searchable' => false],
+        ['data' => 0],
         ['data' => 1],
         ['data' => 2],
         ['data' => 3],
-        ['data' => 4],
-        ['data' => 5, 'className' => 'col-center'],
-        ['data' => 6, 'className' => 'text-end'],
-        ['data' => 7, 'orderable' => false, 'searchable' => false, 'className' => 'col-center'],
+        ['data' => 4, 'className' => 'col-center'],
+        ['data' => 5, 'className' => 'text-end'],
     ],
-    'order' => [[1, 'desc']],
+    'order' => [[0, 'desc']],
     'page_length' => 25,
     'search_placeholder' => 'Search purchase orders...',
 ];

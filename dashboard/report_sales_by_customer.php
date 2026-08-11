@@ -48,7 +48,7 @@ $result = $mysqli->query("SELECT c.display_name AS customer_name,
                                   CASE WHEN COUNT(i.id) > 0 THEN COALESCE(SUM(i.grand_total), 0) / COUNT(i.id) ELSE 0 END AS avg_order_value
                            FROM `" . $tbl_prefix . "invoices` i
                            LEFT JOIN `" . $tbl_prefix . "customers` c ON c.id = i.customer_id
-                           WHERE i.customer_id > 0" . $where . "
+                           WHERE i.customer_id > 0 AND i.organization_id = " . (int)$activeOrganizationId . $where . "
                            GROUP BY i.customer_id, c.display_name
                            ORDER BY total_sales DESC");
 if ($result) {

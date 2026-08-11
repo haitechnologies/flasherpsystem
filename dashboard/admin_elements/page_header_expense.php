@@ -8,7 +8,7 @@ if (isset($_POST['expense_id']))    $expense_id = e_s__($_POST['expense_id']);
 
 ?>
 <?php
-$display_no = getTableAttr('expense_no', DB::EXPENSES, $expense_id);
+$display_no = getTableAttr('reference_no', DB::EXPENSES, $expense_id);
 $display_status = getTableAttr('expense_status', DB::EXPENSES, $expense_id);
 if (empty($display_no)) $display_no = getTableAttr('id', DB::EXPENSES, $expense_id);
 ?>
@@ -23,10 +23,14 @@ if (empty($display_no)) $display_no = getTableAttr('id', DB::EXPENSES, $expense_
             <?php if (isset($module_id) && granted('edit', $module_id)) { ?>
                 <a href="<?php echo $module; ?>.php?action=edit_<?php echo $module; ?>&id=<?php echo $expense_id; ?>" class="btn btn-light btn-sm"><i class="ph-pencil"></i> Edit</a>
             <?php } ?>
+            <a class="btn btn-light btn-sm" href="expense_overview.php?expense_id=<?php echo $expense_id; ?>&action=convert_to_invoice"><i class="ph-file pe-1"></i> Convert to Invoice</a>
             <div class="dropdown">
                 <button type="button" class="btn btn-light btn-sm" data-bs-toggle="dropdown"><i class="ph-dots-three"></i></button>
                 <div class="dropdown-menu dropdown-menu-end">
                     <a href="expense_overview.php?expense_id=<?php echo $expense_id; ?>&action=clone_<?php echo $module; ?>" class="dropdown-item"><i class="ph-copy me-2"></i> Clone</a>
+                    <div class="dropdown-divider"></div>
+                    <a href="#journal" class="dropdown-item"><i class="ph-stack me-2"></i> View Journal</a>
+                    <div class="dropdown-divider"></div>
                     <a href="listing_<?php echo $module; ?>.php?action=delete_<?php echo $module; ?>&id=<?php echo $expense_id; ?>" class="dropdown-item"><i class="ph-trash me-2"></i> Delete</a>
                 </div>
             </div>

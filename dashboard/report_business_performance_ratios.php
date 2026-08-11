@@ -16,6 +16,7 @@ $success_message = '';
 */
 include('admin_elements/permissions.php');
 
+$activeOrganizationId = dashboardRequireActiveOrganization();
 
 /*
 |--------------------------------------------------------------------------
@@ -24,8 +25,8 @@ include('admin_elements/permissions.php');
 |
 */
 
-function getFinancialMetrics($mysqli, $date_from_ymd, $date_to_ymd) {
-    $date_join = " AND j.journal_date >= '" . $date_from_ymd . "' AND j.journal_date <= '" . $date_to_ymd . "'";
+function getFinancialMetrics($mysqli, $date_from_ymd, $date_to_ymd, $activeOrganizationId) {
+    $date_join = " AND j.journal_date >= '" . $date_from_ymd . "' AND j.journal_date <= '" . $date_to_ymd . "' AND j.organization_id = " . (int)$activeOrganizationId;
     
     $metrics = array(
         'total_assets' => 0,
@@ -209,7 +210,7 @@ $date_from_ymd = processDateDtoY($date_from);
 $date_to_ymd = processDateDtoY($date_to);
 
 // Get financial metrics and calculate ratios
-$metrics = getFinancialMetrics($mysqli, $date_from_ymd, $date_to_ymd);
+$metrics = getFinancialMetrics($mysqli, $date_from_ymd, $date_to_ymd, $activeOrganizationId);
 $ratios = calculateRatios($metrics);
 
 // UPDATES LAST VISITED
@@ -237,7 +238,7 @@ if ($accounts_report_subcategory_id > 0) {
                     <div class="col-lg-6">
                         <div class="text-muted">Financial Reporting</div>
                         <div class="mb-0">
-                            <span class="fw-semibold">Business Performance Ratios</span> - <span class="fw-normal">From <?php echo processDateYtoD($date_from_ymd); ?> to <?php echo processDateYtoD($date_to_ymd); ?></span>
+                            <span class="fw-semibold">Business Performance Ratios</span> - <span class="fw-normal">From <?php echo ddm_($date_from_ymd); ?> to <?php echo ddm_($date_to_ymd); ?></span>
                         </div>
                     </div>
 
@@ -337,7 +338,7 @@ if ($accounts_report_subcategory_id > 0) {
 </div>
     <!-- /page header -->
 
-    <script src="reports_filterby.js"></script>
+    <script src="<?php echo $base_url; ?>/dashboard/js/reports_filterby.js"></script>
 
     <div class="content">
 
@@ -345,7 +346,7 @@ if ($accounts_report_subcategory_id > 0) {
             <div class="card-header text-center">
                 <p>Flash Logistics FZC</p>
                 <h5 class="mb-0">Business Performance Ratios Report</h5>
-                <p><span class="text-muted">From</span> <?php echo processDateYtoD($date_from_ymd); ?> <span class="text-muted">To</span> <?php echo processDateYtoD($date_to_ymd); ?></p>
+                <p><span class="text-muted">From</span> <?php echo ddm_($date_from_ymd); ?> <span class="text-muted">To</span> <?php echo ddm_($date_to_ymd); ?></p>
             </div>
 
             <!-- Financial Metrics Summary -->

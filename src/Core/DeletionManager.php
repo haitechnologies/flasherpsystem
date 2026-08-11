@@ -138,7 +138,7 @@ class DeletionManager
                     try {
                         $db->execute($cascade_query, ['record_id' => $record_id]);
                     } catch (Throwable $e) {
-                        error_log("CASCADE_DELETE_ERROR: " . $e->getMessage() . " | Table: {$cascade_table}");
+                        ErrorCapture::record("CASCADE_DELETE_ERROR: " . $e->getMessage() . " | Table: {$cascade_table}");
                     }
                 }
             }
@@ -178,7 +178,7 @@ class DeletionManager
                 'error_code' => null
             ];
         } catch (Throwable $e) {
-            error_log(
+            ErrorCapture::record(
                 "DELETION_EXCEPTION: " . $e->getMessage() .
                     " | Table: {$table_name} | Record ID: {$record_id} | User ID: {$user_id}"
             );

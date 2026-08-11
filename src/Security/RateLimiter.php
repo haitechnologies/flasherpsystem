@@ -7,6 +7,7 @@ namespace App\Security;
 use App\Core\Database;
 use App\Core\Container;
 use App\Core\DB;
+use App\Core\ErrorCapture;
 use Throwable;
 
 /**
@@ -102,7 +103,7 @@ class RateLimiter
         try {
             $db->execute($sql);
         } catch (Throwable $e) {
-            error_log('RateLimiter::createTableIfNotExists() - Table creation failed: ' . $e->getMessage());
+            ErrorCapture::record('RateLimiter::createTableIfNotExists() - Table creation failed: ' . $e->getMessage());
         }
     }
 
@@ -161,7 +162,7 @@ class RateLimiter
                 ];
             }
         } catch (Throwable $e) {
-            error_log('RateLimiter::check() - Failed: ' . $e->getMessage());
+            ErrorCapture::record('RateLimiter::check() - Failed: ' . $e->getMessage());
         }
 
         return [
@@ -224,7 +225,7 @@ class RateLimiter
                 ]);
             }
         } catch (Throwable $e) {
-            error_log('RateLimiter::recordAttempt() - Failed: ' . $e->getMessage());
+            ErrorCapture::record('RateLimiter::recordAttempt() - Failed: ' . $e->getMessage());
         }
     }
 
@@ -242,7 +243,7 @@ class RateLimiter
             $sql = "DELETE FROM `" . self::tableName() . "` WHERE rate_limit_type = 'attempt' AND identifier = :identifier AND action = :action";
             $db->execute($sql, ['identifier' => $identifier, 'action' => $action]);
         } catch (Throwable $e) {
-            error_log('RateLimiter::reset() - Failed: ' . $e->getMessage());
+            ErrorCapture::record('RateLimiter::reset() - Failed: ' . $e->getMessage());
         }
     }
 
@@ -263,7 +264,7 @@ class RateLimiter
                     AND (banned_until IS NULL OR banned_until < NOW())";
             $db->execute($sql, ['expiredTime' => $expiredTime]);
         } catch (Throwable $e) {
-            error_log('RateLimiter::cleanup() - Failed: ' . $e->getMessage());
+            ErrorCapture::record('RateLimiter::cleanup() - Failed: ' . $e->getMessage());
         }
     }
 
@@ -281,7 +282,7 @@ class RateLimiter
             $sql = "SELECT * FROM `" . self::tableName() . "` WHERE rate_limit_type = 'attempt' AND identifier = :identifier AND action = :action LIMIT 1";
             return $db->fetchOne($sql, ['identifier' => $identifier, 'action' => $action]);
         } catch (Throwable $e) {
-            error_log('RateLimiter::getStatus() - Failed: ' . $e->getMessage());
+            ErrorCapture::record('RateLimiter::getStatus() - Failed: ' . $e->getMessage());
             return null;
         }
     }
@@ -327,7 +328,7 @@ class RateLimiter
                 ]);
             }
         } catch (Throwable $e) {
-            error_log('RateLimiter::ban() - Failed: ' . $e->getMessage());
+            ErrorCapture::record('RateLimiter::ban() - Failed: ' . $e->getMessage());
         }
     }
 
@@ -345,7 +346,7 @@ class RateLimiter
             $sql = "UPDATE `" . self::tableName() . "` SET banned_until = NULL WHERE rate_limit_type = 'attempt' AND identifier = :identifier AND action = :action";
             $db->execute($sql, ['identifier' => $identifier, 'action' => $action]);
         } catch (Throwable $e) {
-            error_log('RateLimiter::unban() - Failed: ' . $e->getMessage());
+            ErrorCapture::record('RateLimiter::unban() - Failed: ' . $e->getMessage());
         }
     }
 
@@ -416,7 +417,7 @@ class RateLimiter
                     ORDER BY banned_until DESC";
             return $db->fetchAll($sql);
         } catch (Throwable $e) {
-            error_log('RateLimiter::getBannedList() - Failed: ' . $e->getMessage());
+            ErrorCapture::record('RateLimiter::getBannedList() - Failed: ' . $e->getMessage());
             return [];
         }
     }
@@ -451,7 +452,7 @@ class RateLimiter
                 $stats['total_attempts_today'] = (int)($row3['total'] ?? 0);
             }
         } catch (Throwable $e) {
-            error_log('RateLimiter::getStatistics() - Failed: ' . $e->getMessage());
+            ErrorCapture::record('RateLimiter::getStatistics() - Failed: ' . $e->getMessage());
         }
 
         return $stats;
@@ -487,7 +488,7 @@ class RateLimiter
 
             return !empty($row);
         } catch (Throwable $e) {
-            error_log('RateLimiter::isBlocked() - Failed: ' . $e->getMessage());
+            ErrorCapture::record('RateLimiter::isBlocked() - Failed: ' . $e->getMessage());
             return false;
         }
     }

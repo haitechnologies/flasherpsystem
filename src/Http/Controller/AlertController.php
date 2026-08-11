@@ -65,7 +65,8 @@ class AlertController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("alert_names.php?id=$id&action=edit_alert_names");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("AlertController::handleUpdate error: " . $e->getMessage());
             flash_error('The Alert could not be updated.');
             return Response::redirect("alert_names.php?id=$id&action=edit_alert_names");
         }
@@ -86,7 +87,8 @@ class AlertController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("alert_names.php");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("AlertController::handleCreate error: " . $e->getMessage());
             flash_error('The Alert could not be saved.');
             return Response::redirect("alert_names.php");
         }

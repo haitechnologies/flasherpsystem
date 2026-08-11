@@ -6,6 +6,7 @@ namespace App\DataTable;
 
 use App\Core\Database;
 use App\Core\DB;
+use App\Core\ErrorCapture;
 
 use function is_array;
 
@@ -111,7 +112,7 @@ class Registry
 
         // Check if module is registered
         if (!isset(self::$handlers[$module])) {
-            error_log("DataTable: Unknown module '{$module}'");
+            ErrorCapture::record("DataTable: Unknown module '{$module}'");
             return null;
         }
 
@@ -121,7 +122,7 @@ class Registry
 
         // Check if class exists
         if (!class_exists($handlerClass)) {
-            error_log("DataTable: Handler class '{$handlerClass}' not found for module '{$module}'");
+            ErrorCapture::record("DataTable: Handler class '{$handlerClass}' not found for module '{$module}'");
             return null;
         }
 
@@ -134,14 +135,14 @@ class Registry
                 }
                 $cfg = $this->getTableConfig($cfgModule);
                 if ($cfg === null) {
-                    error_log("DataTable: No config for generic handler '{$module}'");
+                    ErrorCapture::record("DataTable: No config for generic handler '{$module}'");
                     return null;
                 }
                 return new GenericDataTable($cfg, $this->db, $this->userId, $this->roleId, $this->organizationId);
             }
             return new $handlerClass($this->db, $this->userId, $this->roleId, $this->organizationId);
         } catch (\Throwable $e) {
-            error_log("DataTable: Failed to instantiate handler for module '{$module}' [" . get_class($e) . "]: " . $e->getMessage());
+            ErrorCapture::record("DataTable: Failed to instantiate handler for module '{$module}' [" . get_class($e) . "]: " . $e->getMessage());
             return null;
         }
     }
@@ -260,6 +261,15 @@ class Registry
         $this->register('listing_customer_contacts', CustomerContactsDataTable::class);
         $this->register('listing_customer_addresses', CustomerAddressesDataTable::class);
         $this->register('listing_customer_transactions', CustomerTransactionsDataTable::class);
+        $this->register('listing_customer_statement', CustomerStatementDataTable::class);
+
+        // Vendor module sub-listings
+        $this->register('listing_vendor_contacts', VendorContactsDataTable::class);
+        $this->register('listing_vendor_addresses', VendorAddressesDataTable::class);
+        $this->register('listing_vendor_transactions', VendorTransactionsDataTable::class);
+        $this->register('listing_vendor_statement', VendorStatementDataTable::class);
+        $this->register('listing_vendor_logs', VendorLogsDataTable::class);
+        $this->register('listing_vendor_comments', VendorCommentsDataTable::class);
 
         // Shipping module listings
         $this->register('listing_shipping_advices', ShippingAdvicesDataTable::class);
@@ -277,8 +287,17 @@ class Registry
         $this->register('listing_disposable_email_domains', DisposableEmailDomainsDataTable::class);
 
         // Lead/CRM filtered listings
-        $this->register('listing_lead_quotations', LeadQuotationsDataTable::class);
         $this->register('listing_quotations', QuotationsDataTable::class);
+
+        // Sale Orders
+        $this->register('listing_sale_orders', SaleOrdersDataTable::class);
+        $this->register('listing_sale_types', SaleTypesDataTable::class);
+
+        // Payments Received
+        $this->register('listing_payments_received', PaymentsReceivedDataTable::class);
+
+        // Recurring Invoices
+        $this->register('listing_recurring_invoices', RecurringInvoicesDataTable::class);
 
         // HR & Payroll listings
         $this->register('listing_gratuity_settlements', GratuitySettlementsDataTable::class);

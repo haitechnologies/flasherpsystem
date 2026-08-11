@@ -64,7 +64,8 @@ class IncotermController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("incoterms.php?id=$id&action=edit_incoterms");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("IncotermController::handleUpdate error: " . $e->getMessage());
             flash_error('The Incoterm could not be updated.');
             return Response::redirect("incoterms.php?id=$id&action=edit_incoterms");
         }
@@ -84,7 +85,8 @@ class IncotermController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("incoterms.php");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("IncotermController::handleCreate error: " . $e->getMessage());
             flash_error('The Incoterm could not be saved.');
             return Response::redirect("incoterms.php");
         }

@@ -130,7 +130,7 @@ $html = '
         </td>
         <td width="50%" align="right">
             <strong>Advice ID:</strong> ' . $id . '<br />
-            <strong>Date:</strong> ' . date("d-M-Y", strtotime($invoice_date)) . '
+            <strong>Date:</strong> ' . date("d M Y", strtotime($invoice_date)) . '
         </td>
     </tr>
 </table>

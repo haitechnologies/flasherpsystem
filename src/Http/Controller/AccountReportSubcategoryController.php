@@ -64,7 +64,8 @@ class AccountReportSubcategoryController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("report_names.php?id=$id&action=edit_report_names");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("AccountReportSubcategoryController::handleUpdate error: " . $e->getMessage());
             flash_error('The Account Report Subcategory could not be updated.');
             return Response::redirect("report_names.php?id=$id&action=edit_report_names");
         }
@@ -84,7 +85,8 @@ class AccountReportSubcategoryController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("report_names.php");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("AccountReportSubcategoryController::handleCreate error: " . $e->getMessage());
             flash_error('The Account Report Subcategory could not be saved.');
             return Response::redirect("report_names.php");
         }

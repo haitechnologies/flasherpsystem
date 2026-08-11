@@ -109,119 +109,83 @@ if (isset($_POST['customer_id']))           $customer_id     = e_s__($_POST['cus
 
 
 
+<aside class="sidebar sidebar-secondary sidebar-expand-lg" aria-label="Secondary Navigation">
+
+    <!-- Expand button -->
+    <button type="button" class="btn btn-sidebar-expand sidebar-control sidebar-secondary-toggle h-100">
+        <i class="ph-caret-right"></i>
+    </button>
+    <!-- /expand button -->
+
+
+    <!-- Sidebar content -->
+    <?php include('admin_elements/sidebar_customer.php'); ?>
+    <!-- /sidebar content -->
+
+</aside>
+
 <div class="content-wrapper">
 
-    <!-- Page header -->
-    <div class="page-header page-header-light shadow carriers-page-header">
-        <div class="page-header-content d-lg-flex border-top carriers-page-header-content py-2 px-3 carriers-page-header-content">
-            <div class="d-flex">
-                <div class="breadcrumb py-2">
-                    <a href="index.php" class="breadcrumb-item"><i class="ph-house"></i></a>
-                    <a href="index.php" class="breadcrumb-item">Home</a>
-                    <a href="listing_customers.php" class="breadcrumb-item">Customers</a>
-                    <span class="breadcrumb-item active"><?php if (($action == "edit_$module" || $action == "update_$module") && !empty($id)) { ?>Update<?php } else { ?>Activity<?php } ?> </span>
-                </div>
-
-                <a href="#breadcrumb_elements" class="btn btn-light align-self-center collapsed d-lg-none border-transparent rounded-pill p-0 ms-auto" data-bs-toggle="collapse">
-                    <i class="ph-caret-down collapsible-indicator ph-sm m-1"></i>
-                </a>
-            </div>
-
-            <div class="collapse d-lg-block ms-lg-auto mt-1" id="breadcrumb_elements">
-                <div class="d-lg-flex mb-2 mb-lg-0">
-
-                    <button type=\"button\" class=\"btn btn-outline-dark my-1 me-2 nav-link\" data-href=\"customer.php?id=<?php echo $customer_id; ?>\">Exit</button>
-
-                </div>
-            </div>
-
-        </div>
-    </div>
-    <!-- /page header -->
-
+    <!-- Inner content -->
     <div class="content-inner">
+
+        <!-- Page header -->
+        <?php include('admin_elements/page_header_customer.php'); ?>
+        <!-- /page header -->
+
+
+        <!-- Content area -->
         <div class="content">
 
             <?php include('admin_elements/breadcrumb.php'); ?>
 
             <div class="row">
 
-                <?php include('admin_elements/customer_navbar.php'); ?>
+                <div class="col-lg-6 col-xl-12">
 
-                <div class="col-lg-6">
+                    <div class="card">
+                        <div class="card-header d-flex">
+                            <h5 class="mb-0">
+                                <i class="ph-folder me-2"></i>
+                                Customer Activity
+                            </h5>
 
-                    <div class="">
-
-                        <div class="card">
-                            <div class="card-header d-flex">
-                                <h5 class="mb-0">
-                                    <i class="ph-folder me-2"></i>
-                                    Customer Activity
-                                </h5>
-
-                                <div class="ms-auto">
-                                    <span class="text-muted">
-                                        <?php
-                                        // ----------------------------------------------------------------
-                                        $result = $mysqli->query("SELECT id FROM `" . DB::ENTITY_LOGS . "` WHERE entity_type='customer' AND entity_id=$customer_id");
-                                        echo '(' . $result->num_rows . ')';
-                                        // ----------------------------------------------------------------
-                                        ?>
-                                    </span>
-                                </div>
+                            <div class="ms-auto">
+                                <span class="text-muted">
+                                    <?php
+                                    $result = $mysqli->query("SELECT id FROM `" . DB::ENTITY_LOGS . "` WHERE entity_type='customer' AND entity_id=$customer_id");
+                                    echo '(' . $result->num_rows . ')';
+                                    ?>
+                                </span>
                             </div>
+                        </div>
 
 
-                            <div class="list-feed p-3">
+                        <div class="list-feed p-3">
 
-                                <?php
-                                // ======================================================
-                                $result = $mysqli->query("SELECT * FROM `" . DB::ENTITY_LOGS . "` WHERE entity_type='customer' AND entity_id=$customer_id ORDER BY id ASC");
-                                while ($rows = $result->fetch_array()) {
-                                    $note_id = $rows['id'];
-                                    // ======================================================
-                                ?>
+                            <?php
+                            $result = $mysqli->query("SELECT * FROM `" . DB::ENTITY_LOGS . "` WHERE entity_type='customer' AND entity_id=$customer_id ORDER BY id ASC");
+                            while ($rows = $result->fetch_array()) {
+                                $note_id = $rows['id'];
+                            ?>
 
-                                    <!-- <div class="list-feed-item border-info">
-                                    <div class="text-muted fs-sm mb-1"><?php //echo date("$rows['created_at'])); 
-                                                                        ?></div>
-                                    <?php //echo ucwords($rows['module']); 
-                                    ?> has been <?php //echo $rows['action']; 
-                                                                                        ?>.
-                                </div> -->
-
-                                    <div class="timeline-item">
-                                        <div class="timeline-date">
-                                            <?php echo dd_($rows['created_at'], 'd M Y'); ?><br>
-                                            <small class="text-muted"><?php echo dd_($rows['created_at'], 'g:ia'); ?></small>
-                                        </div>
-                                        <div class="timeline-marker"></div>
-                                        <div class="timeline-content">
-                                            <!-- <h6 class="mb-1">Purchase Order updated</h6> -->
-                                            <!-- <p class="mb-1 small text-muted">Items received for Purchase Order PO-00002</p> -->
-                                            <h6 class="mb-1"><?php echo ucwords($rows['module']); ?> has been <?php echo $rows['action']; ?>.</h6>
-                                            <!-- <p class="mb-1 small text-muted">Items received for Purchase Order PO-00002</p> -->
-                                            <!-- <small class="text-muted"> -->
-                                            <!-- by AlFeneeq Medical  -->
-                                            <!-- - <a href="#">View Details</a> -->
-                                            <!-- </small> -->
-                                        </div>
+                                <div class="timeline-item">
+                                    <div class="timeline-date">
+                                        <?php echo dd_($rows['created_at'], 'd M Y'); ?><br>
+                                        <small class="text-muted"><?php echo dd_($rows['created_at'], 'g:ia'); ?></small>
                                     </div>
+                                    <div class="timeline-marker"></div>
+                                    <div class="timeline-content">
+                                        <h6 class="mb-1"><?php echo ucwords($rows['module']); ?> has been <?php echo $rows['action']; ?>.</h6>
+                                    </div>
+                                </div>
 
-                                <?php } // while 
-                                ?>
-
-                                <!-- <div class="list-feed-item border-warning">
-                                        <div class="text-muted fs-sm mb-1">12 minutes ago</div>
-                                        All sellers have received payouts for December!
-                                    </div> -->
-                            </div>
+                            <?php } ?>
 
                         </div>
 
                     </div>
 
-                    <!-- </div> -->
                 </div>
 
 

@@ -24,6 +24,7 @@ $success_message = '';
 */
 include('admin_elements/permissions.php');
 
+$activeOrganizationId = dashboardRequireActiveOrganization();
 
 $limit              = 10;
 $stages             = 2;
@@ -171,6 +172,8 @@ if (!empty($date_from_sql) && !empty($date_to_sql)) {
 } else if (!empty($date_to_sql)) {
     $search_query .= " AND DATE(i.invoice_date) <= '" . $date_to_sql . "'";
 }
+
+$search_query .= " AND i.organization_id = " . (int)$activeOrganizationId;
 
 $invoice_total_column = 'grand_total';
 $db_name = $GLOBALS['DB']['DATABASE'] ?? '';
@@ -482,8 +485,8 @@ if (!empty($date_from) && !empty($date_to)) {
                                 $status_label = ucwords(str_replace('_', ' ', $invoice_status));
                         ?>
                             <tr>
-                                <td><a href="invoice_overview.php?invoice_id=<?php echo $invoice_id; ?>"><?php echo dd_($invoice_date); ?></a></td>
-                                <td><a href="invoice_overview.php?invoice_id=<?php echo $invoice_id; ?>"><?php echo dd_($due_date); ?></a></td>
+                                <td><a href="invoice_overview.php?invoice_id=<?php echo $invoice_id; ?>"><?php echo ddm_($invoice_date); ?></a></td>
+                                <td><a href="invoice_overview.php?invoice_id=<?php echo $invoice_id; ?>"><?php echo ddm_($due_date); ?></a></td>
                                 <td><a href="invoice_overview.php?invoice_id=<?php echo $invoice_id; ?>"><?php echo $invoice_no; ?></a></td>
                                 <td>Invoice</td>
                                 <td><?php echo $status_label; ?></td>

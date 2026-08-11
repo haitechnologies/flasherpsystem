@@ -30,9 +30,13 @@
                                 <a class="dropdown-item small" href="customer_contacts.php?action=edit_customer_contacts&customer_id=<?php echo $customer_id; ?>&contact_id=<?php echo $rows_contacts['id']; ?>">
                                     Edit
                                 </a>
-                                <a class="dropdown-item small" href="customer_overview.php?customer_id=<?php echo $customer_id; ?>&action=delete_customer_contacts&contact_id=<?php echo $rows_contacts['id']; ?>">
-                                    Delete
-                                </a>
+                                <form method="post" action="customer_contacts.php" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this contact?')">
+                                    <input type="hidden" name="action" value="delete_customer_contacts">
+                                    <input type="hidden" name="customer_id" value="<?php echo $customer_id; ?>">
+                                    <input type="hidden" name="contact_id" value="<?php echo $rows_contacts['id']; ?>">
+                                    <?php echo csrf_field(); ?>
+                                    <button type="submit" class="dropdown-item small">Delete</button>
+                                </form>
                             </div>
                         </div>
                     </span>
@@ -242,9 +246,13 @@
                                                 <a class="dropdown-item small" href="customer_contacts.php?action=edit_customer_contacts&customer_id=<?php echo $customer_id; ?>&contact_id=<?php echo $rows_contacts['id']; ?>">
                                                     Edit
                                                 </a>
-                                                <a class="dropdown-item small" href="customer_overview.php?customer_id=<?php echo $customer_id; ?>&action=mark_as_primary&contact_id=<?php echo $rows_contacts['id']; ?>">
-                                                    Mark as Primary
-                                                </a>
+                                                <form method="post" action="customer_overview.php" class="d-inline">
+                                                    <input type="hidden" name="action" value="mark_as_primary">
+                                                    <input type="hidden" name="customer_id" value="<?php echo $customer_id; ?>">
+                                                    <input type="hidden" name="contact_id" value="<?php echo $rows_contacts['id']; ?>">
+                                                    <?php echo csrf_field(); ?>
+                                                    <button type="submit" class="dropdown-item small">Mark as Primary</button>
+                                                </form>
                                                 <a class="dropdown-item small" href="customer_overview.php?customer_id=<?php echo $customer_id; ?>&action=delete_customer_contacts&contact_id=<?php echo $rows_contacts['id']; ?>">
                                                     Delete
                                                 </a>
@@ -287,7 +295,7 @@
 
                 <div class="row mt-2">
                     <div class="col-lg-6 small text-muted">Created On</div>
-                    <div class="col-lg-6 small"><?php echo dd_($created_at); ?></div>
+                    <div class="col-lg-6 small"><?php echo ddm_($created_at); ?></div>
                 </div>
 
                 <div class="row mt-2">

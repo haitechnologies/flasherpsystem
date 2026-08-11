@@ -7,6 +7,7 @@ namespace App\Repository;
 use App\Core\Database;
 use App\Core\DB;
 use App\Model\Unit;
+use App\Core\ErrorCapture;
 
 class UnitRepository
 {
@@ -94,7 +95,7 @@ class UnitRepository
             $this->db->execute($sql, $params);
             return true;
         } catch (\Throwable $e) {
-            error_log("UnitRepository: Update failed: " . $e->getMessage());
+            ErrorCapture::record("UnitRepository: Update failed: " . $e->getMessage());
             return false;
         }
     }

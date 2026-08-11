@@ -7,6 +7,7 @@ namespace App\Repository;
 use App\Core\Database;
 use App\Core\DB;
 use App\Model\Account;
+use App\Core\ErrorCapture;
 
 class AccountRepository
 {
@@ -77,7 +78,7 @@ class AccountRepository
             $this->db->execute($sql, $params);
             return true;
         } catch (\Throwable $e) {
-            error_log("AccountRepository: Update failed: " . $e->getMessage());
+            ErrorCapture::record("AccountRepository: Update failed: " . $e->getMessage());
             return false;
         }
     }

@@ -7,6 +7,7 @@ namespace App\Repository;
 use App\Core\Database;
 use App\Core\DB;
 use App\Model\TaxTreatment;
+use App\Core\ErrorCapture;
 
 class TaxTreatmentRepository
 {
@@ -68,7 +69,7 @@ class TaxTreatmentRepository
             $this->db->execute($sql, $params);
             return true;
         } catch (\Throwable $e) {
-            error_log("TaxTreatmentRepository: Update failed: " . $e->getMessage());
+            ErrorCapture::record("TaxTreatmentRepository: Update failed: " . $e->getMessage());
             return false;
         }
     }

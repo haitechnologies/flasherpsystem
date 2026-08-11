@@ -66,6 +66,7 @@ class PurchaseController extends BaseController
             flash_error($error);
             return Response::redirect("purchases.php?id=$id&action=edit_purchases");
         } catch (\Throwable $e) {
+            $this->logError("PurchaseController::handleUpdate error: " . $e->getMessage());
             flash_error($e->getMessage());
             return Response::redirect("purchases.php?id=$id&action=edit_purchases");
         }
@@ -85,6 +86,7 @@ class PurchaseController extends BaseController
             flash_error($error);
             return Response::redirect("purchases.php");
         } catch (\Throwable $e) {
+            $this->logError("PurchaseController::handleCreate error: " . $e->getMessage());
             flash_error($e->getMessage());
             return Response::redirect("purchases.php");
         }
@@ -130,6 +132,9 @@ class PurchaseController extends BaseController
                 'description' => $request->getArrayItem('description', $i),
                 'qty' => $request->getArrayItem('qty', $i, '1'),
                 'rate' => $request->getArrayItem('rate', $i, '0'),
+                'discount_type' => $request->getArrayItem('discount_type', $i),
+                'discount_type_value' => $request->getArrayItem('discount_type_value', $i, '0'),
+                'discount_amount' => $request->getArrayItem('discount_amount', $i, '0'),
                 'sub_total' => $request->getArrayItem('sub_total', $i, '0'),
                 'tax' => $request->getArrayItem('tax', $i, '0'),
                 'tax_amount' => $request->getArrayItem('tax_amount', $i, '0'),
@@ -148,11 +153,6 @@ class PurchaseController extends BaseController
         $session_user_id = $this->userId;
         $session_role_id = $this->roleId;
         $error_message = $request->getString('error_message');
-        if (empty($error_message)) {
-            foreach (\App\Core\FlashMessage::all() as $fm) {
-                if ($fm['type'] === 'danger') { $error_message = $fm['message']; break; }
-            }
-        }
         $action = $request->getString('action');
 
         // Default values
@@ -177,6 +177,9 @@ class PurchaseController extends BaseController
         $description_arr = [];
         $qty_arr = [];
         $rate_arr = [];
+        $discount_type_arr = [];
+        $discount_type_value_arr = [];
+        $discount_amount_arr = [];
         $sub_total_arr = [];
         $tax_arr = [];
         $tax_amount_arr = [];
@@ -190,6 +193,7 @@ class PurchaseController extends BaseController
                 $row = $this->db->fetchOne($sql, ['id' => $id]);
                 $created_by = $row ? (int)$row['created_by'] : 0;
             } catch (\Throwable $e) {
+                $this->logError("PurchaseController::showForm error: " . $e->getMessage());
                 $created_by = 0;
             }
 
@@ -199,6 +203,7 @@ class PurchaseController extends BaseController
                 try {
                     $purchase = $this->purchaseService->getPurchase($id, $this->orgId);
                     $vendor_id = (string)$purchase->vendorId;
+                    $purchase_no = (string)$purchase->purchaseNo;
                     $purchase_status = $purchase->purchaseStatus;
                     $purchase_date = DateHelper::toDisplayDate($purchase->purchaseDate) ?: $purchase->purchaseDate;
                     $reference_no = (string)$purchase->referenceNo;
@@ -214,7 +219,7 @@ class PurchaseController extends BaseController
                     $grand_tax = (string)$purchase->grandTax;
                     $grand_total = (string)$purchase->grandTotal;
 
-                    $items = $this->purchaseService->getPurchaseItems($id, $this->orgId);
+                    $items = $this->purchaseService->getPurchaseItems($id);
                     $total_rows = count($items);
 
                     foreach ($items as $item) {
@@ -223,12 +228,16 @@ class PurchaseController extends BaseController
                         $description_arr[] = $item->description;
                         $qty_arr[] = $item->qty;
                         $rate_arr[] = $item->rate;
+                        $discount_type_arr[] = $item->discountType;
+                        $discount_type_value_arr[] = $item->discountTypeValue;
+                        $discount_amount_arr[] = $item->discountAmount;
                         $sub_total_arr[] = $item->subTotal;
                         $tax_arr[] = $item->tax;
                         $tax_amount_arr[] = $item->taxAmount;
                         $total_arr[] = $item->total;
                     }
                 } catch (\Throwable $e) {
+                    $this->logError("PurchaseController::showForm error: " . $e->getMessage());
                     $error_message = $e->getMessage();
                 }
             }
@@ -243,6 +252,7 @@ class PurchaseController extends BaseController
         try {
             $vendorOptions = $this->db->fetchAll("SELECT id, display_name FROM `" . DB::VENDORS . "` WHERE is_active=1 ORDER BY id DESC");
         } catch (\Throwable $e) {
+            $this->logError("PurchaseController::showForm error: " . $e->getMessage());
             $vendorOptions = [];
         }
 
@@ -250,6 +260,7 @@ class PurchaseController extends BaseController
         try {
             $warehouseOptions = $this->db->fetchAll("SELECT id, warehouse_name FROM `" . DB::WAREHOUSES . "` WHERE is_active=1");
         } catch (\Throwable $e) {
+            $this->logError("PurchaseController::showForm error: " . $e->getMessage());
             $warehouseOptions = [];
         }
 
@@ -257,6 +268,7 @@ class PurchaseController extends BaseController
         try {
             $itemsList = $this->db->fetchAll("SELECT id, item_name FROM `" . DB::ITEMS . "` WHERE is_active=1 AND item_type='services' ORDER BY item_name");
         } catch (\Throwable $e) {
+            $this->logError("PurchaseController::showForm error: " . $e->getMessage());
             $itemsList = [];
         }
 
@@ -269,6 +281,7 @@ class PurchaseController extends BaseController
             'session_role_id' => $session_role_id,
             'error_message' => $error_message,
             'vendor_id' => $vendor_id,
+            'purchase_no' => $purchase_no ?? '',
             'purchase_status' => $purchase_status,
             'purchase_date' => $purchase_date,
             'reference_no' => $reference_no,
@@ -289,6 +302,9 @@ class PurchaseController extends BaseController
             'description_arr' => $description_arr,
             'qty_arr' => $qty_arr,
             'rate_arr' => $rate_arr,
+            'discount_type_arr' => $discount_type_arr,
+            'discount_type_value_arr' => $discount_type_value_arr,
+            'discount_amount_arr' => $discount_amount_arr,
             'sub_total_arr' => $sub_total_arr,
             'tax_arr' => $tax_arr,
             'tax_amount_arr' => $tax_amount_arr,

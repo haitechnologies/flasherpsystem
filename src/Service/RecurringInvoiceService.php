@@ -54,6 +54,34 @@ class RecurringInvoiceService
             $expiryDate = !empty($data['expiry_date']) ? $this->parseDate((string)$data['expiry_date']) : '1970-01-01';
             $expectedShipmentDate = !empty($data['expected_shipment_date']) ? $this->parseDate((string)$data['expected_shipment_date']) : null;
 
+            $grandSubtotal = 0.0;
+            $grandTax = 0.0;
+            foreach ($itemsData as $itemData) {
+                if ((int)($itemData['service'] ?? 0) <= 0) {
+                    continue;
+                }
+                $qty = (float)($itemData['qty'] ?? 1.0);
+                $rate = (float)($itemData['rate'] ?? 0.0);
+                $sub = (float)($itemData['sub_total'] ?? $qty * $rate);
+                $sub = $sub > 0 ? $sub : $qty * $rate;
+                $tax = (float)($itemData['tax'] ?? 0.0);
+                $taxAmt = (float)($itemData['tax_amount'] ?? ($sub * $tax / 100));
+                $taxAmt = $taxAmt > 0 ? $taxAmt : $sub * $tax / 100;
+                $grandSubtotal += $sub;
+                $grandTax += $taxAmt;
+            }
+
+            $discountType = (string)($data['grand_discount_type'] ?? '');
+            $discountValue = (float)($data['grand_discount_type_value'] ?? 0.0);
+            $discountAmount = 0.0;
+            if ($discountType === 'percent' && $discountValue > 0) {
+                $discountAmount = $grandSubtotal * $discountValue / 100;
+            } elseif ($discountType === 'fixed' && $discountValue > 0) {
+                $discountAmount = $discountValue;
+            }
+            $grandAfterDiscount = $grandSubtotal - $discountAmount;
+            $grandTotal = $grandAfterDiscount + $grandTax;
+
             $invoice = new RecurringInvoice(
                 id: null,
                 organizationId: $orgId,
@@ -84,13 +112,13 @@ class RecurringInvoiceService
                 volume: (float)($data['volume'] ?? 0.0),
                 customerNotes: !empty($data['customer_notes']) ? trim((string)$data['customer_notes']) : null,
                 termsAndConditions: !empty($data['terms_and_conditions']) ? trim((string)$data['terms_and_conditions']) : null,
-                grandSubtotal: (float)($data['grand_subtotal'] ?? 0.0),
-                grandDiscountType: (string)($data['grand_discount_type'] ?? '0.00'),
+                grandSubtotal: $grandSubtotal,
+                grandDiscountType: (string)($data['grand_discount_type'] ?? ''),
                 grandDiscountTypeValue: (float)($data['grand_discount_type_value'] ?? 0.0),
-                grandDiscountAmount: (float)($data['grand_discount_amount'] ?? 0.0),
-                grandAfterDiscount: (float)($data['grand_after_discount'] ?? 0.0),
-                grandTax: (float)($data['grand_tax'] ?? 0.0),
-                grandTotal: (float)($data['grand_total'] ?? 0.0),
+                grandDiscountAmount: $discountAmount,
+                grandAfterDiscount: $grandAfterDiscount,
+                grandTax: $grandTax,
+                grandTotal: $grandTotal,
                 isActive: !empty($data['publish']),
                 createdBy: $userId,
             );

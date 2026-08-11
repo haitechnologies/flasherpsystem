@@ -8,6 +8,7 @@ use App\Core\Database;
 use App\Core\DB;
 use App\Repository\AttendanceDeviceRepository;
 use App\Repository\AttendancePunchRepository;
+use App\Core\ErrorCapture;
 
 /**
  * AttendanceSyncService — Syncs attendance data from ZKTeco devices.
@@ -278,7 +279,7 @@ class AttendanceSyncService
                 }
                 $count++;
             } catch (\Throwable $e) {
-                error_log("AttendanceSyncService: deriveDailyAttendance failed for emp $employeeId: " . $e->getMessage());
+                ErrorCapture::record("AttendanceSyncService: deriveDailyAttendance failed for emp $employeeId: " . $e->getMessage());
             }
         }
 

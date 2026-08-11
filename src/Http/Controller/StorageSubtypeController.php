@@ -68,7 +68,8 @@ class StorageSubtypeController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("storage_subtypes.php?id=$id&action=edit_storage_subtypes");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("StorageSubtypeController::handleUpdate error: " . $e->getMessage());
             flash_error('Storage Subtype could not be updated.');
             return Response::redirect("storage_subtypes.php?id=$id&action=edit_storage_subtypes");
         }
@@ -88,7 +89,8 @@ class StorageSubtypeController extends BaseController
             $error = current($e->getErrors());
             flash_error($error);
             return Response::redirect("storage_subtypes.php");
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->logError("StorageSubtypeController::handleCreate error: " . $e->getMessage());
             flash_error('Storage Subtype could not be saved.');
             return Response::redirect("storage_subtypes.php");
         }

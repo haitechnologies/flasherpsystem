@@ -637,7 +637,7 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
                                                 // ----------------------------------------------
                                                 // Seprate Line Number on base of Space new line
                                                 // ----------------------------------------------
-                                                $desc = explode("\r", $description_arr[$index]);
+                                                $desc = explode("\r", (string)($description_arr[$index] ?? ''));
                                                 // print_r($desc);
                                                 $d_counter = 1;
                                                 if (count($desc) > 0) {

@@ -69,6 +69,7 @@ class LeadAttachmentController extends BaseController
             flash_error($error);
             return Response::redirect("lead_attachments.php?lead_id=$leadId");
         } catch (\Throwable $e) {
+            $this->logError("LeadAttachmentController::handleCreate error: " . $e->getMessage());
             flash_error($e->getMessage());
             return Response::redirect("lead_attachments.php?lead_id=$leadId");
         }
@@ -91,6 +92,7 @@ class LeadAttachmentController extends BaseController
             flash_error($error);
             return Response::redirect("lead_attachments.php?lead_id=$leadId&attachment_id=$id&action=edit_lead_attachments");
         } catch (\Throwable $e) {
+            $this->logError("LeadAttachmentController::handleUpdate error: " . $e->getMessage());
             flash_error($e->getMessage());
             return Response::redirect("lead_attachments.php?lead_id=$leadId&attachment_id=$id&action=edit_lead_attachments");
         }
@@ -119,6 +121,7 @@ class LeadAttachmentController extends BaseController
                 $existingAttachments = $attachments;
                 $existingCount = count($attachments);
             } catch (\Throwable $e) {
+                $this->logError("LeadAttachmentController::showForm error: " . $e->getMessage());
             }
         }
 
@@ -128,6 +131,7 @@ class LeadAttachmentController extends BaseController
                 $attachmentName = (string)$attachment->description;
                 $attachmentFilename = (string)$attachment->filename;
             } catch (\Throwable $e) {
+                $this->logError("LeadAttachmentController::showForm error: " . $e->getMessage());
                 $error_message = $e->getMessage();
             }
         }
