@@ -382,9 +382,9 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
                 $billing_fax            = (!empty($row_billing['fax']) ? s__($row_billing['fax']) : '');
 
 
-                $sale_order_date         = ddm_($sale_order_date);
-                $expiry_date            = ($expiry_date == '1970-01-01' || empty($expiry_date)) ? '' : ddm_($expiry_date);
-                $expected_shipment_date = ($expected_shipment_date == '1970-01-01' || empty($expected_shipment_date)) ? '' : ddm_($expected_shipment_date);
+                $sale_order_date         = function_exists('ddm_') ? ddm_($sale_order_date) : date('d M Y', strtotime($sale_order_date));
+                $expiry_date            = ($expiry_date == '1970-01-01' || empty($expiry_date)) ? '' : (function_exists('ddm_') ? ddm_($expiry_date) : date('d M Y', strtotime($expiry_date)));
+                $expected_shipment_date = ($expected_shipment_date == '1970-01-01' || empty($expected_shipment_date)) ? '' : (function_exists('ddm_') ? ddm_($expected_shipment_date) : date('d M Y', strtotime($expected_shipment_date)));
 
 
                 // ------------------ TOTAL SALE ORDER ITEMS ------------------

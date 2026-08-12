@@ -275,7 +275,7 @@ $accounts_report_category_name  = getTableAttr('category_name', tbl_accounts_rep
                                             <select name="account_id" id="account_id" class="form-select">
                                                 <option value=''>All Accounts</option>
                                                 <?php
-                                                $result_accounts = $mysqli->query("SELECT id, account_name, account_code FROM `" . tbl_accounts . "` WHERE parent_id IS NOT NULL AND organization_id = " . (int)$activeOrganizationId . " ORDER BY account_name ASC");
+                                                $result_accounts = $mysqli->query("SELECT id, account_name, account_code FROM `" . tbl_accounts . "` WHERE parent_id IS NOT NULL ORDER BY account_name ASC");
                                                 while ($row_acc = $result_accounts->fetch_array()) {
                                                 ?>
                                                     <option value="<?php echo $row_acc['id']; ?>" <?php echo (($account_id == $row_acc['id']) ? 'selected' : '') ?>><?php echo s__($row_acc['account_name']); ?> (<?php echo s__($row_acc['account_code']); ?>)</option>
