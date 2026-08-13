@@ -49,7 +49,12 @@ $created_by     = getTableAttr('created_by', DB::CUSTOMERS, $customer_id, $orgWh
             </div>
         </div>
         <div class="my-1 ms-auto d-flex align-items-center gap-2 flex-wrap">
-            <a href="listing_<?php echo $module; ?>.php" class="btn btn-light btn-sm">Cancel</a>
+            <?php $isAddressPage = isset($module) && in_array($module, ['customer_billing_addresses', 'customer_shipping_addresses'], true); ?>
+            <?php if ($isAddressPage): ?>
+                <a href="customer_overview.php?customer_id=<?php echo $customer_id; ?>" class="btn btn-light btn-sm">Cancel</a>
+            <?php else: ?>
+                <a href="listing_<?php echo $module; ?>.php" class="btn btn-light btn-sm">Cancel</a>
+            <?php endif; ?>
             <?php $canApprove = Roles::hasFullAccess(\App\Core\Session::roleId()) || Roles::isAccounts(\App\Core\Session::roleId()); ?>
             <?php if ($canApprove && granted_('edit', 'customers')) { ?>
                 <?php if ($approved == 0) { ?>
