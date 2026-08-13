@@ -448,6 +448,26 @@ function convert_number_to_words($num)
   }
 
   /**
+   * Return '' for empty/zero numeric placeholders so blank fields don't render as "0".
+   */
+  if (!function_exists('nz')) {
+    function nz($value)
+    {
+      if ($value === null || $value === '') {
+        return '';
+      }
+      $v = trim((string)$value);
+      if ($v === '') {
+        return '';
+      }
+      if (is_numeric($v) && (float)$v == 0.0) {
+        return '';
+      }
+      return stripslashes($v);
+    }
+  }
+
+  /**
    * Format decimal numbers for display (currency-friendly).
    *
    * @param mixed $number Numeric value to format

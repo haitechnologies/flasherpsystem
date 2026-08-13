@@ -72,7 +72,6 @@ class BankController extends BaseController
             'routing_number' => $request->getString('routing_number'),
             'description' => $request->getString('description'),
             'is_primary' => $request->get('is_primary') ? 1 : 0,
-            'publish' => $request->get('publish') ? 1 : 0,
         ];
 
         try {
@@ -108,7 +107,6 @@ class BankController extends BaseController
             'routing_number' => $request->getString('routing_number'),
             'description' => $request->getString('description'),
             'is_primary' => $request->get('is_primary') ? 1 : 0,
-            'publish' => $request->get('publish') ? 1 : 0,
         ];
 
         try {
@@ -140,7 +138,6 @@ class BankController extends BaseController
         $routingNumber = '';
         $description = '';
         $isPrimary = 0;
-        $publish = 1;
         $error_message = '';
         $moduleCaption = $this->moduleCaption;
         $module = 'banks';
@@ -162,7 +159,6 @@ class BankController extends BaseController
                 $routingNumber = $bank->routingNumber;
                 $description = $bank->description;
                 $isPrimary = $bank->isPrimary ? 1 : 0;
-                $publish = $bank->isActive ? 1 : 0;
             } catch (NotFoundException $e) {
                 $error_message = $e->getMessage();
             }
@@ -188,6 +184,17 @@ class BankController extends BaseController
             $allAccounts = [];
         }
 
+        $allBanks = [];
+        try {
+            $allBanks = $this->db->fetchAll(
+                "SELECT id, institution_name FROM `" . DB::SETUP_BANKS . "` WHERE is_active=1 AND organization_id=:org_id ORDER BY institution_name",
+                ['org_id' => $this->orgId]
+            );
+        } catch (\Throwable $e) {
+            $this->logError("BankController::showForm error: " . $e->getMessage());
+            $allBanks = [];
+        }
+
         return Response::html($this->view->render('banks/form.php', [
             'id' => $id,
             'accountName' => $accountName,
@@ -202,7 +209,6 @@ class BankController extends BaseController
             'routingNumber' => $routingNumber,
             'description' => $description,
             'isPrimary' => $isPrimary,
-            'publish' => $publish,
             'error_message' => $error_message,
             'moduleCaption' => $moduleCaption,
             'module' => $module,
@@ -210,6 +216,7 @@ class BankController extends BaseController
             'session_user_id' => $session_user_id,
             'allCurrencies' => $allCurrencies,
             'allAccounts' => $allAccounts,
+            'allBanks' => $allBanks,
             'canCreate' => $this->canCreate(),
             'canEdit' => $this->canEdit(),
         ]));

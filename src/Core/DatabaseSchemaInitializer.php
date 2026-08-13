@@ -76,6 +76,7 @@ class DatabaseSchemaInitializer
         self::createInquiryRepliesTable($conn);
         self::ensureUsersMfaColumns($conn);
         self::ensurePaidDaysColumns($conn);
+        self::ensureInvoiceCbmColumns($conn);
     }
 
     /**
@@ -475,6 +476,77 @@ class DatabaseSchemaInitializer
                     $conn->exec($alterSql);
                 } catch (PDOException $e) {
                     ErrorCapture::record("ERROR adding {$columnName} to {$tableName}: " . $e->getMessage());
+                }
+            }
+        }
+    }
+
+    /**
+     * Ensure invoices table has the cbm column (decimal) and volume column is decimal.
+     */
+    private static function ensureInvoiceCbmColumns(mixed $conn): void
+    {
+        $tableName = self::tableName('INVOICES', 'erp_invoices');
+
+        $colQuery = "SELECT COLUMN_NAME, DATA_TYPE, NUMERIC_SCALE FROM information_schema.COLUMNS
+                     WHERE TABLE_SCHEMA = DATABASE()
+                       AND TABLE_NAME = ?
+                       AND COLUMN_NAME = ?
+                     LIMIT 1";
+
+        $checks = [
+            'cbm' => "ALTER TABLE `{$tableName}` ADD COLUMN `cbm` DECIMAL(10,3) NOT NULL DEFAULT 0.000 AFTER `volume`",
+            'volume' => "ALTER TABLE `{$tableName}` MODIFY COLUMN `volume` DECIMAL(10,3) NULL DEFAULT NULL",
+        ];
+
+        foreach ($checks as $columnName => $alterSql) {
+            $hasColumn = false;
+            $isDecimal = false;
+            if ($conn instanceof mysqli) {
+                $existsStmt = $conn->prepare($colQuery);
+                if ($existsStmt) {
+                    $existsStmt->bind_param('ss', $tableName, $columnName);
+                    if ($existsStmt->execute()) {
+                        $result = $existsStmt->get_result();
+                        $row = $result ? $result->fetch_assoc() : null;
+                        $hasColumn = (bool)($row['COLUMN_NAME'] ?? false);
+                        if ($hasColumn && in_array(strtolower((string)($row['DATA_TYPE'] ?? '')), ['decimal', 'double', 'float'], true)) {
+                            $isDecimal = true;
+                        }
+                    }
+                    $existsStmt->close();
+                }
+            } elseif ($conn instanceof PDO) {
+                try {
+                    $existsStmt = $conn->prepare($colQuery);
+                    $existsStmt->execute([$tableName, $columnName]);
+                    $row = $existsStmt->fetch();
+                    $hasColumn = (bool)($row['COLUMN_NAME'] ?? false);
+                    if ($hasColumn && in_array(strtolower((string)($row['DATA_TYPE'] ?? '')), ['decimal', 'double', 'float'], true)) {
+                        $isDecimal = true;
+                    }
+                } catch (PDOException $e) {
+                    ErrorCapture::record("ERROR checking {$columnName} on {$tableName}: " . $e->getMessage());
+                    continue;
+                }
+            }
+
+            if ($columnName === 'cbm' && $hasColumn) {
+                continue;
+            }
+            if ($columnName === 'volume' && $isDecimal) {
+                continue;
+            }
+
+            if ($conn instanceof mysqli) {
+                if (!$conn->query($alterSql)) {
+                    ErrorCapture::record("ERROR altering {$columnName} on {$tableName}: " . $conn->error);
+                }
+            } elseif ($conn instanceof PDO) {
+                try {
+                    $conn->exec($alterSql);
+                } catch (PDOException $e) {
+                    ErrorCapture::record("ERROR altering {$columnName} on {$tableName}: " . $e->getMessage());
                 }
             }
         }

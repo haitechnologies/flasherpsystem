@@ -235,71 +235,88 @@ include 'admin_elements/admin_header.php';
                     <div class="col-lg-4">
                         <div class="row">
                             <div class="col-lg-12">
-                                <div class="card">
-                                    <div class="card-body">
-                                        <div class="row mb-2">
-                                            <label class="col-lg-4 col-form-label">Terms & Conditions:</label>
-                                            <div class="col-lg-8">
-                                                <textarea name="terms_and_conditions" id="terms_and_conditions" class="form-control"><?php echo $terms_and_conditions; ?></textarea>
-                                            </div>
-                                        </div>
-                                        <div class="row mb-2">
-                                            <label class="col-lg-4 col-form-label">Vendor Notes:</label>
-                                            <div class="col-lg-8">
-                                                <textarea name="vendor_notes" id="vendor_notes" class="form-control"><?php echo $vendor_notes; ?></textarea>
-                                            </div>
-                                        </div>
-                                        <div class="row mb-2">
-                                            <div class="col-lg-12">
-                                                <div class="form-check form-switch mt-2">
-                                                    <input type="checkbox" class="form-check-input form-check-input-success" name="publish" id="publish" <?php echo $is_active == 1 ? 'checked="checked"' : ''; ?>>
-                                                    <label class="form-check-label fw-semibold" for="publish">Active Status</label>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
+                                <div class="ms-sm-3 mb-3 mb-sm-0">
+                                    <label class="col-lg-6 col-form-label">Vendor Notes:</label>
+                                    <textarea class="form-control" name="vendor_notes" id="vendor_notes" style="field-sizing: content;" placeholder=""><?php echo $vendor_notes; ?></textarea>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-lg-12">
+                                <div class="ms-sm-3 mb-3 mb-sm-0">
+                                    <label class="col-lg-6 col-form-label">Terms & Conditions:</label>
+                                    <textarea class="form-control" name="terms_and_conditions" id="terms_and_conditions" style="field-sizing: content;" placeholder=""><?php echo $terms_and_conditions; ?></textarea>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div class="col-lg-8">
+                    <div class="col-lg-2"></div>
+                    <div class="col-lg-4">
                         <div class="card">
                             <div class="card-body">
-                                <div class="row mb-2">
-                                    <label class="col-lg-3 col-form-label text-end">Grand Subtotal:</label>
-                                    <div class="col-lg-3">
-                                        <input readonly type="text" name="grand_subtotal" id="grand_subtotal" class="form-control bg-light bg-opacity-75 text-end" value="<?php echo $grand_subtotal; ?>">
-                                    </div>
-                                    <label class="col-lg-2 col-form-label text-end">Grand Discount:</label>
-                                    <div class="col-lg-2">
-                                        <select name="grand_discount_type" id="grand_discount_type" class="form-select">
-                                            <option value="">Select</option>
-                                            <option value="fixed" <?php echo $grand_discount_type === 'fixed' ? 'selected' : ''; ?>>Fixed</option>
-                                            <option value="percent" <?php echo $grand_discount_type === 'percent' ? 'selected' : ''; ?>>Percent</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-lg-2">
-                                        <input type="text" name="grand_discount_type_value" id="grand_discount_type_value" class="form-control calc-grand" value="<?php echo $grand_discount_type_value; ?>">
+                                <div class="row mb-1">
+                                    <label class="col-lg-6 col-form-label fw-semibold">Grand Subtotal:</label>
+                                    <div class="col-lg-6">
+                                        <div class="input-group">
+                                            <span class="input-group-text"><?php echo BASE_CURRENCY['code']; ?></span>
+                                            <input readonly type="number" class="form-control fw-semibold bg-light bg-opacity-50 text-end" placeholder="0" name="grand_subtotal" id="grand_subtotal" value="<?php echo $grand_subtotal; ?>" />
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="row mb-2">
-                                    <label class="col-lg-3 col-form-label text-end">Grand Discount Amount:</label>
+
+                                <div class="row mb-1">
+                                    <label class="col-lg-3 col-form-label">Discount Type:</label>
                                     <div class="col-lg-3">
-                                        <input readonly type="text" name="grand_discount_amount" id="grand_discount_amount" class="form-control bg-light bg-opacity-75 text-end" value="<?php echo $grand_discount_amount; ?>">
+                                        <div class="mb-3 mb-sm-0">
+                                            <select name="grand_discount_type" id="grand_discount_type" class="form-select" onchange="clearGrandDiscountTypeValue(); calculateGrand();">
+                                                <option value='0'></option>
+                                                <option value="percent" <?php if ($grand_discount_type == 'percent') { ?>selected<?php } ?>>Percent %</option>
+                                                <option value="fixed" <?php if ($grand_discount_type == 'fixed') { ?>selected<?php } ?>>Fixed</option>
+                                            </select>
+                                        </div>
                                     </div>
-                                    <label class="col-lg-2 col-form-label text-end">After Discount:</label>
-                                    <div class="col-lg-4">
-                                        <input readonly type="text" name="grand_after_discount" id="grand_after_discount" class="form-control bg-light bg-opacity-75 text-end" value="<?php echo $grand_after_discount; ?>">
+                                    <div class="col-lg-3">
+                                        <input type="number" min="0" step="any" class="form-control" name="grand_discount_type_value" id="grand_discount_type_value" value="<?php echo $grand_discount_type_value; ?>" placeholder="0" onkeyup="calculateGrand();" onchange="calculateGrand();">
                                     </div>
                                 </div>
-                                <div class="row mb-2">
-                                    <label class="col-lg-3 col-form-label text-end">Grand Tax:</label>
-                                    <div class="col-lg-3">
-                                        <input readonly type="text" name="grand_tax" id="grand_tax" class="form-control bg-light bg-opacity-75 text-end" value="<?php echo $grand_tax; ?>">
+
+                                <div class="row mb-1">
+                                    <label class="col-lg-6 col-form-label">Discount Amount</label>
+                                    <div class="col-lg-6">
+                                        <div class="input-group">
+                                            <span class="input-group-text"><?php echo BASE_CURRENCY['code']; ?></span>
+                                            <input readonly type="number" class="form-control bg-light bg-opacity-50 text-end" name="grand_discount_amount" id="grand_discount_amount" value="<?php echo $grand_discount_amount; ?>" placeholder="0">
+                                        </div>
                                     </div>
-                                    <label class="col-lg-2 col-form-label text-end"><span class="text-danger fw-bold">Grand Total:</span></label>
-                                    <div class="col-lg-4">
-                                        <input readonly type="text" name="grand_total" id="grand_total" class="form-control bg-light bg-opacity-75 text-end fw-bold text-danger" value="<?php echo $grand_total; ?>">
+                                </div>
+
+                                <div class="row mb-1">
+                                    <label class="col-lg-6 col-form-label">Subtotal: (Discounted)</label>
+                                    <div class="col-lg-6">
+                                        <div class="input-group">
+                                            <span class="input-group-text"><?php echo BASE_CURRENCY['code']; ?></span>
+                                            <input readonly type="number" class="form-control bg-light bg-opacity-50 text-end" name="grand_after_discount" id="grand_after_discount" value="<?php echo $grand_after_discount; ?>" placeholder="0">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row mb-1">
+                                    <label class="col-lg-6 col-form-label">Total Tax Amount</label>
+                                    <div class="col-lg-6">
+                                        <div class="input-group">
+                                            <span class="input-group-text"><?php echo BASE_CURRENCY['code']; ?></span>
+                                            <input readonly type="number" class="form-control bg-light bg-opacity-50 text-end" name="grand_tax" id="grand_tax" value="<?php echo $grand_tax; ?>" placeholder="0">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row mb-1">
+                                    <label class="col-lg-6 col-form-label fw-semibold">Grand Total</label>
+                                    <div class="col-lg-6">
+                                        <div class="input-group">
+                                            <span class="input-group-text"><?php echo BASE_CURRENCY['code']; ?></span>
+                                            <input type="number" class="form-control fw-semibold bg-light bg-opacity-50 text-end" name="grand_total" id="grand_total" value="<?php echo $grand_total; ?>" readonly>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

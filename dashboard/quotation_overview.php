@@ -37,7 +37,11 @@ if (empty($quotation_id) && isset($_REQUEST['id'])) $quotation_id = e_s__($_REQU
 
 // ------------------ CHECK IF EXISTS ----------------
 //VERIFY IF IS VALID 
-$rs_valid     = $mysqli->query("SELECT id FROM `" . tbl_quotations . "` WHERE id='". $quotation_id."' AND organization_id=$activeOrganizationId");
+$quotationId = (int)$quotation_id;
+$rs_valid_stmt = $mysqli->prepare("SELECT id FROM `" . tbl_quotations . "` WHERE id=? AND organization_id=?");
+$rs_valid_stmt->bind_param('ii', $quotationId, $activeOrganizationId);
+$rs_valid_stmt->execute();
+$rs_valid = $rs_valid_stmt->get_result();
 if ($rs_valid->num_rows == 0) {
     flash_error('Invalid Record in the database.');
     header("Location:listing_quotations.php");
@@ -90,12 +94,16 @@ if (in_array($action, $post_actions)) {
 
 if (($action == "convert_$module" && !empty($quotation_id))) {
 
-    $result_meta = $mysqli->query("SELECT customer_id, lead_id FROM `" . tbl_quotations . "` WHERE id=$quotation_id");
+    $quotationId = (int)$quotation_id;
+
+    $result_meta = $mysqli->query("SELECT customer_id, lead_id, quotation_status FROM `" . tbl_quotations . "` WHERE id=$quotationId AND organization_id=$activeOrganizationId");
     $row_meta = $result_meta->fetch_array();
     $customer_id_meta = (!empty($row_meta['customer_id']) ? $row_meta['customer_id'] : 0);
     $lead_id_meta = (!empty($row_meta['lead_id']) ? $row_meta['lead_id'] : 0);
 
-    if (!empty($lead_id_meta) && (empty($customer_id_meta) || $customer_id_meta == '0')) {
+    if (!empty($row_meta['quotation_status']) && $row_meta['quotation_status'] === 'invoiced') {
+        $error_message = 'This quotation has already been converted to an invoice.';
+    } else if (!empty($lead_id_meta) && (empty($customer_id_meta) || $customer_id_meta == '0')) {
         $error_message = 'Please convert the lead to a customer before converting this quotation to an invoice.';
     } else {
 
@@ -107,7 +115,7 @@ if (($action == "convert_$module" && !empty($quotation_id))) {
     $prefix = 'FL-IN' . date('ym');
 
     // Get the last invoice number for this month
-    $sql = "SELECT invoice_no  FROM `" . tbl_invoices . "`  WHERE invoice_no LIKE '{$prefix}-%'ORDER BY invoice_no DESC LIMIT 1";
+    $sql = "SELECT invoice_no  FROM `" . tbl_invoices . "`  WHERE invoice_no LIKE '{$prefix}-%' AND organization_id=$activeOrganizationId ORDER BY invoice_no DESC LIMIT 1";
     $result = $mysqli->query($sql);
 
     if ($row = $result->fetch_assoc()) {
@@ -124,31 +132,31 @@ if (($action == "convert_$module" && !empty($quotation_id))) {
 
 
     // -- Invoice
-    $result = $mysqli->query("INSERT INTO `" . tbl_invoices . "` (organization_id, customer_id, warehouse_id, subject, job_reference_no, invoice_date, expiry_date, grand_subtotal, grand_discount_type, grand_discount_type_value, grand_discount_amount, grand_after_discount, grand_tax, grand_total, customer_notes, terms_and_conditions, invoice_status, is_active, created_at, updated_at)
-    SELECT organization_id, customer_id, warehouse_id, subject, job_reference_no, NOW(), NOW(), grand_subtotal, grand_discount_type, grand_discount_type_value, grand_discount_amount, grand_after_discount, grand_tax, grand_total, customer_notes, terms_and_conditions, 'draft', is_active, NOW(), NOW() FROM `" . tbl_quotations . "` WHERE id = $quotation_id;");
+    $result = $mysqli->query("INSERT INTO `" . tbl_invoices . "` (organization_id, customer_id, warehouse_id, subject, job_reference_no, invoice_no, invoice_date, expiry_date, grand_subtotal, grand_discount_type, grand_discount_type_value, grand_discount_amount, grand_after_discount, grand_tax, grand_total, customer_notes, terms_and_conditions, invoice_status, is_active, created_at, updated_at)
+    SELECT organization_id, customer_id, warehouse_id, subject, job_reference_no, '" . $invoice_no . "', NOW(), NOW(), grand_subtotal, grand_discount_type, grand_discount_type_value, grand_discount_amount, grand_after_discount, grand_tax, grand_total, customer_notes, terms_and_conditions, 'draft', is_active, NOW(), NOW() FROM `" . tbl_quotations . "` WHERE id = $quotationId AND organization_id=$activeOrganizationId;");
 
     $new_invoice_id = $mysqli->insert_id;
     fp__($tbl_name, $new_invoice_id);
 
-    // Update Invoice no
-    $mysqli->query("UPDATE `" . tbl_invoices . "` SET invoice_no = '" . $invoice_no . "', quotation_id = $quotation_id WHERE id=$new_invoice_id");
+    // Set quotation_id on the new invoice
+    $mysqli->query("UPDATE `" . tbl_invoices . "` SET quotation_id = $quotationId WHERE id=$new_invoice_id");
 
     // -- Invoice Items
     $result = $mysqli->query("INSERT INTO `" . tbl_invoice_items . "` (organization_id, invoice_id, service, description, qty, rate, discount_type, discount_type_value, discount_amount, tax, tax_amount, sub_total, total, created_at, updated_at, created_by) 
-    SELECT organization_id, $new_invoice_id, service, description, qty, rate, discount_type, discount_type_value, discount_amount, tax, tax_amount, sub_total, total, NOW(), NOW(), '" . Session::userId() . "' FROM `" . tbl_quotation_items . "` WHERE quotation_id = $quotation_id");
+    SELECT organization_id, $new_invoice_id, service, description, qty, rate, discount_type, discount_type_value, discount_amount, tax, tax_amount, sub_total, total, NOW(), NOW(), '" . Session::userId() . "' FROM `" . tbl_quotation_items . "` WHERE quotation_id = $quotationId AND organization_id=$activeOrganizationId");
 
     fp__(tbl_invoice_items, $mysqli->insert_id);
 
     // -- Dimension Items (copy from quotation to invoice)
     $mysqli->query("INSERT INTO `" . DB::DIMENSION_ITEMS . "` (module_type, record_id, pcs, unit, length, width, height, formula, cbm, volume, created_at, updated_at, created_by)
     SELECT 'invoices', $new_invoice_id, pcs, unit, length, width, height, formula, cbm, volume, NOW(), NOW(), '" . Session::userId() . "'
-    FROM `" . DB::DIMENSION_ITEMS . "` WHERE module_type='quotations' AND record_id = $quotation_id");
+    FROM `" . DB::DIMENSION_ITEMS . "` WHERE module_type='quotations' AND record_id = $quotationId");
 
 
     $success_message = 'This Quotation has been Converted to Invoice Successfully. Please click here to view. <a href="invoice_overview.php?invoice_id=' . $new_invoice_id . '"> ' . $invoice_no . '</a>';
 
     // CHANGE STATUS OF QUOATION TO INVOICED
-    $mysqli->query("UPDATE `" . tbl_quotations . "` SET invoice_id = $new_invoice_id,  quotation_status = 'invoiced' WHERE id=$quotation_id");
+    $mysqli->query("UPDATE `" . tbl_quotations . "` SET invoice_id = $new_invoice_id,  quotation_status = 'invoiced' WHERE id=$quotationId");
     }
 
 
@@ -168,8 +176,10 @@ if (($action == "convert_$module" && !empty($quotation_id))) {
     // Build the prefix for this month
     $prefix = 'FL-QT' . date('ym');
 
+    $quotationId = (int)$quotation_id;
+
     // Get the last invoice number for this month
-    $sql = "SELECT quotation_no  FROM `" . tbl_quotations . "`  WHERE quotation_no LIKE '{$prefix}-%'ORDER BY quotation_no DESC LIMIT 1";
+    $sql = "SELECT quotation_no  FROM `" . tbl_quotations . "`  WHERE quotation_no LIKE '{$prefix}-%' AND organization_id=$activeOrganizationId ORDER BY quotation_no DESC LIMIT 1";
     $result = $mysqli->query($sql);
 
     if ($row = $result->fetch_assoc()) {
@@ -187,21 +197,21 @@ if (($action == "convert_$module" && !empty($quotation_id))) {
 
     // -- Quotation
     $result = $mysqli->query("INSERT INTO `" . tbl_quotations . "` (organization_id, customer_id, lead_id, warehouse_id, quotation_no, subject, job_reference_no, quotation_date, expiry_date, expected_shipment_date, payment_term, shipment_type, sales_person, mawb_bol, hwb_hbol, shipper_id, consignee_id, origin_port, origin_country, destination_port, no_of_packs, gross_weight, chargeable_weight, volume, grand_subtotal, grand_discount_type, grand_discount_type_value, grand_discount_amount, grand_after_discount, grand_tax, grand_total, customer_notes, terms_and_conditions, quotation_status, is_active, created_at, updated_at)
-    SELECT organization_id, customer_id, lead_id, warehouse_id, '" . $quotation_no . "', subject, FLOOR(111 + (RAND() * 889)), NOW(), NOW(), expected_shipment_date, payment_term, shipment_type, sales_person, mawb_bol, hwb_hbol, shipper_id, consignee_id, origin_port, origin_country, destination_port, no_of_packs, gross_weight, chargeable_weight, volume, grand_subtotal, grand_discount_type, grand_discount_type_value, grand_discount_amount, grand_after_discount, grand_tax, grand_total, customer_notes, terms_and_conditions, 'draft', is_active, NOW(), NOW() FROM `" . tbl_quotations . "` WHERE id = $quotation_id;");
+    SELECT organization_id, customer_id, lead_id, warehouse_id, '" . $quotation_no . "', subject, FLOOR(111 + (RAND() * 889)), NOW(), NOW(), expected_shipment_date, payment_term, shipment_type, sales_person, mawb_bol, hwb_hbol, shipper_id, consignee_id, origin_port, origin_country, destination_port, no_of_packs, gross_weight, chargeable_weight, volume, grand_subtotal, grand_discount_type, grand_discount_type_value, grand_discount_amount, grand_after_discount, grand_tax, grand_total, customer_notes, terms_and_conditions, 'draft', is_active, NOW(), NOW() FROM `" . tbl_quotations . "` WHERE id = $quotationId AND organization_id=$activeOrganizationId;");
 
     $new_cloned_id = $mysqli->insert_id;
     fp__($tbl_name, $new_cloned_id);
 
     // -- Quotation Items
     $result = $mysqli->query("INSERT INTO `" . tbl_quotation_items . "` (organization_id, quotation_id, service, description, qty, rate, discount_type, discount_type_value, discount_amount, tax, tax_amount, sub_total, total, created_at, updated_at, created_by) 
-    SELECT organization_id, $new_cloned_id, service, description, qty, rate, discount_type, discount_type_value, discount_amount, tax, tax_amount, sub_total, total, NOW(), NOW(), '" . Session::userId() . "' FROM `" . tbl_quotation_items . "` WHERE quotation_id = $quotation_id");
+    SELECT organization_id, $new_cloned_id, service, description, qty, rate, discount_type, discount_type_value, discount_amount, tax, tax_amount, sub_total, total, NOW(), NOW(), '" . Session::userId() . "' FROM `" . tbl_quotation_items . "` WHERE quotation_id = $quotationId AND organization_id=$activeOrganizationId");
 
     fp__(tbl_quotation_items, $mysqli->insert_id);
 
     // -- Dimension Items
     $mysqli->query("INSERT INTO `" . DB::DIMENSION_ITEMS . "` (module_type, record_id, pcs, unit, length, width, height, formula, cbm, volume, created_at, updated_at, created_by)
     SELECT 'quotations', $new_cloned_id, pcs, unit, length, width, height, formula, cbm, volume, NOW(), NOW(), '" . Session::userId() . "'
-    FROM `" . DB::DIMENSION_ITEMS . "` WHERE module_type='quotations' AND record_id = $quotation_id");
+    FROM `" . DB::DIMENSION_ITEMS . "` WHERE module_type='quotations' AND record_id = $quotationId");
 
 
     $success_message = 'Quotation has been cloned Successfully. Please click here to view. <a href="quotation_overview.php?quotation_id=' . $new_cloned_id . '"> ' . $quotation_no . '</a>';
@@ -222,7 +232,10 @@ if (($action == "convert_$module" && !empty($quotation_id))) {
     if (!in_array($quotation_status, $allowed_statuses, true)) {
         $error_message = "Invalid status value.";
     } else {
-        $result = $mysqli->query("UPDATE `$tbl_name` SET quotation_status = '" . $quotation_status . "' WHERE id=$quotation_id AND organization_id=$activeOrganizationId");
+        $quotationId = (int)$quotation_id;
+        $result = $mysqli->prepare("UPDATE `$tbl_name` SET quotation_status = ? WHERE id=? AND organization_id=?");
+        $result->bind_param('sii', $quotation_status, $quotationId, $activeOrganizationId);
+        $result->execute();
 
         if ($result) {
             $success_message = "The $module_caption status has been updated successfully.";
@@ -244,23 +257,41 @@ if (($action == "convert_$module" && !empty($quotation_id))) {
 */
 } else if (($action == "delete_$module" && !empty($quotation_id)) && granted('delete', $module_id)) {
 
-    if (Session::roleId() == '1') {
-        $mysqli->query("DELETE FROM `" . DB::DIMENSION_ITEMS . "` WHERE module_type='quotations' AND record_id=$quotation_id");
-        $mysqli->query("DELETE FROM `" . DB::QUOTATION_ITEMS . "` WHERE quotation_id=$quotation_id AND organization_id=$activeOrganizationId");
-        $mysqli->query("DELETE FROM `$tbl_name` WHERE id=$quotation_id AND organization_id=$activeOrganizationId");
+    $quotationId = (int)$quotation_id;
+    if ($quotationId <= 0) {
+        $error_message = 'Invalid record.';
     } else {
-        $mysqli->query("DELETE FROM `" . DB::DIMENSION_ITEMS . "` WHERE module_type='quotations' AND record_id=$quotation_id");
-        $mysqli->query("DELETE FROM `" . DB::QUOTATION_ITEMS . "` WHERE quotation_id=$quotation_id AND organization_id=$activeOrganizationId");
-        $mysqli->query("DELETE FROM `$tbl_name` WHERE id=$quotation_id AND created_by='" . Session::userId() . "' AND organization_id=$activeOrganizationId");
-    }
+        if (Session::roleId() == '1') {
+            $stmt = $mysqli->prepare("DELETE FROM `" . DB::DIMENSION_ITEMS . "` WHERE module_type='quotations' AND record_id=?");
+            $stmt->bind_param('i', $quotationId);
+            $stmt->execute();
+            $stmt = $mysqli->prepare("DELETE FROM `" . DB::QUOTATION_ITEMS . "` WHERE quotation_id=? AND organization_id=?");
+            $stmt->bind_param('ii', $quotationId, $activeOrganizationId);
+            $stmt->execute();
+            $stmt = $mysqli->prepare("DELETE FROM `$tbl_name` WHERE id=? AND organization_id=?");
+            $stmt->bind_param('ii', $quotationId, $activeOrganizationId);
+            $stmt->execute();
+        } else {
+            $userId = (int)Session::userId();
+            $stmt = $mysqli->prepare("DELETE FROM `" . DB::DIMENSION_ITEMS . "` WHERE module_type='quotations' AND record_id=?");
+            $stmt->bind_param('i', $quotationId);
+            $stmt->execute();
+            $stmt = $mysqli->prepare("DELETE FROM `" . DB::QUOTATION_ITEMS . "` WHERE quotation_id=? AND organization_id=?");
+            $stmt->bind_param('ii', $quotationId, $activeOrganizationId);
+            $stmt->execute();
+            $stmt = $mysqli->prepare("DELETE FROM `$tbl_name` WHERE id=? AND created_by=? AND organization_id=?");
+            $stmt->bind_param('iii', $quotationId, $userId, $activeOrganizationId);
+            $stmt->execute();
+        }
 
-    if ($mysqli->affected_rows > 0) {
+        if ($mysqli->affected_rows > 0) {
         $success_message = "Item deleted successfully.";
         flash_success($success_message);
         header("Location:listing_$module.php");
         exit;
     } else {
         $error_message = "Action denied. You are not authorized to delete this record.";
+    }
     }
 }
 

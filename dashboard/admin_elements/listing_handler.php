@@ -71,6 +71,7 @@ if ($action === "publish_{$module}" && !empty($id) && granted('edit', $module_id
             }
         }
     } catch (\Throwable $e) {
+        log_error($e->getMessage(), 'ERROR', $e->getFile(), $e->getLine(), ['module' => $module, 'action' => 'delete', 'id' => (int)($id ?? 0)]);
         $error_message = "{$module_caption} could not be deleted.";
     }
 }

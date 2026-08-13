@@ -95,7 +95,6 @@ include 'admin_elements/admin_header.php';
                                         <label class="col-lg-3 col-form-label"><span class="text-danger">Customer Name:*</span> </label>
                                         <div class="col-lg-9">
                                             <?php if ($id > 0 || $post_invoice_id > 0): ?>
-                                                <input type="hidden" class="form-control" name="customer_id" id="customer_id" value="<?php echo htmlspecialchars($customer_id, ENT_QUOTES, 'UTF-8'); ?>">
                                                 <input type="text" readonly class="form-control bg-light" name="" id="" value="<?php echo htmlspecialchars((string)getTableAttr('display_name', \App\Core\DB::CUSTOMERS, $customer_id), ENT_QUOTES, 'UTF-8'); ?>">
                                             <?php else: ?>
                                                 <select name="customer_id" id="customer_id" class="form-control select" onchange="if(this.value > 0) { window.location.href='?mod=<?php echo $module; ?>&customer_id=' + this.value; }">
@@ -171,15 +170,6 @@ include 'admin_elements/admin_header.php';
                                         <label class="col-lg-3 col-form-label">Reference#:</label>
                                         <div class="col-lg-9">
                                             <input type="text" class="form-control" placeholder="Reference no" name="reference_no" id="reference_no" value="<?php echo htmlspecialchars($reference_no, ENT_QUOTES, 'UTF-8'); ?>">
-                                        </div>
-                                    </div>
-
-                                    <div class="row mb-2">
-                                        <div class="col-lg-9 offset-lg-3">
-                                            <div class="form-check form-switch">
-                                                <input type="checkbox" class="form-check-input form-check-input-success" name="publish" id="publish" <?php echo $is_active == 1 ? 'checked="checked"' : ''; ?>>
-                                                <label class="form-check-label fw-semibold" for="publish">Active Status</label>
-                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -288,7 +278,7 @@ include 'admin_elements/admin_header.php';
 
                     <div class="row">
                         <div class="col-lg-8">
-                            <span class="text-muted">**List contains only PAID invoices</span>
+                            <span class="text-muted">**List contains only UNPAID invoices (excludes paid, written off and void)</span>
                         </div>
                         <div class="col-lg-4">
                             <div class="card ">

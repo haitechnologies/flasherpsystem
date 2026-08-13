@@ -8,6 +8,7 @@ require '../vendor/autoload.php';
 
 
 $module = 'shipping_stocks';
+$GLOBALS['module'] = $module;
 $module_caption = 'Shipping Stock';
 $tbl_name = DB::SHIPPING_STOCKS;
 $error_message = '';

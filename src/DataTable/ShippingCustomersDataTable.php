@@ -24,7 +24,6 @@ class ShippingCustomersDataTable extends BaseDataTable
         $id      = (int)($row['id'] ?? 0);
         $name    = (string)($row['display_name'] ?? '');
         $phone   = (string)($row['phone'] ?? '');
-        $address = (string)($row['address'] ?? '');
         $type    = (string)($row['customer_type'] ?? '');
         $active  = (int)($row['is_active'] ?? 0);
         $badge   = $active ? BadgeHelper::success('Active') : BadgeHelper::danger('Inactive');
@@ -32,8 +31,8 @@ class ShippingCustomersDataTable extends BaseDataTable
             $this->rowNumber,
             htmlspecialchars($name),
             htmlspecialchars($phone),
-            htmlspecialchars($address),
-            htmlspecialchars($address),
+            '',
+            '',
             htmlspecialchars($type),
             $badge,
             $this->getActionButtons($id, 'shipping_customers'),

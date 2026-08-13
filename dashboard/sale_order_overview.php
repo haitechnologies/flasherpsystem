@@ -18,6 +18,8 @@ $success_message = '';
 */
 include('admin_elements/permissions.php');
 
+$activeOrganizationId = dashboardRequireActiveOrganization();
+
 
 /*
 |--------------------------------------------------------------------------
@@ -33,7 +35,11 @@ if (empty($sale_order_id) && isset($_REQUEST['id'])) $sale_order_id = e_s__($_RE
 
 // ------------------ CHECK IF EXISTS ----------------
 //VERIFY IF IS VALID 
-$rs_valid     = $mysqli->query("SELECT id FROM `" . tbl_sale_orders . "` WHERE id=$sale_order_id");
+$saleOrderId = (int)$sale_order_id;
+$rs_valid_stmt = $mysqli->prepare("SELECT id FROM `" . tbl_sale_orders . "` WHERE id=? AND organization_id=?");
+$rs_valid_stmt->bind_param('ii', $saleOrderId, $activeOrganizationId);
+$rs_valid_stmt->execute();
+$rs_valid = $rs_valid_stmt->get_result();
 if ($rs_valid->num_rows == 0) {
     flash_error('Invalid Record in the database.');
     header("Location:listing_sale_orders.php");
@@ -44,7 +50,10 @@ if ($rs_valid->num_rows == 0) {
 
 // ------------------ CHECK IF SALE ORDER IS CONVERTED - INVOICED ----------------
 $invoiced = 0;
-$rs_converted     = $mysqli->query("SELECT sale_order_status FROM `" . tbl_sale_orders . "` WHERE id ='" . $sale_order_id . "' AND sale_order_status='invoiced' ");
+$rs_converted_stmt = $mysqli->prepare("SELECT sale_order_status FROM `" . tbl_sale_orders . "` WHERE id=? AND sale_order_status='invoiced' AND organization_id=?");
+$rs_converted_stmt->bind_param('ii', $saleOrderId, $activeOrganizationId);
+$rs_converted_stmt->execute();
+$rs_converted = $rs_converted_stmt->get_result();
 if ($rs_converted->num_rows > 0) {
     $invoiced = 1;
     // $success_message = 'This Sale Order is Conveted into Invoice.';
@@ -75,6 +84,36 @@ if (isset($_REQUEST['sale_order_item_id']) && !empty($_REQUEST['sale_order_item_
 
 /*
 |--------------------------------------------------------------------------
+| ACTION SECURITY GATE
+|--------------------------------------------------------------------------
+*/
+$post_actions = ["convert_$module", "clone_$module", "update_$module", "delete_$module"];
+if (in_array($action, $post_actions)) {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        flash_error('Invalid request method.');
+        header("Location: sale_order_overview.php?sale_order_id=$sale_order_id");
+        exit;
+    }
+    if (!validate_csrf_token($_POST['csrf_token'] ?? '')) {
+        flash_error('Invalid security token. Please refresh the page and try again.');
+        header("Location: sale_order_overview.php?sale_order_id=$sale_order_id");
+        exit;
+    }
+    if ($action !== "delete_$module" && !granted('edit', $module_id)) {
+        flash_error('Access denied.');
+        header("Location: sale_order_overview.php?sale_order_id=$sale_order_id");
+        exit;
+    }
+    if ($action === "delete_$module" && !granted('delete', $module_id)) {
+        flash_error('Access denied.');
+        header("Location: sale_order_overview.php?sale_order_id=$sale_order_id");
+        exit;
+    }
+}
+
+
+/*
+|--------------------------------------------------------------------------
 | CONVERT TO INVOICE
 |--------------------------------------------------------------------------
 |
@@ -90,7 +129,7 @@ if (($action == "convert_$module" && !empty($sale_order_id))) {
     $prefix = 'FL-IN' . date('ym');
 
     // Get the last invoice number for this month
-    $sql = "SELECT invoice_no  FROM `" . tbl_invoices . "`  WHERE invoice_no LIKE '{$prefix}-%'ORDER BY invoice_no DESC LIMIT 1";
+    $sql = "SELECT invoice_no  FROM `" . tbl_invoices . "`  WHERE invoice_no LIKE '{$prefix}-%' AND organization_id=$activeOrganizationId ORDER BY invoice_no DESC LIMIT 1";
     $result = $mysqli->query($sql);
 
     if ($row = $result->fetch_assoc()) {
@@ -107,26 +146,31 @@ if (($action == "convert_$module" && !empty($sale_order_id))) {
 
 
     // -- Invoice
-    $result = $mysqli->query("INSERT INTO `" . tbl_invoices . "` (customer_id, warehouse_id, subject, reference_no, invoice_date, expiry_date, grand_subtotal, grand_discount_type, grand_discount_type_value, grand_discount_amount, grand_after_discount, grand_tax, grand_total, customer_notes, terms_and_conditions, invoice_status, is_active, created_at, updated_at)
-    SELECT customer_id, warehouse_id, subject, reference_no, NOW(), NOW(), grand_subtotal, grand_discount_type, grand_discount_type_value, grand_discount_amount, grand_after_discount, grand_tax, grand_total, customer_notes, terms_and_conditions, 'draft', is_active, NOW(), NOW() FROM `" . tbl_sale_orders . "` WHERE id = $sale_order_id;");
+    $result = $mysqli->query("INSERT INTO `" . tbl_invoices . "` (organization_id, customer_id, warehouse_id, subject, reference_no, invoice_date, expiry_date, grand_subtotal, grand_discount_type, grand_discount_type_value, grand_discount_amount, grand_after_discount, grand_tax, grand_total, customer_notes, terms_and_conditions, invoice_status, is_active, created_at, updated_at)
+    SELECT organization_id, customer_id, warehouse_id, subject, reference_no, NOW(), NOW(), grand_subtotal, grand_discount_type, grand_discount_type_value, grand_discount_amount, grand_after_discount, grand_tax, grand_total, customer_notes, terms_and_conditions, 'draft', is_active, NOW(), NOW()     FROM `" . tbl_sale_orders . "` WHERE id = $saleOrderId AND organization_id=$activeOrganizationId;");
 
     $new_invoice_id = $mysqli->insert_id;
     fp__($tbl_name, $new_invoice_id);
 
     // Update Invoice no
-    $mysqli->query("UPDATE `" . tbl_invoices . "` SET invoice_no = '" . $invoice_no . "', sale_order_id = $sale_order_id WHERE id=$new_invoice_id");
+    $mysqli->query("UPDATE `" . tbl_invoices . "` SET invoice_no = '" . $invoice_no . "', sale_order_id = $saleOrderId WHERE id=$new_invoice_id");
 
     // -- Invoice Items
-    $result = $mysqli->query("INSERT INTO `" . tbl_invoice_items . "` ( invoice_id, service, description, qty, rate, discount_type, discount_type_value, discount_amount, tax, tax_amount, sub_total, total, created_at, updated_at, created_by) 
-    SELECT $new_invoice_id, service, description, qty, rate, discount_type, discount_type_value, discount_amount, tax, tax_amount, sub_total, total, NOW(), NOW(), '" . Session::userId() . "' FROM `" . tbl_sale_order_items . "` WHERE sale_order_id = $sale_order_id");
+    $result = $mysqli->query("INSERT INTO `" . tbl_invoice_items . "` (organization_id, invoice_id, service, description, qty, rate, discount_type, discount_type_value, discount_amount, tax, tax_amount, sub_total, total, created_at, updated_at, created_by) 
+    SELECT organization_id, $new_invoice_id, service, description, qty, rate, discount_type, discount_type_value, discount_amount, tax, tax_amount, sub_total, total, NOW(), NOW(), '" . Session::userId() . "' FROM `" . tbl_sale_order_items . "`     WHERE sale_order_id = $saleOrderId AND organization_id=$activeOrganizationId");
 
     fp__(tbl_invoice_items, $mysqli->insert_id);
+
+    // -- Dimension Items (copy from sale order to invoice)
+    $mysqli->query("INSERT INTO `" . DB::DIMENSION_ITEMS . "` (organization_id, module_type, record_id, pcs, unit, length, width, height, formula, cbm, volume, created_at, updated_at, created_by)
+    SELECT organization_id, 'invoices', $new_invoice_id, pcs, unit, length, width, height, formula, cbm, volume, NOW(), NOW(), '" . Session::userId() . "'
+    FROM `" . DB::DIMENSION_ITEMS . "` WHERE module_type='sale_orders' AND record_id = $saleOrderId");
 
 
     $success_message = 'This Sale Order has been Converted to Invoice Successfully. Please click here to view. <a href="invoice_overview.php?invoice_id=' . $new_invoice_id . '"> ' . $invoice_no . '</a>';
 
-    // CHANGE STATUS OF QUOATION TO INVOICED
-    $mysqli->query("UPDATE `" . tbl_sale_orders . "` SET invoice_id = $new_invoice_id,  sale_order_status = 'invoiced' WHERE id=$sale_order_id");
+    // CHANGE STATUS OF SALE ORDER TO INVOICED
+    $mysqli->query("UPDATE `" . tbl_sale_orders . "` SET invoice_id = $new_invoice_id,  sale_order_status = 'invoiced' WHERE id=$saleOrderId AND organization_id=$activeOrganizationId");
 
 
 
@@ -139,14 +183,14 @@ if (($action == "convert_$module" && !empty($sale_order_id))) {
 } else if (($action == "clone_$module" && !empty($sale_order_id))) {
 
     // ======================================================
-    // INVOICE NO Auto Generation System
+    // SALE ORDER NO Auto Generation System
     // ======================================================
 
     // Build the prefix for this month
     $prefix = 'FL-SO' . date('ym');
 
-    // Get the last invoice number for this month
-    $sql = "SELECT sale_order_no  FROM `" . tbl_sale_orders . "`  WHERE sale_order_no LIKE '{$prefix}-%'ORDER BY sale_order_no DESC LIMIT 1";
+    // Get the last sale order number for this month
+    $sql = "SELECT sale_order_no  FROM `" . tbl_sale_orders . "`  WHERE sale_order_no LIKE '{$prefix}-%' AND organization_id=$activeOrganizationId ORDER BY sale_order_no DESC LIMIT 1";
     $result = $mysqli->query($sql);
 
     if ($row = $result->fetch_assoc()) {
@@ -154,26 +198,31 @@ if (($action == "convert_$module" && !empty($sale_order_id))) {
         $last_serial = (int) substr($row['sale_order_no'], -4);
         $new_serial = $last_serial + 1;
     } else {
-        // First invoice of the month
+        // First sale order of the month
         $new_serial = 1;
     }
 
-    // Build new invoice number with zero padding
+    // Build new sale order number with zero padding
     $sale_order_no = $prefix . '-' . str_pad($new_serial, 4, '0', STR_PAD_LEFT);
 
 
     // -- Sale order
-    $result = $mysqli->query("INSERT INTO `" . tbl_sale_orders . "` (customer_id, warehouse_id, sale_order_no, subject, reference_no, sale_order_date, expiry_date, expected_shipment_date, payment_term, shipment_type, sales_person, job_reference_no, master_awb_no, shipper_id, consignee_id, origin_port, destination_port, no_of_packs, gross_weight, chargeable_weight, volume, grand_subtotal, grand_discount_type, grand_discount_type_value, grand_discount_amount, grand_after_discount, grand_tax, grand_total, customer_notes, terms_and_conditions, sale_order_status, is_active, created_at, updated_at)
-    SELECT customer_id, warehouse_id, '" . $sale_order_no . "', subject, reference_no, NOW(), NOW(), expected_shipment_date, payment_term, shipment_type, sales_person, job_reference_no, master_awb_no, shipper_id, consignee_id, origin_port, destination_port, no_of_packs, gross_weight, chargeable_weight, volume, grand_subtotal, grand_discount_type, grand_discount_type_value, grand_discount_amount, grand_after_discount, grand_tax, grand_total, customer_notes, terms_and_conditions, 'draft', is_active, NOW(), NOW() FROM `" . tbl_sale_orders . "` WHERE id = $sale_order_id;");
+    $result = $mysqli->query("INSERT INTO `" . tbl_sale_orders . "` (organization_id, customer_id, warehouse_id, sale_order_no, subject, reference_no, sale_order_date, expiry_date, expected_shipment_date, payment_term, shipment_type, sales_person, job_reference_no, master_awb_no, mawb_bol, hwb_hbol, shipper_id, consignee_id, origin_port, origin_country, destination_port, destination_country, no_of_packs, gross_weight, chargeable_weight, volume, cbm, grand_subtotal, grand_discount_type, grand_discount_type_value, grand_discount_amount, grand_after_discount, grand_tax, grand_total, customer_notes, terms_and_conditions, sale_order_status, is_active, created_at, updated_at)
+    SELECT organization_id, customer_id, warehouse_id, '" . $sale_order_no . "', subject, reference_no, NOW(), NOW(), expected_shipment_date, payment_term, shipment_type, sales_person, job_reference_no, master_awb_no, mawb_bol, hwb_hbol, shipper_id, consignee_id, origin_port, origin_country, destination_port, destination_country, no_of_packs, gross_weight, chargeable_weight, volume, cbm, grand_subtotal, grand_discount_type, grand_discount_type_value, grand_discount_amount, grand_after_discount, grand_tax, grand_total, customer_notes, terms_and_conditions, 'draft', is_active, NOW(), NOW()     FROM `" . tbl_sale_orders . "` WHERE id = $saleOrderId AND organization_id=$activeOrganizationId;");
 
     $new_cloned_id = $mysqli->insert_id;
     fp__($tbl_name, $new_cloned_id);
 
     // -- Sale order Items
-    $result = $mysqli->query("INSERT INTO `" . tbl_sale_order_items . "` ( sale_order_id, service, description, qty, rate, discount_type, discount_type_value, discount_amount, tax, tax_amount, sub_total, total, created_at, updated_at, created_by) 
-    SELECT $new_cloned_id, service, description, qty, rate, discount_type, discount_type_value, discount_amount, tax, tax_amount, sub_total, total, NOW(), NOW(), '" . Session::userId() . "' FROM `" . tbl_sale_order_items . "` WHERE sale_order_id = $sale_order_id");
+    $result = $mysqli->query("INSERT INTO `" . tbl_sale_order_items . "` (organization_id, sale_order_id, service, description, qty, rate, discount_type, discount_type_value, discount_amount, tax, tax_amount, sub_total, total, created_at, updated_at, created_by) 
+    SELECT organization_id, $new_cloned_id, service, description, qty, rate, discount_type, discount_type_value, discount_amount, tax, tax_amount, sub_total, total, NOW(), NOW(), '" . Session::userId() . "' FROM `" . tbl_sale_order_items . "`     WHERE sale_order_id = $saleOrderId AND organization_id=$activeOrganizationId");
 
     fp__(tbl_sale_order_items, $mysqli->insert_id);
+
+    // -- Dimension Items
+    $mysqli->query("INSERT INTO `" . DB::DIMENSION_ITEMS . "` (organization_id, module_type, record_id, pcs, unit, length, width, height, formula, cbm, volume, created_at, updated_at, created_by)
+    SELECT organization_id, 'sale_orders', $new_cloned_id, pcs, unit, length, width, height, formula, cbm, volume, NOW(), NOW(), '" . Session::userId() . "'
+    FROM `" . DB::DIMENSION_ITEMS . "` WHERE module_type='sale_orders' AND record_id = $saleOrderId");
 
 
     $success_message = 'Sale order has been cloned Successfully. Please click here to view. <a href="sale_order_overview.php?sale_order_id=' . $new_cloned_id . '"> ' . $sale_order_no . '</a>';
@@ -190,29 +239,23 @@ if (($action == "convert_$module" && !empty($sale_order_id))) {
 */
 } else if (($action == "update_$module" && !empty($sale_order_id) && !empty($sale_order_status))) {
 
-    $result = $mysqli->query("UPDATE `$tbl_name` SET sale_order_status = '" . $sale_order_status . "' WHERE id=$sale_order_id");
-
-    if ($result) {
-        $success_message = "The $module_caption status has been updated successfully.";
-
-
-        // ------------ Sale order Log -------------
-        // if (isset($_POST['sale_order_log_comments']) && !empty($_POST['sale_order_log_comments'])) {
-        //     $sale_order_log_comments     = e_s__($_POST['sale_order_log_comments']);
-
-        //     $mysqli->query("INSERT INTO `" . tbl_sale_order_logs . "` (sale_order_id, sale_order_status, comments) VALUES ('" . $id . "', '" . $sale_order_status . "', '" . $sale_order_log_comments . "'); ");
-        //     fp__(tbl_sale_order_logs, $mysqli->insert_id);
-        // }
-
-        /* ---------------------- NOTIFICATIONS QUERY ---------------------- */
-
-        // --------------------------------------------------------------------------------
-        flash_success($success_message);
-        header("Location:sale_order_overview.php?sale_order_id=$sale_order_id");
-        exit;
-        // $error_message = "Sorry! $module Status Could Not Be Updated.";
+    $allowed_statuses = ['draft', 'sent', 'approved', 'shipped', 'delivered', 'paid', 'partially_paid', 'overdue', 'cancelled', 'confirmed', 'invoiced'];
+    if (!in_array($sale_order_status, $allowed_statuses, true)) {
+        $error_message = "Invalid status value.";
     } else {
-        $error_message = "Sorry! $module Status Could Not Be Updated.";
+        $result = $mysqli->prepare("UPDATE `$tbl_name` SET sale_order_status = ? WHERE id=? AND organization_id=?");
+        $result->bind_param('sii', $sale_order_status, $saleOrderId, $activeOrganizationId);
+        $result->execute();
+
+        if ($result) {
+            $success_message = "The $module_caption status has been updated successfully.";
+            flash_success($success_message);
+            header("Location:sale_order_overview.php?sale_order_id=$sale_order_id");
+            exit;
+            // $error_message = "Sorry! $module Status Could Not Be Updated.";
+        } else {
+            $error_message = "Sorry! $module Status Could Not Be Updated.";
+        }
     }
 }
 
@@ -296,7 +339,10 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
                 */
             if (!empty($sale_order_id)) {
 
-                $result = $mysqli->query("SELECT * FROM `$tbl_name` WHERE id=$sale_order_id");
+                $result_stmt = $mysqli->prepare("SELECT * FROM `$tbl_name` WHERE id=? AND organization_id=?");
+                $result_stmt->bind_param('ii', $saleOrderId, $activeOrganizationId);
+                $result_stmt->execute();
+                $result = $result_stmt->get_result();
                 $row = $result->fetch_array();
 
                 $customer_id            = s__($row['customer_id']);
@@ -307,7 +353,7 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
                 $reference_no           = s__($row['reference_no']);
 
                 $expected_shipment_date = s__($row['expected_shipment_date']);
-                $payment_term           = getTableAttr('payment_term', tbl_customers, $customer_id);
+                $payment_term           = s__($row['payment_term']);
 
                 $shipment_type          = s__($row['shipment_type']);
                 $sales_person           = s__($row['sales_person']);
@@ -316,7 +362,9 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
                 $shipper                = (isset($row['shipper_id']) ? s__($row['shipper_id']) : '');
                 $consignee              = (isset($row['consignee_id']) ? s__($row['consignee_id']) : '');
                 $origin                 = (isset($row['origin_port']) ? s__($row['origin_port']) : '');
+                $origin_country         = (isset($row['origin_country']) ? s__($row['origin_country']) : '');
                 $destination            = (isset($row['destination_port']) ? s__($row['destination_port']) : '');
+                $destination_country    = (isset($row['destination_country']) ? s__($row['destination_country']) : '');
                 $no_of_packs            = s__($row['no_of_packs']);
                 $gross_weight           = s__($row['gross_weight']);
                 $chargeable_weight      = s__($row['chargeable_weight']);
@@ -355,7 +403,10 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
 
 
                 // --- Customer Information
-                $rs = $mysqli->query("SELECT * FROM `" . tbl_customers . "` WHERE id=$customer_id");
+                $rs_stmt = $mysqli->prepare("SELECT * FROM `" . tbl_customers . "` WHERE id=? AND organization_id=?");
+                $rs_stmt->bind_param('ii', $customer_id, $activeOrganizationId);
+                $rs_stmt->execute();
+                $rs = $rs_stmt->get_result();
                 $row_customer = $rs->fetch_array();
                 $salutation             = s__($row_customer['salutation']);
                 $first_name             = s__($row_customer['first_name']);
@@ -368,7 +419,10 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
                 $trn                    = s__($row_customer['trn']);
 
                 // Customer Billing Address 
-                $rs_billing     = $mysqli->query("SELECT * FROM `" . DB::CUSTOMER_ADDRESSES . "` WHERE addressable_type='Customer' AND addressable_id=$customer_id AND type='billing' ");
+                $rs_billing_stmt = $mysqli->prepare("SELECT * FROM `" . DB::CUSTOMER_ADDRESSES . "` WHERE addressable_type='Customer' AND addressable_id=? AND type='billing' AND organization_id=? ");
+                $rs_billing_stmt->bind_param('ii', $customer_id, $activeOrganizationId);
+                $rs_billing_stmt->execute();
+                $rs_billing = $rs_billing_stmt->get_result();
                 $row_billing    = $rs_billing->fetch_array();
 
                 $billing_attention      = (!empty($row_billing['attention']) ? s__($row_billing['attention']) : '');
@@ -389,7 +443,10 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
 
                 // ------------------ TOTAL SALE ORDER ITEMS ------------------
                 // echo "SELECT * FROM `" . tbl_sale_order_items . "` WHERE sale_order_id=$id ORDER BY requested_date";
-                $result_sale_order_items     = $mysqli->query("SELECT * FROM `" . tbl_sale_order_items . "` WHERE sale_order_id=$sale_order_id ORDER BY id");
+                $result_items_stmt = $mysqli->prepare("SELECT * FROM `" . tbl_sale_order_items . "` WHERE sale_order_id=? AND organization_id=? ORDER BY id");
+                $result_items_stmt->bind_param('ii', $saleOrderId, $activeOrganizationId);
+                $result_items_stmt->execute();
+                $result_sale_order_items = $result_items_stmt->get_result();
                 $total_rows                 = $result_sale_order_items->num_rows;
 
 
@@ -417,7 +474,10 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
 
             <?php
             //COUNT QUERY
-            $result         = $mysqli->query("SELECT id FROM `" . tbl_invoices . "` WHERE sale_order_id=$sale_order_id ORDER BY id DESC LIMIT 5 ");
+            $result_stmt = $mysqli->prepare("SELECT id FROM `" . tbl_invoices . "` WHERE sale_order_id=? AND organization_id=? ORDER BY id DESC LIMIT 5 ");
+            $result_stmt->bind_param('ii', $saleOrderId, $activeOrganizationId);
+            $result_stmt->execute();
+            $result = $result_stmt->get_result();
             $total_pages    = $result->num_rows;
             // -----------------------------------
             if ($total_pages > 0) {
@@ -454,7 +514,10 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
                                             <?php
 
                                             //NORMAL QUERY
-                                            $result_invoices = $mysqli->query("SELECT * FROM `" . tbl_invoices . "` WHERE sale_order_id=$sale_order_id ORDER BY id DESC LIMIT 5");
+                                            $result_invoices_stmt = $mysqli->prepare("SELECT * FROM `" . tbl_invoices . "` WHERE sale_order_id=? AND organization_id=? ORDER BY id DESC LIMIT 5");
+                                            $result_invoices_stmt->bind_param('ii', $saleOrderId, $activeOrganizationId);
+                                            $result_invoices_stmt->execute();
+                                            $result_invoices = $result_invoices_stmt->get_result();
                                             // ---------------------------------------------------------------------------------------
                                             while ($row_invoices = $result_invoices->fetch_array(MYSQLI_ASSOC)) {
 
@@ -533,7 +596,10 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
 
                             <?php
                             $warehouse_information = '';
-                            $rs_warehouse   = $mysqli->query("SELECT * FROM `" . tbl_warehouses . "` WHERE id=1");
+                            $rs_warehouse_stmt = $mysqli->prepare("SELECT * FROM `" . tbl_warehouses . "` WHERE id=?");
+                            $rs_warehouse_stmt->bind_param('i', $activeOrganizationId);
+                            $rs_warehouse_stmt->execute();
+                            $rs_warehouse = $rs_warehouse_stmt->get_result();
                             $row_warehouse  = $rs_warehouse->fetch_array();
 
                             $warehouse_no       = s__($row_warehouse['warehouse_no']);
@@ -603,7 +669,7 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
                                 <div class="row">
                                     <label class="col-lg-5 col-form-label">Origin:</label>
                                     <div class="col-lg-7 mt-2">
-                                        <?php echo getTableAttr('alpha3_code', tbl_geo_countries, $origin); ?> - <?php echo getTableAttr('country_name', tbl_geo_countries, $origin); ?>
+                                        <?php echo $origin ? e(getTableAttr('port_name', DB::PORTS, $origin)) : ''; ?><?php echo ($origin && $origin_country) ? ' - ' : ''; ?><?php echo $origin_country ? e(getTableAttr('country', DB::GEO_COUNTRIES, $origin_country)) : ''; ?>
                                     </div>
                                 </div>
                                 <div class="row">
@@ -648,7 +714,7 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
                                 <div class="row">
                                     <label class="col-lg-5 col-form-label">Destination:</label>
                                     <div class="col-lg-7 mt-2">
-                                        <?php echo getTableAttr('alpha3_code', tbl_geo_countries, $destination); ?> - <?php echo getTableAttr('country_name', tbl_geo_countries, $destination); ?>
+                                        <?php echo $destination ? e(getTableAttr('port_name', DB::PORTS, $destination)) : ''; ?><?php echo ($destination && $destination_country) ? ' - ' : ''; ?><?php echo $destination_country ? e(getTableAttr('country', DB::GEO_COUNTRIES, $destination_country)) : ''; ?>
                                     </div>
                                 </div>
                                 <div class="row">

@@ -81,23 +81,19 @@ class QuotationService
 
             // Date parsing
             $quotationDate = (string)($data['quotation_date'] ?? date('Y-m-d'));
-            if (strpos($quotationDate, '-') === false) {
+            if ($quotationDate !== '') {
                 $quotationDate = \App\Helper\DateHelper::toDbDate($quotationDate) ?: $quotationDate;
             }
             $expiryDate = (string)($data['expiry_date'] ?? '');
             if (!empty($expiryDate)) {
-                if (strpos($expiryDate, '-') === false) {
-                    $expiryDate = \App\Helper\DateHelper::toDbDate($expiryDate) ?: $expiryDate;
-                }
+                $expiryDate = \App\Helper\DateHelper::toDbDate($expiryDate) ?: $expiryDate;
             } else {
                 $expiryDate = '1970-01-01';
             }
 
             $expectedShipmentDate = (string)($data['expected_shipment_date'] ?? '');
             if (!empty($expectedShipmentDate)) {
-                if (strpos($expectedShipmentDate, '-') === false) {
-                    $expectedShipmentDate = \App\Helper\DateHelper::toDbDate($expectedShipmentDate) ?: $expectedShipmentDate;
-                }
+                $expectedShipmentDate = \App\Helper\DateHelper::toDbDate($expectedShipmentDate) ?: $expectedShipmentDate;
             } else {
                 $expectedShipmentDate = '1970-01-01';
             }
@@ -240,23 +236,19 @@ class QuotationService
         try {
             // Date parsing
             $quotationDate = isset($data['quotation_date']) ? (string)$data['quotation_date'] : $quotation->quotationDate;
-            if (strpos($quotationDate, '-') === false) {
+            if ($quotationDate !== '') {
                 $quotationDate = \App\Helper\DateHelper::toDbDate($quotationDate) ?: $quotationDate;
             }
             $expiryDate = isset($data['expiry_date']) ? (string)$data['expiry_date'] : $quotation->expiryDate;
             if (!empty($expiryDate)) {
-                if (strpos($expiryDate, '-') === false) {
-                    $expiryDate = \App\Helper\DateHelper::toDbDate($expiryDate) ?: $expiryDate;
-                }
+                $expiryDate = \App\Helper\DateHelper::toDbDate($expiryDate) ?: $expiryDate;
             } else {
                 $expiryDate = '1970-01-01';
             }
 
             $expectedShipmentDate = isset($data['expected_shipment_date']) ? (string)$data['expected_shipment_date'] : $quotation->expectedShipmentDate;
             if (!empty($expectedShipmentDate)) {
-                if (strpos($expectedShipmentDate, '-') === false) {
-                    $expectedShipmentDate = \App\Helper\DateHelper::toDbDate($expectedShipmentDate) ?: $expectedShipmentDate;
-                }
+                $expectedShipmentDate = \App\Helper\DateHelper::toDbDate($expectedShipmentDate) ?: $expectedShipmentDate;
             } else {
                 $expectedShipmentDate = '1970-01-01';
             }

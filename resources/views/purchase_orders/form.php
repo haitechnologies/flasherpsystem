@@ -117,7 +117,7 @@ foreach ($warehouseOptions as $w) {
                                     $field = ['name' => 'purchase_order_date', 'label' => 'Purchase Order Date:', 'required' => true, 'value' => $purchase_order_date, 'placeholder' => 'Purchase Order Date'];
                                     include 'admin_elements/form_field_date.php';
 
-                                    $field = ['name' => 'warehouse_id', 'label' => 'Warehouse:', 'required' => true, 'options_html' => '<option value="0">Please select</option>' . $warehouse_options_html, 'selected' => $warehouse_id, 'empty_option' => false, 'extra_class' => 'form-select'];
+                                    $field = ['name' => 'warehouse_id', 'label' => 'Warehouse:', 'required' => true, 'options_html' => $warehouse_options_html, 'selected' => $warehouse_id, 'empty_option' => false, 'extra_class' => 'form-select'];
                                     include 'admin_elements/form_field_select.php';
 
                                     $field = ['name' => 'subject', 'label' => 'Subject:', 'value' => $subject, 'placeholder' => 'Let your vendor know what this Purchase Order is for'];

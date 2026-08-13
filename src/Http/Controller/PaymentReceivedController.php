@@ -13,6 +13,7 @@ use App\Security\Roles;
 use App\Exception\ValidationException;
 use App\Exception\NotFoundException;
 use App\Helper\DateHelper;
+use App\Helper\PdfGeneratorHelper;
 
 class PaymentReceivedController extends BaseController
 {
@@ -61,18 +62,31 @@ class PaymentReceivedController extends BaseController
 
     private function handleUpdate(Request $request, int $id): Response
     {
+        $payment = $this->paymentService->getPayment($id, $this->orgId);
+        $canEditRecord = Roles::hasFullAccess($this->roleId) || $this->userId === $payment->createdBy;
+        if (!$canEditRecord) {
+            log_error("IDOR attempt: User {$this->userId} tried to update payment $id", 'WARNING', __FILE__, __LINE__);
+            return new Response('Forbidden', 403);
+        }
+
         $paymentData = $this->buildPaymentData($request);
         $itemsData = $this->buildItemsData($request);
 
         try {
             $this->paymentService->updatePayment($id, $paymentData, $itemsData, $this->orgId, $this->userId);
 
+            PdfGeneratorHelper::ensure('payments_received', $id);
+
+            if ($request->get('save_and_send') == 1) {
+                return Response::redirect("send_email.php?current_module=payments_received&id=$id");
+            }
             updateCustomerLogs((int)($paymentData['customer_id'] ?? 0), 'payment', 'edit', $id);
             flash_success('The Payment Received has been updated successfully.');
             return Response::redirect("payment_received_overview.php?payment_received_id=$id");
         } catch (ValidationException $e) {
             $error = current($e->getErrors());
             flash_error($error);
+            $_SESSION['__payments_received_old_input'] = $_POST;
             return Response::redirect("payments_received.php?id=$id&action=edit_payments_received");
         } catch (\Throwable $e) {
             log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
@@ -82,6 +96,7 @@ class PaymentReceivedController extends BaseController
                 'error_code' => (string)$e->getCode(),
             ]));
             flash_error($e->getMessage());
+            $_SESSION['__payments_received_old_input'] = $_POST;
             return Response::redirect("payments_received.php?id=$id&action=edit_payments_received");
         }
     }
@@ -95,12 +110,18 @@ class PaymentReceivedController extends BaseController
             $newPayment = $this->paymentService->createPayment($paymentData, $itemsData, $this->orgId, $this->userId);
             $id = $newPayment->id;
 
+            PdfGeneratorHelper::ensure('payments_received', $id);
+
+            if ($request->get('save_and_send') == 1) {
+                return Response::redirect("send_email.php?current_module=payments_received&id=$id");
+            }
             updateCustomerLogs((int)($paymentData['customer_id'] ?? 0), 'payment', 'add', $id);
             flash_success('The Payment Received has been saved successfully.');
             return Response::redirect("payment_received_overview.php?payment_received_id=$id");
         } catch (ValidationException $e) {
             $error = current($e->getErrors());
             flash_error($error);
+            $_SESSION['__payments_received_old_input'] = $_POST;
             return Response::redirect("payments_received.php");
         } catch (\Throwable $e) {
             log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
@@ -110,6 +131,7 @@ class PaymentReceivedController extends BaseController
                 'error_code' => (string)$e->getCode(),
             ]));
             flash_error($e->getMessage());
+            $_SESSION['__payments_received_old_input'] = $_POST;
             return Response::redirect("payments_received.php");
         }
     }
@@ -177,8 +199,8 @@ class PaymentReceivedController extends BaseController
             'bank_charges' => $request->getString('bank_charges'),
             'reference_no' => $request->getString('reference_no'),
             'payment_status' => $request->getString('payment_status', 'draft'),
-            'publish' => $request->get('publish') ? true : false,
-            'is_active' => $request->get('publish') ? true : false,
+            'publish' => true,
+            'is_active' => true,
         ];
     }
 
@@ -261,7 +283,7 @@ class PaymentReceivedController extends BaseController
                 $created_by = 0;
             }
 
-            $canEdit = Roles::hasFullAccess($session_role_id) || $session_user_id === $created_by;
+            $canEdit = Roles::hasFullAccess($session_role_id) || $this->canEdit() || $session_user_id === $created_by;
 
             if ($canEdit) {
                 try {
@@ -301,6 +323,34 @@ class PaymentReceivedController extends BaseController
 
         if ($total_rows == 0) {
             $total_rows = 1;
+        }
+
+        // Restore old form input after failed save
+        if (session_status() === PHP_SESSION_NONE) {
+            @session_start();
+        }
+        if (isset($_SESSION['__payments_received_old_input'])) {
+            $old = $_SESSION['__payments_received_old_input'];
+            unset($_SESSION['__payments_received_old_input']);
+
+            foreach (['customer_id', 'payment_date', 'payment_method', 'deposit_to',
+                       'total_amount_received', 'bank_charges', 'reference_no',
+                       'payment_status'] as $key) {
+                if (isset($old[$key])) {
+                    $$key = (string)$old[$key];
+                }
+            }
+
+            if (isset($old['publish'])) {
+                $is_active = $old['publish'] ? 1 : 0;
+            }
+
+            if (isset($old['item_id']) && is_array($old['item_id'])) {
+                $item_id_arr = $old['item_id'];
+                $amount_received_on_arr = $old['amount_received_on'] ?? [];
+                $amount_received_arr = $old['amount_received'] ?? [];
+                $total_rows = max(1, count($old['item_id']));
+            }
         }
 
         // Fetch dropdown data

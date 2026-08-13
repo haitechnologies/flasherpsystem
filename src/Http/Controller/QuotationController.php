@@ -14,6 +14,7 @@ use App\Security\Roles;
 use App\Exception\ValidationException;
 use App\Exception\NotFoundException;
 use App\Helper\DateHelper;
+use App\Helper\PdfGeneratorHelper;
 
 class QuotationController extends BaseController
 {
@@ -46,12 +47,28 @@ class QuotationController extends BaseController
         $action = $request->getString('action');
 
         return match (true) {
-            $request->isPost() && $action === 'update_quotations' && $id > 0 && $this->canEdit()
+            $request->isPost() && $action === 'update_quotations' && $id > 0 && $this->canEditQuotation($id)
                 => $this->handleUpdate($request, $id),
             $request->isPost() && $action === 'add_quotations' && $this->canCreate()
                 => $this->handleCreate($request),
             default => $this->showForm($request, $id),
         };
+    }
+
+    private function canEditQuotation(int $id): bool
+    {
+        if (Roles::hasFullAccess($this->roleId) || $this->canEdit()) {
+            return true;
+        }
+        try {
+            $row = $this->db->fetchOne(
+                "SELECT created_by FROM `" . DB::QUOTATIONS . "` WHERE id = :id AND organization_id = :org_id",
+                ['id' => $id, 'org_id' => $this->orgId]
+            );
+            return $row !== null && (int)$row['created_by'] === $this->userId;
+        } catch (\Throwable $e) {
+            return false;
+        }
     }
 
     private function handleUpdate(Request $request, int $id): Response
@@ -63,6 +80,7 @@ class QuotationController extends BaseController
             $this->quotationService->updateQuotation($id, $quotationData, $itemsData, $this->orgId, $this->userId);
 
             updateCustomerLogs((int)($quotationData['customer_id'] ?? 0), 'quotation', 'edit', $id);
+            PdfGeneratorHelper::ensure('quotations', $id);
             if ($request->get('save_and_send') == 1) {
                 return Response::redirect("send_email.php?current_module=quotations&id=$id");
             }
@@ -92,6 +110,7 @@ class QuotationController extends BaseController
             $id = $newQuotation->id;
 
             updateCustomerLogs((int)($quotationData['customer_id'] ?? 0), 'quotation', 'add', $id);
+            PdfGeneratorHelper::ensure('quotations', $id);
             if ($request->get('save_and_send') == 1) {
                 return Response::redirect("send_email.php?current_module=quotations&id=$id");
             }
@@ -115,7 +134,7 @@ class QuotationController extends BaseController
     {
         return [
             'customer_id' => $request->getString('customer_id'),
-            'lead_id' => $request->getString('lead_id'),
+            'lead_id' => $request->getString('lead_id') !== '' ? $request->getString('lead_id') : $request->getString('lead_id_hidden'),
             'quotation_date' => $request->getString('quotation_date'),
             'expiry_date' => $request->getString('expiry_date'),
             'warehouse_id' => $request->getString('warehouse_id'),
@@ -146,7 +165,7 @@ class QuotationController extends BaseController
             'customer_notes' => $request->getString('customer_notes'),
             'grand_tax' => $request->getString('grand_tax'),
             'grand_total' => $request->getString('grand_total'),
-            'publish' => $request->has('publish') ? (bool) $request->get('publish') : true,
+            'publish' => $request->has('publish') ? (bool) $request->get('publish') : false,
             'quotation_status' => $request->getString('quotation_status', 'draft'),
         ];
     }
@@ -195,7 +214,7 @@ class QuotationController extends BaseController
         $lead_id = (string)$request->getInt('lead_id');
         $quotation_no = '';
         $quotation_status = 'draft';
-        $quotation_date = date('Y-m-d');
+        $quotation_date = date('d-m-Y');
         $expiry_date = '';
         $warehouse_id = '0';
         $expected_shipment_date = '';
@@ -226,6 +245,7 @@ class QuotationController extends BaseController
         $grand_tax = '0.00';
         $grand_total = '0.00';
         $is_active = 1;
+        $publish = 1;
 
         $item_id_arr = [];
         $service_arr = [];
@@ -248,7 +268,7 @@ class QuotationController extends BaseController
                 $created_by = 0;
             }
 
-            $canEdit = Roles::hasFullAccess($session_role_id) || $session_user_id === $created_by;
+            $canEdit = Roles::hasFullAccess($session_role_id) || $this->canEdit() || $session_user_id === $created_by;
 
             if ($canEdit) {
                 try {
@@ -277,7 +297,7 @@ class QuotationController extends BaseController
                     $gross_weight = (string)$quotation->grossWeight;
                     $chargeable_weight = (string)$quotation->chargeableWeight;
                     $volume = (string)$quotation->volume;
-                    $cbm = (string)$quotation->volume;
+                    $cbm = (string)$quotation->cbm;
                     $customer_notes = (string)$quotation->customerNotes;
                     $terms_and_conditions = (string)$quotation->termsAndConditions;
                     $grand_subtotal = (string)$quotation->grandSubtotal;
@@ -288,8 +308,9 @@ class QuotationController extends BaseController
                     $grand_tax = (string)$quotation->grandTax;
                     $grand_total = (string)$quotation->grandTotal;
                     $is_active = $quotation->isActive ? 1 : 0;
+                    $publish = $quotation->publish ? 1 : 0;
 
-                    $quotation_date = \App\Helper\DateHelper::toDbDate($quotation_date);
+                    $quotation_date = \App\Helper\DateHelper::toInputDate($quotation_date) ?: $quotation_date;
                     $expiry_date = ($expiry_date === '1970-01-01') ? '' : $expiry_date;
                     $expected_shipment_date = ($expected_shipment_date === '1970-01-01') ? '' : $expected_shipment_date;
 
@@ -338,15 +359,20 @@ class QuotationController extends BaseController
                 'terms_and_conditions', 'grand_subtotal', 'grand_discount_type',
                 'grand_discount_type_value', 'grand_discount_amount',
                 'grand_after_discount', 'customer_notes', 'grand_tax',
-                'grand_total', 'quotation_status',
+                'grand_total', 'quotation_status', 'cbm',
             ] as $key) {
                 if (isset($old[$key])) {
                     $$key = (string)$old[$key];
                 }
             }
 
+            if (empty($lead_id) && isset($old['lead_id_hidden'])) {
+                $lead_id = (string)$old['lead_id_hidden'];
+            }
+
             if (isset($old['publish'])) {
                 $is_active = $old['publish'] ? 1 : 0;
+                $publish = $old['publish'] ? 1 : 0;
             }
 
             if (isset($old['service']) && is_array($old['service'])) {
@@ -381,7 +407,7 @@ class QuotationController extends BaseController
             }
         }
         try {
-            $orgList = $this->db->fetchAll("SELECT id, warehouse_name FROM `" . DB::ORGANIZATIONS . "` WHERE is_active=1");
+            $orgList = $this->db->fetchAll("SELECT id, warehouse_name FROM `" . DB::ORGANIZATIONS . "` WHERE is_active=1 AND id=1");
         } catch (\Throwable $e) {
             $orgList = [];
             if (function_exists('log_error')) {
@@ -506,6 +532,7 @@ class QuotationController extends BaseController
             'grand_tax' => $grand_tax,
             'grand_total' => $grand_total,
             'is_active' => $is_active,
+            'publish' => $publish,
             'total_rows' => $total_rows,
             'item_id_arr' => $item_id_arr,
             'service_arr' => $service_arr,

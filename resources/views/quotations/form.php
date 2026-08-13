@@ -69,28 +69,23 @@ global $mysqli;
 ?>
 <div class="content-wrapper">
 
-    <div class="page-header page-header-light shadow">
-        <div class="page-header-content d-lg-flex border-top py-2 px-3 align-items-center">
-            <div class="my-1">
-                <h5 class="ms-2">
-                    <?php if ($id > 0): ?>
-                        <?php echo $quotation_no; ?>
-                    <?php else: ?>
-                        New <?php echo $moduleCaption; ?>
-                    <?php endif; ?>
-                </h5>
+    <div class="page-header page-header-light shadow carriers-page-header">
+        <div class="page-header-content border-top py-2 px-3 carriers-page-header-content">
+            <div class="my-1 d-flex align-items-center gap-2">
+                <h5 class="mb-0"><?php echo ($id > 0) ? 'Edit' : 'New'; ?> <?php echo $moduleCaption; ?></h5>
+                <?php if ($id > 0): ?>
+                    <span class="badge bg-success bg-opacity-10 text-success ms-2">Quotation #: <?php echo $quotation_no; ?></span>
+                <?php endif; ?>
+                <span class="badge bg-primary bg-opacity-10 text-primary ms-2"><?php echo !empty($quotation_status) ? ucwords($quotation_status) : ''; ?></span>
             </div>
-            <div class="p-3 rounded mt-1">
-                <label class="form-check-label text-muted small"><?php echo (!empty($quotation_status) ? strtoupper($quotation_status) : ''); ?></label>
-            </div>
-            <div class="my-1 ms-auto d-flex align-items-center gap-2 flex-wrap">
-                <?php if ($canCreate): ?>
-                    <?php if ($id > 0): ?>
+            <div class="my-1 d-flex align-items-center gap-2">
+                <?php if ($id > 0): ?>
+                    <?php if ($canEdit): ?>
                         <button type="button" form="frm<?php echo $module; ?>" class="submit-form btn btn-primary btn-sm">Save</button>
-                    <?php else: ?>
-                        <button type="button" form="frm<?php echo $module; ?>" class="save-draft-quotation btn btn-light btn-sm">Save as Draft</button>
                     <?php endif; ?>
-                    <button type="button" form="frm<?php echo $module; ?>" class="save-and-send-quotation btn btn-light btn-sm">Save and Send</button>
+                <?php elseif ($canCreate): ?>
+                    <button type="button" form="frm<?php echo $module; ?>" class="save-draft-quotation btn btn-primary btn-sm">Save as Draft</button>
+                    <button type="button" form="frm<?php echo $module; ?>" class="save-and-send-quotation btn btn-info btn-sm">Save and Send</button>
                 <?php endif; ?>
                 <?php if ($id > 0): ?>
                     <a href="quotation_overview.php?quotation_id=<?php echo $id; ?>" class="btn btn-light btn-sm">Cancel</a>
@@ -131,6 +126,16 @@ global $mysqli;
                                 <div class="card-body">
 
                                     <div class="row mb-2">
+                                        <label class="col-lg-3 col-form-label">Publish:</label>
+                                        <div class="col-lg-9 d-flex align-items-center">
+                                            <div class="form-check form-switch">
+                                                <input type="checkbox" class="form-check-input" name="publish" id="publish" value="1" <?php echo $publish ? 'checked' : ''; ?>>
+                                                <label class="form-check-label" for="publish">Visible in customer portal / public listing</label>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="row mb-2">
                                         <label class="col-lg-3 col-form-label"><span class="text-danger">Customer Name:*</span></label>
                                         <div class="col-lg-9">
                                             <select name="customer_id" id="customer_id" class="form-select" onchange="toggleQuotationPartySelectors()">
@@ -155,6 +160,7 @@ global $mysqli;
                                                     </option>
                                                 <?php endforeach; ?>
                                             </select>
+                                            <input type="hidden" name="lead_id_hidden" id="lead_id_hidden" value="<?php echo $lead_id; ?>">
                                         </div>
                                     </div>
 
@@ -263,8 +269,8 @@ global $mysqli;
                                         <div class="col-lg-3">
                                             <input type="text" class="form-control" name="master_awb_no" id="master_awb_no" value="<?php echo htmlspecialchars($master_awb_no); ?>">
                                         </div>
-                                        <label class="col-lg-1 col-form-label text-end">HWB/HBOL:</label>
-                                        <div class="col-lg-5">
+                                        <label class="col-lg-2 col-form-label text-end">HWB/HBOL:</label>
+                                        <div class="col-lg-4">
                                             <input type="text" class="form-control" name="hwb_hbol" id="hwb_hbol" value="<?php echo htmlspecialchars($hwb_hbol); ?>">
                                         </div>
                                     </div>
@@ -289,8 +295,8 @@ global $mysqli;
                                     </div>
 
                                     <div class="row mb-2">
-                                        <label class="col-lg-3 col-form-label">Consignee:</label>
-                                        <div class="col-lg-7">
+                                        <label class="col-lg-3 col-form-label"><span class="text-danger">Consignee:*</span> <i class="ph-plus-circle" id="openConsigneePopup" style="cursor:pointer;"></i> </label>
+                                        <div class="col-lg-9">
                                             <select name="consignee" id="consignee_id" class="form-select">
                                                 <option value="0">Please select</option>
                                                 <?php foreach ($consigneesList as $row): ?>
@@ -299,11 +305,6 @@ global $mysqli;
                                                     </option>
                                                 <?php endforeach; ?>
                                             </select>
-                                        </div>
-                                        <div class="col-lg-2">
-                                            <a href="#" class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#consigneeModal">
-                                                <i class="ph-plus"></i>
-                                            </a>
                                         </div>
                                     </div>
 
@@ -496,7 +497,7 @@ global $mysqli;
                             <div class="col-lg-12">
                                 <div class="ms-sm-3 mb-3 mb-sm-0">
                                     <label class="col-lg-6 col-form-label">Customer Notes:</label>
-                                    <textarea class="form-control" name="customer_notes" id="customer_notes" style="field-sizing: content;" placeholder="Enter any notes to be displayed in your transaction"><?php echo htmlspecialchars($customer_notes); ?></textarea>
+                                    <textarea class="form-control" name="customer_notes" id="customer_notes" style="field-sizing: content;" placeholder=""><?php echo htmlspecialchars($customer_notes); ?></textarea>
                                 </div>
                             </div>
                         </div>
@@ -504,7 +505,7 @@ global $mysqli;
                             <div class="col-lg-12">
                                 <div class="ms-sm-3 mb-3 mb-sm-0">
                                     <label class="col-lg-6 col-form-label">Terms & Conditions:</label>
-                                    <textarea class="form-control text-wrap" name="terms_and_conditions" id="terms_and_conditions" style="field-sizing: content;" placeholder="Enter the terms and conditions of your business to be displayed in your transaction"><?php echo htmlspecialchars($terms_and_conditions); ?></textarea>
+                                    <textarea class="form-control text-wrap" name="terms_and_conditions" id="terms_and_conditions" style="field-sizing: content;" placeholder=""><?php echo htmlspecialchars($terms_and_conditions); ?></textarea>
                                 </div>
                             </div>
                         </div>
@@ -586,10 +587,12 @@ global $mysqli;
                 </div>
 
             </form>
-
-            <?php include('admin_elements/copyright.php'); ?>
         </div>
+
+        <?php include('admin_elements/copyright.php'); ?>
+
     </div>
+
 </div>
 
 <!-- Shipper Modal -->
@@ -816,6 +819,8 @@ global $mysqli;
         const leadSelected = leadSelect.value && leadSelect.value !== '0' && leadSelect.value !== 'Please select';
         if (customerSelected) { leadSelect.disabled = true; } else { leadSelect.disabled = false; }
         if (leadSelected) { customerSelect.disabled = true; } else { customerSelect.disabled = false; }
+        const leadHidden = document.getElementById('lead_id_hidden');
+        if (leadHidden) { leadHidden.value = leadSelect.value; }
     }
 
     function calculateChargeableWeight() {
@@ -996,53 +1001,30 @@ global $mysqli;
 
     function calculateGrand() {
         var total_rows = document.getElementById('total_rows').value;
-        var final_total = 0;
-        for (var i = 1; i <= total_rows; i++) {
-            var total = document.getElementById('total' + i);
-            if (total) final_total += Number(total.value);
-        }
-        document.getElementById('grand_subtotal').value = parseFloat(final_total.toFixed(2));
-        var apply_discount = false;
-        var grand_discount_type = document.getElementById('grand_discount_type').value;
-        var grand_subtotal = parseFloat(document.getElementById('grand_subtotal').value);
-        var grand_discount_type_value = document.getElementById('grand_discount_type_value').value;
-        if (!grand_discount_type_value || grand_discount_type_value === 'undefined' || grand_discount_type_value === 'NULL') {
-            grand_discount_type_value = '0';
-        } else {
-            grand_discount_type_value = parseFloat(grand_discount_type_value);
-        }
-        if (grand_discount_type === 'fixed') {
-            if (grand_subtotal !== 0 && grand_discount_type_value <= grand_subtotal) {
-                document.getElementById('grand_discount_amount').value = parseFloat(grand_discount_type_value);
-                apply_discount = true;
-            }
-        } else if (grand_discount_type === 'percent') {
-            if (grand_discount_type_value <= 100) {
-                var percntVal = percentage(grand_subtotal, grand_discount_type_value);
-                document.getElementById('grand_discount_amount').value = parseFloat(percntVal.toFixed(2));
-                var grand_after_discount = parseFloat(grand_subtotal.toFixed(2)) - parseFloat(percntVal.toFixed(2));
-                document.getElementById('grand_total').value = parseFloat(grand_after_discount.toFixed(2));
-                apply_discount = true;
-            }
-        } else {
-            document.getElementById('grand_discount_type_value').value = '';
-            var grand_tax_val = parseFloat(document.getElementById('grand_tax').value || 0);
-            document.getElementById('grand_total').value = parseFloat(grand_subtotal + grand_tax_val).toFixed(2);
-        }
-        if (apply_discount) {
-            var grand_discount_amount = parseFloat(document.getElementById('grand_discount_amount').value || 0);
-            final_total = parseFloat(final_total) - grand_discount_amount;
-            document.getElementById('grand_after_discount').value = parseFloat(final_total.toFixed(2));
-        }
+        var grand_subtotal_val = 0;
         var total_tax = 0;
         for (var i = 1; i <= total_rows; i++) {
+            var sub_total = document.getElementById('sub_total' + i);
+            if (sub_total) grand_subtotal_val += Number(sub_total.value);
             var tax_amount = document.getElementById('tax_amount' + i);
             if (tax_amount) total_tax += Number(tax_amount.value);
         }
+        document.getElementById('grand_subtotal').value = parseFloat(grand_subtotal_val.toFixed(2));
         document.getElementById('grand_tax').value = parseFloat(total_tax.toFixed(2));
-        var grand_subtotal_final = Number(final_total);
-        var grand_total_final = parseFloat(grand_subtotal_final) + parseFloat(total_tax);
-        document.getElementById('grand_total').value = parseFloat(grand_total_final.toFixed(2));
+
+        var grand_discount_type = document.getElementById('grand_discount_type').value;
+        var grand_discount_type_value = parseFloat(document.getElementById('grand_discount_type_value').value) || 0;
+        var grand_discount_amount = 0;
+        if ((grand_discount_type === 'percent' || grand_discount_type === 'percentage') && grand_discount_type_value > 0 && grand_discount_type_value <= 100) {
+            grand_discount_amount = grand_subtotal_val * grand_discount_type_value / 100;
+        } else if (grand_discount_type === 'fixed' && grand_discount_type_value > 0 && grand_discount_type_value <= grand_subtotal_val) {
+            grand_discount_amount = grand_discount_type_value;
+        }
+
+        var grand_after_discount = Math.max(0, grand_subtotal_val - grand_discount_amount);
+        document.getElementById('grand_discount_amount').value = parseFloat(grand_discount_amount.toFixed(2));
+        document.getElementById('grand_after_discount').value = parseFloat(grand_after_discount.toFixed(2));
+        document.getElementById('grand_total').value = parseFloat((grand_after_discount + total_tax).toFixed(2));
     }
 
     function clearGrandDiscountTypeValue() {
@@ -1110,6 +1092,10 @@ global $mysqli;
         initPortSelect2('origin_port', 'origin_country');
         initPortSelect2('destination_port', 'destination_country');
 
+        $('#openConsigneePopup').on('click', function() {
+            new bootstrap.Modal(document.getElementById('consigneeModal')).show();
+        });
+
         $(document).on('click', '.submit-form', function(e) {
             e.preventDefault();
             document.getElementById('frmquotations').submit();
@@ -1141,4 +1127,5 @@ global $mysqli;
             <?php endfor; ?>
         <?php endif; ?>
     });
+
 </script>

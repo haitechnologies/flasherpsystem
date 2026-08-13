@@ -526,7 +526,6 @@ $adminHeaderQuickAccessSections = [
 		'dashboard' => 'dashboard_shipping.php',
 		'links' => [
 			['href' => 'listing_shipping_advices.php', 'label' => 'Shipping Advices', 'icon' => 'ph-note-pencil', 'perm' => 'shipping_advices'],
-			['href' => 'listing_shipping_invoices.php', 'label' => 'Shipping Invoices', 'icon' => 'ph-files', 'perm' => 'shipping_invoices'],
 			['href' => 'listing_shipping_stocks.php', 'label' => 'Shipping Stocks', 'icon' => 'ph-stack', 'perm' => 'shipping_stocks'],
 			['href' => 'listing_ports.php', 'label' => 'Ports', 'icon' => 'ph-map-pin-line', 'perm' => 'ports'],
 			['href' => 'listing_carriers.php', 'label' => 'Carriers', 'icon' => 'ph-truck', 'perm' => 'carriers'],

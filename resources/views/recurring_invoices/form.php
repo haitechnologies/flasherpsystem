@@ -70,7 +70,7 @@ foreach ($customers as $c) {
 }
 
 $warehouse_options = '';
-$warehouses = $db->fetchAll("SELECT id, warehouse_name FROM `" . DB::ORGANIZATIONS . "` WHERE is_active=1");
+$warehouses = $db->fetchAll("SELECT id, warehouse_name FROM `" . DB::ORGANIZATIONS . "` WHERE is_active=1 AND id=1");
 foreach ($warehouses as $w) {
     $sel = ((string)$w['id'] === $warehouse_id) ? 'selected' : '';
     $warehouse_options .= '<option value="' . $w['id'] . '" ' . $sel . '>' . $w['warehouse_name'] . '</option>';
@@ -84,7 +84,7 @@ foreach ($payment_terms as $pt) {
 }
 
 $sales_person_options = '';
-$sales_persons = $db->fetchAll("SELECT id, warehouse_name FROM `" . DB::ORGANIZATIONS . "` WHERE is_active=1");
+$sales_persons = $db->fetchAll("SELECT id, warehouse_name FROM `" . DB::ORGANIZATIONS . "` WHERE is_active=1 AND id=1");
 foreach ($sales_persons as $sp) {
     $sel = ((string)$sp['id'] === $sales_person) ? 'selected' : '';
     $sales_person_options .= '<option value="' . $sp['id'] . '" ' . $sel . '>' . $sp['warehouse_name'] . '</option>';
@@ -526,7 +526,7 @@ foreach ($destinations as $d) {
                                 <div class="col-lg-12">
                                     <div class="ms-sm-3 mb-3 mb-sm-0">
                                         <label class="col-lg-6 col-form-label">Customer Notes:</label>
-                                        <textarea class="form-control" name="customer_notes" id="customer_notes" style="field-sizing: content;" placeholder="Enter any notes to be displayed in your transaction"><?php echo $customer_notes; ?></textarea>
+                                        <textarea class="form-control" name="customer_notes" id="customer_notes" style="field-sizing: content;" placeholder=""><?php echo $customer_notes; ?></textarea>
                                     </div>
                                 </div>
                             </div>
@@ -534,7 +534,7 @@ foreach ($destinations as $d) {
                                 <div class="col-lg-12">
                                     <div class="ms-sm-3 mb-3 mb-sm-0">
                                         <label class="col-lg-6 col-form-label">Terms & Conditions: </label>
-                                        <textarea class="form-control" name="terms_and_conditions" id="terms_and_conditions" style="field-sizing: content;" placeholder="Enter the terms and conditions of your business to be displayed in your transaction"><?php echo $terms_and_conditions; ?></textarea>
+                                        <textarea class="form-control" name="terms_and_conditions" id="terms_and_conditions" style="field-sizing: content;" placeholder=""><?php echo $terms_and_conditions; ?></textarea>
                                     </div>
                                 </div>
                             </div>

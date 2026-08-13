@@ -315,10 +315,7 @@ class DB
     /** Shipping advice line items */
     public const SHIPPING_ADVICE_ITEMS = self::PREFIX . 'shipping_advice_items';
 
-    /** Shipping invoices */
-    public const SHIPPING_INVOICES = self::PREFIX . 'shipping_invoices';
-
-    /** Shipping invoice line items */
+    /** Shipping invoice line items (invoice details live inside shipping_advices) */
     public const SHIPPING_INVOICE_ITEMS = self::PREFIX . 'shipping_invoice_items';
 
     /** Shipping inventory snapshots */
@@ -359,6 +356,9 @@ class DB
     public const SETUP_STATUSES = self::TAXONOMIES;
     /** Setup Tags (polymorphic, stored in taxonomies with type='lead_tag'|'customer_tag'|'job_tag') */
     public const SETUP_TAGS = self::TAXONOMIES;
+
+    /** Setup Banks — bank institutions master data (CBUAE register) */
+    public const SETUP_BANKS = self::PREFIX . 'setup_banks';
 
     /** Polymorphic taxonomies table for categorization */
     public const TAXONOMIES = self::PREFIX . 'taxonomies';

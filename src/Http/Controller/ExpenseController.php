@@ -170,7 +170,7 @@ class ExpenseController extends BaseController
                 $created_by = 0;
             }
 
-            $canEdit = Roles::hasFullAccess($session_role_id) || $session_user_id === $created_by;
+            $canEdit = Roles::hasFullAccess($session_role_id) || $this->canEdit() || $session_user_id === $created_by;
 
             if ($canEdit) {
                 try {
@@ -213,11 +213,13 @@ class ExpenseController extends BaseController
         try {
             $vendorsList = $this->db->fetchAll("SELECT id, display_name FROM `" . DB::VENDORS . "` ORDER BY id DESC");
         } catch (\Throwable $e) {
-        }
+                log_error('Failed to load form dropdown: ' . $e->getMessage(), 'WARNING', $e->getFile(), $e->getLine(), ['module' => 'expenses', 'action' => 'load_form_dropdown']);
+}
         try {
             $customersList = $this->db->fetchAll("SELECT id, display_name FROM `" . DB::CUSTOMERS . "` WHERE is_active=1 AND approved=1 ORDER BY id DESC");
         } catch (\Throwable $e) {
-        }
+                log_error('Failed to load form dropdown: ' . $e->getMessage(), 'WARNING', $e->getFile(), $e->getLine(), ['module' => 'expenses', 'action' => 'load_form_dropdown']);
+}
 
         return Response::html($this->view->render('expenses/form.php', [
             'id' => $id,
@@ -282,11 +284,13 @@ class ExpenseController extends BaseController
         try {
             $vendorsList = $this->db->fetchAll("SELECT id, display_name FROM `" . DB::VENDORS . "` ORDER BY id DESC");
         } catch (\Throwable $e) {
-        }
+                log_error('Failed to load form dropdown: ' . $e->getMessage(), 'WARNING', $e->getFile(), $e->getLine(), ['module' => 'expenses', 'action' => 'load_form_dropdown']);
+}
         try {
             $customersList = $this->db->fetchAll("SELECT id, display_name FROM `" . DB::CUSTOMERS . "` WHERE is_active=1 AND approved=1 ORDER BY id DESC");
         } catch (\Throwable $e) {
-        }
+                log_error('Failed to load form dropdown: ' . $e->getMessage(), 'WARNING', $e->getFile(), $e->getLine(), ['module' => 'expenses', 'action' => 'load_form_dropdown']);
+}
 
         return Response::html($this->view->render('expenses/form.php', [
             'id' => $id,

@@ -20,6 +20,9 @@ if (empty($display_no)) $display_no = getTableAttr('id', DB::EXPENSES, $expense_
         </div>
         <div class="my-1 ms-auto d-flex align-items-center gap-2 flex-wrap">
             <a href="listing_<?php echo $module; ?>.php" class="btn btn-light btn-sm">Cancel</a>
+            <a href="send_email.php?current_module=<?php echo $module; ?>&id=<?php echo $expense_id; ?>" class="btn btn-light btn-sm"><i class="ph-envelope-simple pe-1"></i> Send Email</a>
+            <?php $token = hash('sha512', 'bushogai' . $expense_id); ?>
+            <a href="pdf_expense.php?id=<?php echo $expense_id; ?>&token=<?php echo $token; ?>" class="btn btn-light btn-sm" target="_blank"><i class="ph-file-pdf pe-1"></i> PDF</a>
             <?php if (isset($module_id) && granted('edit', $module_id)) { ?>
                 <a href="<?php echo $module; ?>.php?action=edit_<?php echo $module; ?>&id=<?php echo $expense_id; ?>" class="btn btn-light btn-sm"><i class="ph-pencil"></i> Edit</a>
             <?php } ?>

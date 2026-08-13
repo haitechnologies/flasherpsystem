@@ -19,6 +19,8 @@ use App\Exception\ValidationException;
  */
 class SaleOrderService
 {
+    public const ALLOWED_STATUSES = ['draft', 'sent', 'approved', 'shipped', 'delivered', 'paid', 'partially_paid', 'overdue', 'cancelled', 'confirmed', 'invoiced'];
+
     private SaleOrderRepository $saleOrderRepo;
     private CustomerRepository $customerRepo;
     private Database $db;
@@ -110,6 +112,7 @@ class SaleOrderService
                 jobReferenceNo: !empty($data['job_reference_no']) ? trim((string)$data['job_reference_no']) : null,
                 masterAwbNo: !empty($data['master_awb_no']) ? trim((string)$data['master_awb_no']) : null,
                 mawbBol: !empty($data['mawb_bol']) ? trim((string)$data['mawb_bol']) : null,
+                hwbHbol: !empty($data['hwb_hbol']) ? trim((string)$data['hwb_hbol']) : null,
                 shipperId: !empty($data['shipper_id']) ? (int)$data['shipper_id'] : 0,
                 consigneeId: !empty($data['consignee_id']) ? (int)$data['consignee_id'] : 0,
                 originPort: !empty($data['origin_port']) ? (int)$data['origin_port'] : 0,
@@ -222,6 +225,7 @@ class SaleOrderService
                 jobReferenceNo: isset($data['job_reference_no']) ? (!empty($data['job_reference_no']) ? trim((string)$data['job_reference_no']) : null) : $saleOrder->jobReferenceNo,
                 masterAwbNo: isset($data['master_awb_no']) ? (!empty($data['master_awb_no']) ? trim((string)$data['master_awb_no']) : null) : $saleOrder->masterAwbNo,
                 mawbBol: isset($data['mawb_bol']) ? (!empty($data['mawb_bol']) ? trim((string)$data['mawb_bol']) : null) : $saleOrder->mawbBol,
+                hwbHbol: isset($data['hwb_hbol']) ? (!empty($data['hwb_hbol']) ? trim((string)$data['hwb_hbol']) : null) : $saleOrder->hwbHbol,
                 shipperId: isset($data['shipper_id']) ? (int)$data['shipper_id'] : $saleOrder->shipperId,
                 consigneeId: isset($data['consignee_id']) ? (int)$data['consignee_id'] : $saleOrder->consigneeId,
                 originPort: isset($data['origin_port']) ? (int)$data['origin_port'] : $saleOrder->originPort,
@@ -732,7 +736,7 @@ class SaleOrderService
      */
     public function updateStatus(int $id, string $status, int $orgId): bool
     {
-        $allowedStatuses = ['draft', 'sent', 'approved', 'shipped', 'delivered', 'paid', 'partially_paid', 'overdue', 'cancelled', 'confirmed', 'invoiced'];
+        $allowedStatuses = self::ALLOWED_STATUSES;
         if (!in_array($status, $allowedStatuses, true)) {
             throw new ValidationException(['status' => "Invalid status: {$status}"]);
         }
@@ -759,6 +763,10 @@ class SaleOrderService
         }
         if (empty($data['sale_order_date'])) {
             throw new ValidationException(['sale_order_date' => "Please select Sale Order Date."]);
+        }
+
+        if (!empty($data['sale_order_status']) && !in_array($data['sale_order_status'], self::ALLOWED_STATUSES, true)) {
+            throw new ValidationException(['sale_order_status' => "Invalid sale order status."]);
         }
 
         // Verify customer exists in organization

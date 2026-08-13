@@ -57,7 +57,7 @@ class OrgIdInjectionMiddleware
             'erp_ports', 'erp_projects', 'erp_purchase_orders', 'erp_purchases',
             'erp_quotations', 'erp_salary_structures', 'erp_sale_orders',
             'erp_shippers', 'erp_shipping_advice_items', 'erp_shipping_advices',
-            'erp_shipping_invoice_items', 'erp_shipping_invoices',
+            'erp_shipping_invoice_items',
             'erp_shipping_stock_items', 'erp_shipping_stocks',
             'erp_storage_types', 'erp_subscription_overrides', 'erp_tasks',
             'erp_tax_treatments', 'erp_taxonomies', 'erp_vendors',

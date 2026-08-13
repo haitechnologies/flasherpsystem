@@ -80,6 +80,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $success_message = "Successfully updated {$updated_count} color settings!";
         
     } catch (Exception $e) {
+        log_error($e->getMessage(), 'ERROR', $e->getFile(), $e->getLine(), ['module' => 'ui_design', 'action' => 'save_settings']);
         $error_message = "Error: " . htmlspecialchars($e->getMessage());
     }
 }

@@ -83,7 +83,8 @@ class JobController extends BaseController
                 return Response::redirect("view_job.php?id=$id");
             }
         } catch (\Throwable $e) {
-        }
+                log_error('Failed to load form dropdown: ' . $e->getMessage(), 'WARNING', $e->getFile(), $e->getLine(), ['module' => 'jobs', 'action' => 'load_form_dropdown']);
+}
 
         $jobData = $this->buildJobData($request);
         $jobData['id'] = $id;
@@ -525,7 +526,8 @@ class JobController extends BaseController
                         exit;
                     }
                 } catch (\Throwable $e) {
-                }
+                                log_error('Failed to load form dropdown: ' . $e->getMessage(), 'WARNING', $e->getFile(), $e->getLine(), ['module' => 'jobs', 'action' => 'load_form_dropdown']);
+}
 
                 try {
                     $job = $this->jobService->getJob($id, $this->orgId);
@@ -740,69 +742,82 @@ class JobController extends BaseController
 
         // Fetch dropdown data
         try {
-            $warehousesList = $this->db->fetchAll("SELECT id, warehouse_name FROM `" . DB::ORGANIZATIONS . "` WHERE is_active=1");
+            $warehousesList = $this->db->fetchAll("SELECT id, warehouse_name FROM `" . DB::ORGANIZATIONS . "` WHERE is_active=1 AND id=1");
         } catch (\Throwable $e) {
             $warehousesList = [];
+            log_error('Failed to load form dropdown: ' . $e->getMessage(), 'WARNING', $e->getFile(), $e->getLine(), ['module' => 'jobs', 'action' => 'load_form_dropdown']);
         }
         try {
             $customersList = $this->db->fetchAll("SELECT id, display_name FROM `" . DB::CUSTOMERS . "` WHERE is_active=1 AND approved=1 ORDER BY id DESC");
         } catch (\Throwable $e) {
             $customersList = [];
+            log_error('Failed to load form dropdown: ' . $e->getMessage(), 'WARNING', $e->getFile(), $e->getLine(), ['module' => 'jobs', 'action' => 'load_form_dropdown']);
         }
         try {
             $usersList = $this->db->fetchAll("SELECT id, full_name FROM `" . DB::USERS . "` WHERE is_active=1 ORDER BY full_name");
         } catch (\Throwable $e) {
             $usersList = [];
+            log_error('Failed to load form dropdown: ' . $e->getMessage(), 'WARNING', $e->getFile(), $e->getLine(), ['module' => 'jobs', 'action' => 'load_form_dropdown']);
         }
         try {
             $currenciesList = $this->db->fetchAll("SELECT id, currency FROM `" . DB::CURRENCIES . "` WHERE is_active=1 ORDER BY id ASC");
         } catch (\Throwable $e) {
             $currenciesList = [];
+            log_error('Failed to load form dropdown: ' . $e->getMessage(), 'WARNING', $e->getFile(), $e->getLine(), ['module' => 'jobs', 'action' => 'load_form_dropdown']);
         }
         try {
             $jobStatusesList = $this->db->fetchAll("SELECT id, job_status FROM `" . DB::JOB_STATUSES . "` WHERE is_active=1 ORDER BY job_status");
         } catch (\Throwable $e) {
             $jobStatusesList = [];
+            log_error('Failed to load form dropdown: ' . $e->getMessage(), 'WARNING', $e->getFile(), $e->getLine(), ['module' => 'jobs', 'action' => 'load_form_dropdown']);
         }
         try {
             $incotermsList = $this->db->fetchAll("SELECT id, incoterm FROM `" . DB::INCOTERMS . "` ORDER BY incoterm ASC");
         } catch (\Throwable $e) {
             $incotermsList = [];
+            log_error('Failed to load form dropdown: ' . $e->getMessage(), 'WARNING', $e->getFile(), $e->getLine(), ['module' => 'jobs', 'action' => 'load_form_dropdown']);
         }
         try {
             $carriersList = $this->db->fetchAll("SELECT id, carrier_name FROM `" . DB::CARRIERS . "` ORDER BY carrier_name ASC");
         } catch (\Throwable $e) {
             $carriersList = [];
+            log_error('Failed to load form dropdown: ' . $e->getMessage(), 'WARNING', $e->getFile(), $e->getLine(), ['module' => 'jobs', 'action' => 'load_form_dropdown']);
         }
         try {
             $containerTypesList = $this->db->fetchAll("SELECT id, container_type FROM `" . DB::CONTAINER_TYPES . "` WHERE is_active=1 ORDER BY container_type");
         } catch (\Throwable $e) {
             $containerTypesList = [];
+            log_error('Failed to load form dropdown: ' . $e->getMessage(), 'WARNING', $e->getFile(), $e->getLine(), ['module' => 'jobs', 'action' => 'load_form_dropdown']);
         }
         try {
             $tagsList = $this->db->fetchAll("SELECT id, value FROM `" . DB::TAXONOMIES . "` WHERE is_active=1 AND type='job_tag' ORDER BY value");
         } catch (\Throwable $e) {
             $tagsList = [];
+            log_error('Failed to load form dropdown: ' . $e->getMessage(), 'WARNING', $e->getFile(), $e->getLine(), ['module' => 'jobs', 'action' => 'load_form_dropdown']);
         }
         try {
             $servicesList = $this->db->fetchAll("SELECT id, item_name FROM `" . DB::ITEMS . "` WHERE is_active=1 AND item_type='services' ORDER BY item_name");
         } catch (\Throwable $e) {
             $servicesList = [];
+            log_error('Failed to load form dropdown: ' . $e->getMessage(), 'WARNING', $e->getFile(), $e->getLine(), ['module' => 'jobs', 'action' => 'load_form_dropdown']);
         }
         try {
             $countriesList = $this->db->fetchAll("SELECT id, country FROM `" . DB::GEO_COUNTRIES . "` WHERE is_active=1 ORDER BY country");
         } catch (\Throwable $e) {
             $countriesList = [];
+            log_error('Failed to load form dropdown: ' . $e->getMessage(), 'WARNING', $e->getFile(), $e->getLine(), ['module' => 'jobs', 'action' => 'load_form_dropdown']);
         }
         try {
             $departmentsList = $this->db->fetchAll("SELECT id, department, email FROM `" . DB::DEPARTMENTS . "` WHERE publish=1 ORDER BY department");
         } catch (\Throwable $e) {
             $departmentsList = [];
+            log_error('Failed to load form dropdown: ' . $e->getMessage(), 'WARNING', $e->getFile(), $e->getLine(), ['module' => 'jobs', 'action' => 'load_form_dropdown']);
         }
         try {
             $quotesList = $this->db->fetchAll("SELECT id, quotation_no FROM `" . DB::QUOTATIONS . "` WHERE organization_id = :org_id ORDER BY id DESC", ['org_id' => $this->orgId]);
         } catch (\Throwable $e) {
             $quotesList = [];
+            log_error('Failed to load form dropdown: ' . $e->getMessage(), 'WARNING', $e->getFile(), $e->getLine(), ['module' => 'jobs', 'action' => 'load_form_dropdown']);
         }
 
         return Response::html($this->view->render('jobs/form.php', [

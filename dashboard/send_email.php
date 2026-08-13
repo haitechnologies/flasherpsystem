@@ -3,6 +3,7 @@
 
 use App\Core\DB;
 use App\Core\Database;
+use App\Helper\PdfGeneratorHelper;
 use App\Repository\EmailProviderRepository;
 use App\Service\EmailProviderService;
 use App\Service\SMTPMailer;
@@ -81,6 +82,8 @@ $modules_config = [
     'debit_notes'       => ['caption' => 'Debit Note',       'prefix' => 'debit_note',     'type' => 'vendor'],
     'payments_received' => ['caption' => 'Payment Received', 'prefix' => 'payment',        'type' => 'customer'],
     'recurring_invoices' => ['caption' => 'Recurring Invoice', 'prefix' => 'invoice',       'type' => 'customer'],
+    'payments_made'     => ['caption' => 'Payment Made',     'prefix' => 'payment_made',   'type' => 'vendor', 'no_column' => 'reference_no'],
+    'expenses'          => ['caption' => 'Expense',          'prefix' => 'expense',        'type' => 'vendor', 'no_column' => 'reference_no'],
 ];
 
 // 2. Resolve Current Module Attributes
@@ -90,8 +93,15 @@ $pfx            = $config['prefix'];
 $type           = $config['type']; // 'customer' or 'vendor'
 $tbl_name       = $tbl_prefix . $current_module;
 
+// Recurring invoices are stored in the invoices table (recurring = 1),
+// not in an erp_recurring_invoices table.
+if ($current_module === 'recurring_invoices') {
+    $tbl_name = DB::INVOICES;
+}
+
 // 3. Dynamic Data Extraction
-$doc_no     = getTableAttr($pfx . '_no', $tbl_name, $id) ?: $id;
+$no_column  = $config['no_column'] ?? ($pfx . '_no');
+$doc_no     = getTableAttr($no_column, $tbl_name, $id) ?: $id;
 
 // 1. Determine Identity Keys based on Module Type ('customer' or 'vendor')
 $contact_id_col = ($type === 'vendor') ? 'vendor_id' : 'customer_id';
@@ -249,26 +259,9 @@ if ($action == 'send_email' && !empty($id)) {
         $pdf_token = hash('sha512', 'bushogai' . $id);
         $pdf_link = rtrim($admin_base_url, '/') . '/' . $pdf_page . '?' . $pdf_id_param . '=' . $id . '&token=' . $pdf_token;
 
-        $pdf_path = \App\Helper\PdfHelper::storageDirFor($current_module) . '/' . \App\Helper\PdfHelper::filenameWithExt((int)$id);
+        PdfGeneratorHelper::ensure($current_module, (int)$id);
 
-        if (!is_file($pdf_path) && isset($container)) {
-            $cookieName = strtoupper(PROJECT_PREFIX) . '_DASHBOARD_SESSID';
-            $ch = curl_init($pdf_link . '&mode=save');
-            curl_setopt_array($ch, [
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_FOLLOWLOCATION => false,
-                CURLOPT_HEADER => true,
-                CURLOPT_TIMEOUT => 30,
-                CURLOPT_HTTPHEADER => [
-                    'Cookie: ' . $cookieName . '=' . session_id(),
-                ],
-            ]);
-            if (!empty($_SERVER['HTTP_USER_AGENT'])) {
-                curl_setopt($ch, CURLOPT_USERAGENT, $_SERVER['HTTP_USER_AGENT']);
-            }
-            curl_exec($ch);
-            curl_close($ch);
-        }
+        $pdf_path = \App\Helper\PdfHelper::storageDirFor($current_module) . '/' . \App\Helper\PdfHelper::filenameWithExt((int)$id);
 
         if (is_file($pdf_path)) {
             $attachments[] = [
@@ -322,6 +315,33 @@ if ($action == 'send_email' && !empty($id)) {
         }
     }
 
+}
+
+/*
+|--------------------------------------------------------------------------
+| ATTACHMENT DISPLAY (form view)
+|--------------------------------------------------------------------------
+| Resolve the PDF that will be attached so it can be shown/verified
+| on the send-email form before sending.
+*/
+$attachment_display_name = '';
+$attachment_display_link = '';
+$attachment_available = false;
+
+$pdf_display_page = \App\Helper\PdfHelper::pageFor($current_module);
+$pdf_display_id_param = \App\Helper\PdfHelper::idParamFor($current_module);
+
+if ($pdf_display_page !== '' && is_file(dirname(__DIR__) . '/dashboard/' . $pdf_display_page)) {
+    PdfGeneratorHelper::ensure($current_module, (int)$id);
+
+    $pdf_display_path = \App\Helper\PdfHelper::storageDirFor($current_module) . '/' . \App\Helper\PdfHelper::filenameWithExt((int)$id);
+
+    if (is_file($pdf_display_path)) {
+        $pdf_display_token = hash('sha512', 'bushogai' . $id);
+        $attachment_display_link = rtrim($admin_base_url, '/') . '/' . $pdf_display_page . '?' . $pdf_display_id_param . '=' . $id . '&token=' . $pdf_display_token;
+        $attachment_display_name = $module_caption . '_' . $doc_no . '.pdf';
+        $attachment_available = true;
+    }
 }
 
 /*
@@ -420,6 +440,28 @@ if ($action == 'send_email' && !empty($id)) {
                             </div>
 
 
+                        </div>
+                    </div>
+
+                    <div class="col-lg-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="card-title mb-0">Attachment</h6>
+                            </div>
+                            <div class="card-body">
+                                <?php if ($attachment_available) { ?>
+                                    <div class="d-flex align-items-center mb-2">
+                                        <i class="ph-file-pdf me-2 text-danger"></i>
+                                        <span class="fw-semibold"><?php echo $attachment_display_name; ?></span>
+                                    </div>
+                                    <p class="text-muted mb-0">This PDF will be attached to the email when sent.</p>
+                                    <a href="<?php echo $attachment_display_link; ?>" target="_blank" class="btn btn-outline-primary btn-sm mt-2">
+                                        <i class="ph-eye me-1"></i> View / Download PDF
+                                    </a>
+                                <?php } else { ?>
+                                    <p class="text-muted mb-0">No PDF attachment available for this document.</p>
+                                <?php } ?>
+                            </div>
                         </div>
                     </div>
 

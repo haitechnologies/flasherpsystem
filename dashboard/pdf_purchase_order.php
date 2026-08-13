@@ -315,6 +315,24 @@ EOD;
 
 $encrypted_filename = hash('sha256', $salt . $id);
 
+$pdfs_dir = dirname(__DIR__) . '/pdfs_purchase_orders';
+if (!is_dir($pdfs_dir)) {
+    @mkdir($pdfs_dir, 0755, true);
+}
+$pdf_path = $pdfs_dir . '/' . $encrypted_filename . '.pdf';
+
+$save_mode = isset($_GET['mode']) && $_GET['mode'] === 'save';
+if ($save_mode) {
+    $pdf->Output($pdf_path, 'F');
+    $mysqli->query("UPDATE `" . tbl_purchase_orders . "` SET pdf = '" . $mysqli->real_escape_string($encrypted_filename) . "' WHERE id=$id");
+    header('Content-Type: application/json');
+    echo json_encode(['success' => true, 'filename' => $encrypted_filename . '.pdf', 'path' => $pdf_path]);
+    exit;
+}
+
+if (!is_file($pdf_path)) {
+    $pdf->Output($pdf_path, 'F');
+}
 $mysqli->query("UPDATE `" . tbl_purchase_orders . "` SET pdf = '" . $mysqli->real_escape_string($encrypted_filename) . "' WHERE id=$id");
 
 $pdf->Output($encrypted_filename, 'I');

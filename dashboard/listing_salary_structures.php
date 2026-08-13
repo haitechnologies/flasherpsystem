@@ -35,6 +35,7 @@ if ($action == "delete_$module" && !empty($id) && (has_full_access() || (isset($
         exit;
     } catch (\Throwable $e) {
         $error_message = "Salary component could not be deleted.";
+        log_error($e->getMessage(), 'ERROR', $e->getFile(), $e->getLine(), ['module' => 'salary_structures', 'action' => 'delete']);
     }
 }
 

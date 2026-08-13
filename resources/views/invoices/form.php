@@ -83,52 +83,31 @@ include 'admin_elements/admin_header.php';
         <?php endif; ?>
 
         <!-- Page header -->
-        <div class="page-header page-header-light shadow">
-            <div class="page-header-content d-lg-flex border-top">
-                <div class="row mt-3">
-                    <div class="col-lg-12">
-                        <h5 class="ms-2"><?php echo ($id > 0) ? 'Edit' : 'New'; ?> <?php echo $moduleCaption; ?></h5>
-                    </div>
-                    <a href="#breadcrumb_elements" class="btn btn-light align-self-center collapsed d-lg-none border-transparent rounded-pill p-0 ms-auto" data-bs-toggle="collapse">
-                        <i class="ph-caret-down collapsible-indicator ph-sm m-1"></i>
-                    </a>
+        <div class="page-header page-header-light shadow carriers-page-header">
+            <div class="page-header-content border-top py-2 px-3 carriers-page-header-content">
+                <div class="my-1 d-flex align-items-center gap-2">
+                    <h5 class="mb-0"><?php echo ($id > 0) ? 'Edit' : 'New'; ?> <?php echo $moduleCaption; ?></h5>
+                    <?php if ($id > 0): ?>
+                        <span class="badge bg-success bg-opacity-10 text-success ms-2">Invoice #: <?php echo $invoice_no; ?></span>
+                    <?php endif; ?>
+                    <span class="badge bg-primary bg-opacity-10 text-primary ms-2"><?php echo !empty($invoice_status) ? ucwords($invoice_status) : ''; ?></span>
                 </div>
-
-                <?php if ($id > 0): ?>
-                    <div class="p-3 rounded mt-1">
-                        <div class="form-check form-check-inline form-switch">
-                            <label class="form-check-label fw-semibold" for="sc_r_success">Invoice #: <?php echo $invoice_no; ?></label>
-                        </div>
-                    </div>
-                <?php endif; ?>
-
-                <div class="p-3 rounded mt-1">
-                    <div class="form-check form-check-inline form-switch">
-                        <label class="form-check-label" for="sc_r_success"><strong><?php echo (!empty($invoice_status) ? ucwords($invoice_status) : ''); ?></strong></label>
-                    </div>
-                </div>
-
-                <div class="collapse d-lg-block ms-lg-auto mt-1" id="breadcrumb_elements">
-                    <div class="d-lg-flex mb-2 mb-lg-0">
-                        <div class="mt-2 mb-2">
-                            <?php if ($id > 0): ?>
-                                <?php if ($canEdit): ?>
-                                    <button type="button" class="submit-form btn btn-primary btn-sm me-2">Save</button>
-                                    <button type="button" class="save-and-send-invoice btn btn-info btn-sm me-2">Save and Send</button>
-                                <?php endif; ?>
-                            <?php else: ?>
-                                <?php if ($canCreate): ?>
-                                    <button type="button" class="save-draft-invoice btn btn-primary btn-sm me-2">Save as Draft</button>
-                                    <button type="button" class="save-and-send-invoice btn btn-info btn-sm me-2">Save and Send</button>
-                                <?php endif; ?>
+                <div class="my-1 d-flex align-items-center gap-2">
+                    <?php if ($canCreate): ?>
+                        <?php if ($id > 0): ?>
+                            <?php if ($canEdit): ?>
+                                <button type="button" form="frm<?php echo $module; ?>" class="submit-form btn btn-primary btn-sm">Save</button>
                             <?php endif; ?>
-                            <?php if ($id > 0): ?>
-                                <a href="invoice_overview.php?invoice_id=<?php echo $id; ?>" class="btn btn-light btn-sm">Cancel</a>
-                            <?php else: ?>
-                                <a href="listing_<?php echo $module; ?>.php" class="btn btn-light btn-sm">Cancel</a>
-                            <?php endif; ?>
-                        </div>
-                    </div>
+                        <?php else: ?>
+                            <button type="button" form="frm<?php echo $module; ?>" class="save-draft-invoice btn btn-primary btn-sm">Save as Draft</button>
+                        <?php endif; ?>
+                        <button type="button" form="frm<?php echo $module; ?>" class="save-and-send-invoice btn btn-info btn-sm">Save and Send</button>
+                    <?php endif; ?>
+                    <?php if ($id > 0): ?>
+                        <a href="invoice_overview.php?invoice_id=<?php echo $id; ?>" class="btn btn-light btn-sm">Cancel</a>
+                    <?php else: ?>
+                        <a href="listing_<?php echo $module; ?>.php" class="btn btn-light btn-sm">Cancel</a>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
@@ -527,7 +506,7 @@ include 'admin_elements/admin_header.php';
                             <div class="col-lg-12">
                                 <div class="ms-sm-3 mb-3 mb-sm-0">
                                     <label class="col-lg-6 col-form-label">Customer Notes:</label>
-                                    <textarea class="form-control" name="customer_notes" id="customer_notes" style="field-sizing:content;" placeholder="Enter any notes to be displayed in your transaction"><?php echo $customer_notes; ?></textarea>
+                                    <textarea class="form-control" name="customer_notes" id="customer_notes" style="field-sizing:content;" placeholder=""><?php echo $customer_notes; ?></textarea>
                                 </div>
                             </div>
                         </div>
@@ -535,17 +514,7 @@ include 'admin_elements/admin_header.php';
                             <div class="col-lg-12">
                                 <div class="ms-sm-3 mb-3 mb-sm-0">
                                     <label class="col-lg-6 col-form-label">Terms &amp; Conditions:</label>
-                                    <textarea class="form-control" name="terms_and_conditions" id="terms_and_conditions" style="field-sizing:content;" placeholder="Enter the terms and conditions of your business to be displayed in your transaction"><?php echo $terms_and_conditions; ?></textarea>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-lg-12">
-                                <div class="ms-sm-3 mb-3 mt-2">
-                                    <div class="form-check form-switch">
-                                        <input type="checkbox" class="form-check-input form-check-input-success" name="publish" id="publish" <?php echo $is_active == 1 ? 'checked="checked"' : ''; ?>>
-                                        <label class="form-check-label fw-semibold" for="publish">Active Status</label>
-                                    </div>
+                                    <textarea class="form-control" name="terms_and_conditions" id="terms_and_conditions" style="field-sizing:content;" placeholder=""><?php echo $terms_and_conditions; ?></textarea>
                                 </div>
                             </div>
                         </div>

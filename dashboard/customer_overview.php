@@ -42,6 +42,7 @@ $customer_id = $customerIdResult['value'];
 try {
     $customerObj = $customerService->getCustomer((int)$customer_id, $activeOrganizationId);
 } catch (NotFoundException $e) {
+    log_error($e->getMessage(), 'WARNING', $e->getFile(), $e->getLine(), ['module' => 'customers', 'action' => 'view', 'customer_id' => (int)($customer_id ?? 0)]);
     flash_error($e->getMessage());
     header("Location:listing_customers.php");
     exit;
@@ -103,6 +104,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action == "approved" && !empty($cu
             header("Location:customer_overview.php?customer_id=$customer_id");
             exit;
         } catch (\Throwable $e) {
+            log_error($e->getMessage(), 'ERROR', $e->getFile(), $e->getLine(), ['module' => 'customers', 'action' => 'overview_action', 'customer_id' => (int)($customer_id ?? 0)]);
             flash_error($e->getMessage());
             header("Location:customer_overview.php?customer_id=$customer_id");
             exit;
@@ -122,6 +124,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action == "approved" && !empty($cu
             header("Location:customer_overview.php?customer_id=$customer_id");
             exit;
         } catch (\Throwable $e) {
+            log_error($e->getMessage(), 'ERROR', $e->getFile(), $e->getLine(), ['module' => 'customers', 'action' => 'overview_action', 'customer_id' => (int)($customer_id ?? 0)]);
             flash_error($e->getMessage());
             header("Location:customer_overview.php?customer_id=$customer_id");
             exit;
@@ -142,6 +145,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action == "approved" && !empty($cu
             header("Location:customer_overview.php?customer_id=$customer_id");
             exit;
         } catch (\Throwable $e) {
+            log_error($e->getMessage(), 'ERROR', $e->getFile(), $e->getLine(), ['module' => 'customers', 'action' => 'overview_action', 'customer_id' => (int)($customer_id ?? 0)]);
             flash_error($e->getMessage());
             header("Location:customer_overview.php?customer_id=$customer_id");
             exit;

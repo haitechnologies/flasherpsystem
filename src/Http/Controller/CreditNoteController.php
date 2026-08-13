@@ -12,6 +12,7 @@ use App\Service\CreditNoteService;
 use App\Security\Roles;
 use App\Exception\ValidationException;
 use App\Helper\DateHelper;
+use App\Helper\PdfGeneratorHelper;
 
 class CreditNoteController extends BaseController
 {
@@ -62,13 +63,18 @@ class CreditNoteController extends BaseController
 
     private function handleUpdate(Request $request, int $id): Response
     {
+        $denied = $this->ownershipDenied($id);
+        if ($denied !== null) {
+            return $denied;
+        }
+
         $noteData = $this->buildNoteData($request);
         $itemsData = $this->buildItemsData($request);
 
         try {
             $this->creditNoteService->updateNote($id, $noteData, $itemsData, $this->orgId, $this->userId);
             updateCustomerLogs((int)$noteData['customer_id'], 'credit_note', 'edit', $id);
-
+            PdfGeneratorHelper::ensure('credit_notes', $id);
             if ($request->get('save_and_send') == 1) {
                 return Response::redirect("send_email.php?current_module=credit_notes&id=$id");
             }
@@ -77,6 +83,7 @@ class CreditNoteController extends BaseController
         } catch (ValidationException $e) {
             $error = current($e->getErrors());
             flash_error($error);
+            $_SESSION['__credit_notes_old_input'] = $_POST;
             return Response::redirect("credit_notes.php?id=$id&action=edit_credit_notes");
         } catch (\Throwable $e) {
             log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
@@ -86,6 +93,7 @@ class CreditNoteController extends BaseController
                 'error_code' => (string)$e->getCode(),
             ]));
             flash_error($e->getMessage());
+            $_SESSION['__credit_notes_old_input'] = $_POST;
             return Response::redirect("credit_notes.php?id=$id&action=edit_credit_notes");
         }
     }
@@ -99,7 +107,7 @@ class CreditNoteController extends BaseController
             $newNote = $this->creditNoteService->createNote($noteData, $itemsData, $this->orgId, $this->userId);
             $id = $newNote->id;
             updateCustomerLogs((int)$noteData['customer_id'], 'credit_note', 'add', (int)$id);
-
+            PdfGeneratorHelper::ensure('credit_notes', $id);
             if ($request->get('save_and_send') == 1) {
                 return Response::redirect("send_email.php?current_module=credit_notes&id=$id");
             }
@@ -108,6 +116,7 @@ class CreditNoteController extends BaseController
         } catch (ValidationException $e) {
             $error = current($e->getErrors());
             flash_error($error);
+            $_SESSION['__credit_notes_old_input'] = $_POST;
             return Response::redirect("credit_notes.php");
         } catch (\Throwable $e) {
             log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
@@ -117,12 +126,18 @@ class CreditNoteController extends BaseController
                 'error_code' => (string)$e->getCode(),
             ]));
             flash_error($e->getMessage());
+            $_SESSION['__credit_notes_old_input'] = $_POST;
             return Response::redirect("credit_notes.php");
         }
     }
 
     private function handleClone(Request $request, int $id): Response
     {
+        $denied = $this->ownershipDenied($id);
+        if ($denied !== null) {
+            return $denied;
+        }
+
         try {
             $cloned = $this->creditNoteService->cloneNote($id, $this->orgId, $this->userId);
             flash_success('The Credit Note has been cloned successfully.');
@@ -141,6 +156,11 @@ class CreditNoteController extends BaseController
 
     private function handleConvert(Request $request, int $id): Response
     {
+        $denied = $this->ownershipDenied($id);
+        if ($denied !== null) {
+            return $denied;
+        }
+
         try {
             $invoiceId = $this->creditNoteService->convertToInvoice($id, $this->orgId, $this->userId);
             flash_success('Credit Note converted to invoice successfully.');
@@ -159,6 +179,11 @@ class CreditNoteController extends BaseController
 
     private function handleVoid(Request $request, int $id): Response
     {
+        $denied = $this->ownershipDenied($id);
+        if ($denied !== null) {
+            return $denied;
+        }
+
         try {
             $this->creditNoteService->voidNote($id, $this->orgId, $this->userId);
             flash_success('Credit Note voided with a reversing journal entry.');
@@ -177,6 +202,11 @@ class CreditNoteController extends BaseController
 
     private function handleOpen(Request $request, int $id): Response
     {
+        $denied = $this->ownershipDenied($id);
+        if ($denied !== null) {
+            return $denied;
+        }
+
         try {
             $this->creditNoteService->openNote($id, $this->orgId, $this->userId);
             flash_success('Credit Note opened and journal entry posted.');
@@ -191,6 +221,23 @@ class CreditNoteController extends BaseController
             flash_error($e->getMessage());
             return Response::redirect('credit_note_overview.php?credit_note_id=' . $id);
         }
+    }
+
+    private function ownershipDenied(int $id): ?Response
+    {
+        try {
+            $note = $this->creditNoteService->getCreditNote($id, $this->orgId);
+        } catch (\Throwable $e) {
+            return new Response('Not Found', 404);
+        }
+
+        $canManageRecord = Roles::hasFullAccess($this->roleId) || $this->userId === $note->createdBy;
+        if (!$canManageRecord) {
+            log_error("IDOR attempt: User {$this->userId} tried to manage credit note $id", 'WARNING', __FILE__, __LINE__);
+            return new Response('Forbidden', 403);
+        }
+
+        return null;
     }
 
     private function buildNoteData(Request $request): array
@@ -227,8 +274,8 @@ class CreditNoteController extends BaseController
             'grand_after_discount' => $request->getString('grand_after_discount'),
             'grand_tax' => $request->getString('grand_tax', '0.00'),
             'grand_total' => $request->getString('grand_total', '0.00'),
-            'publish' => $request->get('publish') ? true : false,
-            'is_active' => $request->get('publish') ? true : false,
+            'publish' => true,
+            'is_active' => true,
         ];
     }
 
@@ -332,7 +379,7 @@ class CreditNoteController extends BaseController
                 $created_by = 0;
             }
 
-            $canEdit = Roles::hasFullAccess($session_role_id) || $session_user_id === $created_by;
+            $canEdit = Roles::hasFullAccess($session_role_id) || $this->canEdit() || $session_user_id === $created_by;
 
             if ($canEdit) {
                 try {
@@ -404,6 +451,50 @@ class CreditNoteController extends BaseController
             $total_rows = 1;
         }
 
+        // Restore old form input after failed save
+        if (session_status() === PHP_SESSION_NONE) {
+            @session_start();
+        }
+        if (isset($_SESSION['__credit_notes_old_input'])) {
+            $old = $_SESSION['__credit_notes_old_input'];
+            unset($_SESSION['__credit_notes_old_input']);
+
+            foreach ([
+                'customer_id', 'credit_note_date', 'credit_note_status', 'reference_no',
+                'invoice_id', 'warehouse_id', 'subject', 'payment_term',
+                'expiry_date', 'expected_shipment_date', 'shipment_type', 'sales_person',
+                'job_reference_no', 'master_awb_no', 'shipper', 'consignee',
+                'origin', 'destination', 'no_of_packs', 'gross_weight',
+                'chargeable_weight', 'volume', 'customer_notes', 'terms_and_conditions',
+                'grand_subtotal', 'grand_discount_type', 'grand_discount_type_value',
+                'grand_discount_amount', 'grand_after_discount', 'grand_tax', 'grand_total',
+            ] as $key) {
+                if (isset($old[$key])) {
+                    $$key = (string)$old[$key];
+                }
+            }
+
+            if (isset($old['publish'])) {
+                $is_active = $old['publish'] ? 1 : 0;
+            }
+
+            if (isset($old['service']) && is_array($old['service'])) {
+                $item_id_arr = $old['item_id'] ?? [];
+                $service_arr = $old['service'];
+                $description_arr = $old['description'] ?? [];
+                $qty_arr = $old['qty'] ?? [];
+                $rate_arr = $old['rate'] ?? [];
+                $discount_type_arr = $old['discount_type'] ?? [];
+                $discount_type_value_arr = $old['discount_type_value'] ?? [];
+                $discount_amount_arr = $old['discount_amount'] ?? [];
+                $sub_total_arr = $old['sub_total'] ?? [];
+                $tax_arr = $old['tax'] ?? [];
+                $tax_amount_arr = $old['tax_amount'] ?? [];
+                $total_arr = $old['total'] ?? [];
+                $total_rows = max(1, count($service_arr));
+            }
+        }
+
         $customersList = [];
         $warehousesList = [];
         $itemsList = [];
@@ -415,7 +506,7 @@ class CreditNoteController extends BaseController
             }
         }
         try {
-            $warehousesList = $this->db->fetchAll("SELECT id, warehouse_name FROM `" . DB::WAREHOUSES . "` WHERE is_active=1 ORDER BY warehouse_name");
+            $warehousesList = $this->db->fetchAll("SELECT id, warehouse_name FROM `" . DB::WAREHOUSES . "` WHERE is_active=1 AND id=1 ORDER BY warehouse_name");
         } catch (\Throwable $e) {
             if (function_exists('log_error')) {
                                 log_error('Credit note form dropdown load failed: ' . $e->getMessage(), 'WARNING', __FILE__, __LINE__, function_exists('backend_runtime_log_context') ? backend_runtime_log_context(['module' => 'credit_notes', 'module_slug' => 'credit_notes', 'error_code' => (string)$e->getCode()]) : ['module' => 'credit_notes', 'module_slug' => 'credit_notes', 'error_code' => (string)$e->getCode()]);

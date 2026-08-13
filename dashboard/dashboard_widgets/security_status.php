@@ -48,6 +48,7 @@ try {
     
 } catch (Exception $e) {
     // If rate limiter not initialized, show error
+    log_error($e->getMessage(), 'WARNING', $e->getFile(), $e->getLine(), ['module' => 'security_status']);
     ?>
     <div class="card border-warning">
         <div class="card-header bg-warning text-dark">

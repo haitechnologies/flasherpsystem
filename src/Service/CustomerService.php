@@ -207,6 +207,10 @@ class CustomerService
 
         $saved = $this->customerRepo->save($updatedCustomer);
 
+        if ($customer->openingBalance != $saved->openingBalance) {
+            $this->syncOpeningBalanceJournal((int)$saved->id, (float)$saved->openingBalance, $orgId, $userId, $saved->displayName, $saved->receivableAccountId);
+        }
+
         return $saved;
     }
 
@@ -872,6 +876,25 @@ class CustomerService
         $journalService->createJournal($journalData, $itemsData, $orgId, $userId);
     }
 
+    private function syncOpeningBalanceJournal(int $customerId, float $balance, int $orgId, int $userId, string $customerName, ?int $receivableAccountId = null): void
+    {
+        try {
+            $journalService = Container::getInstance()->get(\App\Service\JournalService::class);
+            $journalRepo = Container::getInstance()->get(\App\Repository\JournalRepository::class);
+
+            $existing = $journalRepo->findByReference('customer_opening_balance', $customerId, $orgId);
+            foreach ($existing as $journal) {
+                $journalService->deleteJournal((int)$journal->id, $orgId);
+            }
+
+            if ($balance != 0) {
+                $this->createOpeningBalanceJournal($customerId, $balance, $orgId, $userId, $customerName, $receivableAccountId);
+            }
+        } catch (\Throwable $e) {
+            error_log('Customer opening balance journal sync failed: ' . $e->getMessage());
+        }
+    }
+
     /**
      * Clone customer
      */
@@ -1058,7 +1081,6 @@ class CustomerService
              FROM `" . DB::ENTITY_LOGS . "`
              WHERE entity_type = 'customer' AND entity_id = :id
                AND (organization_id IS NULL OR organization_id = :org)
-               AND module NOT IN ('comment', 'comments')
              ORDER BY created_at DESC LIMIT 30",
             ['id' => $customerId, 'org' => $orgId]
         );
@@ -1202,6 +1224,14 @@ class CustomerService
                 $entry['icon'] = 'ph-bank';
                 $entry['title'] = $action === 'add' ? 'Payment received' : 'Payment updated';
                 $entry['details_url'] = $recordId > 0 ? 'payment_received_overview.php?payment_id=' . $recordId : null;
+            } elseif ($module === 'comment' || $module === 'comments') {
+                $entry['icon'] = 'ph-chat-centered-text';
+                $entry['title'] = match ($action) {
+                    'added', 'add' => 'Comment added',
+                    'updated', 'edit' => 'Comment updated',
+                    'deleted', 'delete' => 'Comment deleted',
+                    default => 'Comment added',
+                };
             }
 
             $entries[] = $entry;

@@ -83,6 +83,7 @@ class PaymentReceivedService
         if (empty($itemsData)) {
             throw new ValidationException(['items' => "No items added. Please add at least one item."]);
         }
+        $this->validateItemsTotal($data, $itemsData);
 
         $this->db->beginTransaction();
         try {
@@ -139,6 +140,7 @@ class PaymentReceivedService
     {
         $payment = $this->getPayment($id, $orgId);
         $this->validatePaymentData($data, $orgId);
+        $this->validateItemsTotal($data, $itemsData);
 
         $this->db->beginTransaction();
         try {
@@ -469,6 +471,29 @@ class PaymentReceivedService
         $customer = $this->customerRepo->find((int)$data['customer_id'], $orgId);
         if ($customer === null) {
             throw new ValidationException(['customer_id' => "Selected customer does not exist in your organization."]);
+        }
+
+        $allowedStatuses = ['draft', 'paid', 'void', 'refund'];
+        $status = isset($data['payment_status']) ? trim((string)$data['payment_status']) : 'draft';
+        if (!in_array($status, $allowedStatuses, true)) {
+            throw new ValidationException(['payment_status' => "Invalid status: {$status}"]);
+        }
+    }
+
+    /**
+     * Verify the client-submitted total matches the sum of item allocations.
+     */
+    private function validateItemsTotal(array $data, array $itemsData): void
+    {
+        $submittedTotal = (float)($data['total_amount_received'] ?? 0.0);
+        $itemsTotal = 0.0;
+        foreach ($itemsData as $item) {
+            $itemsTotal += (float)($item['amount_received'] ?? 0.0);
+        }
+        if (abs($itemsTotal - $submittedTotal) > 0.01) {
+            throw new ValidationException([
+                'total_amount_received' => "The total received amount (" . number_format($submittedTotal, 2) . ") does not match the sum of item allocations (" . number_format($itemsTotal, 2) . ").",
+            ]);
         }
     }
 

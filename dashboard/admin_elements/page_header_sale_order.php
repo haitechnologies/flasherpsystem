@@ -40,6 +40,13 @@ if (empty($display_no)) $display_no = getTableAttr('id', DB::SALE_ORDERS, $sale_
                     </form>
                 <?php } ?>
             <?php } ?>
+            <a href="send_email.php?current_module=<?php echo $module; ?>&id=<?php echo $sale_order_id; ?>" class="btn btn-light btn-sm">
+                <i class="ph-envelope-simple pe-1"></i> Send Email
+            </a>
+            <?php $token = hash("sha512", 'bushogai' . $sale_order_id); ?>
+            <a href="pdf_sale_order.php?id=<?php echo $sale_order_id; ?>&token=<?php echo $token; ?>" class="btn btn-light btn-sm" target="_blank">
+                <i class="ph-file-pdf pe-1"></i> PDF
+            </a>
             <div class="dropdown">
                 <button type="button" class="btn btn-light btn-sm" data-bs-toggle="dropdown"><i class="ph-dots-three"></i></button>
                 <div class="dropdown-menu dropdown-menu-end">

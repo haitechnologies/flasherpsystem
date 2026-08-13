@@ -14,6 +14,7 @@ use App\Security\Roles;
 use App\Exception\ValidationException;
 use App\Exception\NotFoundException;
 use App\Helper\DateHelper;
+use App\Helper\PdfGeneratorHelper;
 
 class InvoiceController extends BaseController
 {
@@ -60,9 +61,17 @@ class InvoiceController extends BaseController
         $itemsData = $this->buildItemsData($request);
 
         try {
+            $invoice = $this->invoiceService->getInvoice($id, $this->orgId);
+            $canEditRecord = Roles::hasFullAccess($this->roleId) || $this->userId === $invoice->createdBy;
+            if (!$canEditRecord) {
+                log_error("IDOR attempt: User {$this->userId} tried to update invoice $id", 'WARNING', __FILE__, __LINE__);
+                return new Response('Forbidden', 403);
+            }
+
             $this->invoiceService->updateInvoice($id, $invoiceData, $itemsData, $this->orgId, $this->userId);
 
             updateCustomerLogs((int)($invoiceData['customer_id'] ?? 0), 'invoice', 'edit', $id);
+            PdfGeneratorHelper::ensure('invoices', $id);
             flash_success('The Invoice has been updated successfully.');
             if ($request->get('save_and_send') == 1) {
                 return Response::redirect("send_email.php?current_module=invoices&id=$id");
@@ -94,6 +103,7 @@ class InvoiceController extends BaseController
             $id = $newInvoice->id;
 
             updateCustomerLogs((int)($invoiceData['customer_id'] ?? 0), 'invoice', 'add', $id);
+            PdfGeneratorHelper::ensure('invoices', $id);
             flash_success('The Invoice has been saved successfully.');
             if ($request->get('save_and_send') == 1) {
                 return Response::redirect("send_email.php?current_module=invoices&id=$id");
@@ -151,8 +161,8 @@ class InvoiceController extends BaseController
             'customer_notes' => $request->getString('customer_notes'),
             'grand_tax' => $request->getString('grand_tax'),
             'grand_total' => $request->getString('grand_total'),
-            'publish' => $request->get('publish') ? true : false,
-            'is_active' => $request->get('publish') ? true : false,
+            'publish' => true,
+            'is_active' => true,
             'invoice_status' => $request->getString('invoice_status', 'draft'),
         ];
     }
@@ -296,7 +306,7 @@ class InvoiceController extends BaseController
                     $gross_weight = (string)$invoice->grossWeight;
                     $chargeable_weight = (string)$invoice->chargeableWeight;
                     $volume = (string)$invoice->volume;
-                    $cbm = (string)$invoice->volume;
+                    $cbm = (string)$invoice->cbm;
                     $customer_notes = (string)$invoice->customerNotes;
                     $terms_and_conditions = (string)$invoice->termsAndConditions;
                     $grand_subtotal = (string)$invoice->grandSubtotal;
@@ -355,7 +365,7 @@ class InvoiceController extends BaseController
             }
         }
         try {
-            $orgList = $this->db->fetchAll("SELECT id, warehouse_name FROM `" . DB::ORGANIZATIONS . "` WHERE is_active=1");
+            $orgList = $this->db->fetchAll("SELECT id, warehouse_name FROM `" . DB::ORGANIZATIONS . "` WHERE is_active=1 AND id=1");
         } catch (\Throwable $e) {
             $orgList = [];
             if (function_exists('log_error')) {

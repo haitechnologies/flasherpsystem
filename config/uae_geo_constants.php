@@ -188,22 +188,58 @@ function getUAECountryDropdown($selected_id = null) {
  * Maps old getTableAttr calls for geo data
  */
 function getGeoAttr($attr, $table, $id) {
-    if (strpos($table, 'geo_states') !== false) {
-        if ($attr == 'state_name' || $attr == 'name') {
-            return getUAEStateName($id);
-        } elseif ($attr == 'name_ar') {
-            return getUAEStateNameAr($id);
-        }
-    } elseif (strpos($table, 'geo_countries') !== false) {
-        if ($attr == 'country_name' || $attr == 'name') {
-            return getUAECountryName($id);
-        } elseif ($attr == 'alpha3_code') {
-            return getUAECountryAlpha3Code($id);
-        } elseif ($attr == 'name_ar') {
-            return getUAECountryNameAr($id);
-        } elseif ($attr == 'country') {
-            return UAE_COUNTRY_ISO2;
-        }
+    if (empty($id)) {
+        return '';
     }
-    return '';
+
+    $mysqli = $GLOBALS['DB']['MSQLI'] ?? null;
+    if ($mysqli === null) {
+        return '';
+    }
+
+    if (strpos($table, 'geo_states') !== false) {
+        $map = [
+            'state_name' => 'state',
+            'name'       => 'state',
+            'state'      => 'state',
+            'state_ar'   => 'state_ar',
+            'name_ar'    => 'state_ar',
+            'slug'       => 'slug',
+            'country_id' => 'country_id',
+        ];
+    } elseif (strpos($table, 'geo_countries') !== false) {
+        $map = [
+            'country_name' => 'country',
+            'name'         => 'country',
+            'country'      => 'country',
+            'country_ar'   => 'country_ar',
+            'name_ar'      => 'country_ar',
+            'alpha3_code'  => 'alpha3_code',
+            'alpha2_code'  => 'alpha2_code',
+            'abbr'         => 'abbr',
+            'dialing_code' => 'dialing_code',
+            'slug'         => 'slug',
+            'numeric_code' => 'numeric_code',
+        ];
+    } else {
+        return '';
+    }
+
+    if (!isset($map[$attr])) {
+        return '';
+    }
+
+    $column = $map[$attr];
+
+    $stmt = $mysqli->prepare("SELECT `" . $column . "` FROM `" . $table . "` WHERE `id` = ?");
+    if (!$stmt) {
+        return '';
+    }
+    $stmt->bind_param('s', $id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $row = $result ? $result->fetch_row() : null;
+    $stmt->close();
+
+    return ($row !== null && $row[0] !== null) ? (string)$row[0] : '';
 }

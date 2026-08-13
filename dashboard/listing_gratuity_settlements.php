@@ -33,6 +33,7 @@ if ($action == "delete_$module" && !empty($id) && (is_SystemAdmin() || is_SuperA
         $error_message = current($e->getErrors());
     } catch (\Throwable $e) {
         $error_message = "Gratuity settlement could not be deleted.";
+        log_error($e->getMessage(), 'ERROR', $e->getFile(), $e->getLine(), ['module' => 'gratuity_settlements', 'action' => 'delete']);
     }
 }
 

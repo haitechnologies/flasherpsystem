@@ -25,18 +25,16 @@ class BanksDataTable extends BaseDataTable
         return $sql;
     }
     protected $sortableColumns = [
-        0 => 'id', 1 => 'is_primary', 2 => 'is_active', 3 => 'account_name',
-        4 => 'currency', 5 => 'account_code', 6 => 'bank_name',
-        7 => 'branch', 8 => 'iban', 9 => 'routing_number',
-        10 => 'created_at', 11 => 'id'
+        0 => 'id', 1 => 'is_primary', 2 => 'account_name',
+        3 => 'currency', 4 => 'account_code', 5 => 'bank_name',
+        6 => 'branch', 7 => 'iban', 8 => 'routing_number',
+        9 => 'created_at', 10 => 'id'
     ];
 
     protected function formatRow($row, $requestData = [])
     {
         $id       = (int)($row['id'] ?? 0);
         $primary  = (int)($row['is_primary'] ?? 0) ? BadgeHelper::success('Primary') : '';
-        $publish  = (int)($row['is_active'] ?? 0);
-        $badge    = $publish ? BadgeHelper::success('Active') : BadgeHelper::danger('Inactive');
         $name     = (string)($row['account_name'] ?? '');
         $currency = (string)($row['currency_name'] ?? $row['currency'] ?? '');
         $code     = (string)($row['account_code'] ?? '');
@@ -46,7 +44,7 @@ class BanksDataTable extends BaseDataTable
         $routing  = (string)($row['routing_number'] ?? '');
         $created  = (string)($row['created_at'] ?? '');
         return [
-            $this->rowNumber, $primary, $badge,
+            $this->rowNumber, $primary,
             htmlspecialchars($name),
             htmlspecialchars($currency),
             htmlspecialchars($code),

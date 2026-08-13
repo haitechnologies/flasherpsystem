@@ -126,7 +126,7 @@ class DebitNoteController extends BaseController
             'grand_after_discount' => $request->getString('grand_after_discount'),
             'grand_tax' => $request->getString('grand_tax', '0.00'),
             'grand_total' => $request->getString('grand_total', '0.00'),
-            'publish' => $request->get('publish') ? true : false,
+            'publish' => true,
         ];
     }
 
@@ -209,7 +209,7 @@ class DebitNoteController extends BaseController
                 $created_by = 0;
             }
 
-            $canEdit = Roles::hasFullAccess($session_role_id) || $session_user_id === $created_by;
+            $canEdit = Roles::hasFullAccess($session_role_id) || $this->canEdit() || $session_user_id === $created_by;
 
             if ($canEdit) {
                 try {
@@ -269,15 +269,18 @@ class DebitNoteController extends BaseController
         try {
             $vendorsList = $this->db->fetchAll("SELECT id, display_name FROM `" . DB::VENDORS . "` WHERE is_active=1 AND organization_id=:org_id ORDER BY id DESC", ['org_id' => $this->orgId]);
         } catch (\Throwable $e) {
-        }
+                log_error('Failed to load form dropdown: ' . $e->getMessage(), 'WARNING', $e->getFile(), $e->getLine(), ['module' => 'debit_notes', 'action' => 'load_form_dropdown']);
+}
         try {
-            $warehousesList = $this->db->fetchAll("SELECT id, warehouse_name FROM `" . DB::WAREHOUSES . "` WHERE is_active=1 ORDER BY warehouse_name");
+            $warehousesList = $this->db->fetchAll("SELECT id, warehouse_name FROM `" . DB::WAREHOUSES . "` WHERE is_active=1 AND id=1 ORDER BY warehouse_name");
         } catch (\Throwable $e) {
-        }
+                log_error('Failed to load form dropdown: ' . $e->getMessage(), 'WARNING', $e->getFile(), $e->getLine(), ['module' => 'debit_notes', 'action' => 'load_form_dropdown']);
+}
         try {
             $itemsList = $this->db->fetchAll("SELECT id, item_name FROM `" . DB::ITEMS . "` WHERE is_active=1 AND item_type='services' AND organization_id=:org_id ORDER BY item_name", ['org_id' => $this->orgId]);
         } catch (\Throwable $e) {
-        }
+                log_error('Failed to load form dropdown: ' . $e->getMessage(), 'WARNING', $e->getFile(), $e->getLine(), ['module' => 'debit_notes', 'action' => 'load_form_dropdown']);
+}
 
         return Response::html($this->view->render('debit_notes/form.php', [
             'id' => $id,
@@ -381,13 +384,19 @@ class DebitNoteController extends BaseController
         $itemsList = [];
         try {
             $vendorsList = $this->db->fetchAll("SELECT id, display_name FROM `" . DB::VENDORS . "` WHERE is_active=1 AND organization_id=:org_id ORDER BY id DESC", ['org_id' => $this->orgId]);
-        } catch (\Throwable $e) {}
+        } catch (\Throwable $e) {
+            log_error('Failed to load form dropdown: ' . $e->getMessage(), 'WARNING', $e->getFile(), $e->getLine(), ['module' => 'debit_notes', 'action' => 'load_form_dropdown']);
+        }
         try {
-            $warehousesList = $this->db->fetchAll("SELECT id, warehouse_name FROM `" . DB::WAREHOUSES . "` WHERE is_active=1 ORDER BY warehouse_name");
-        } catch (\Throwable $e) {}
+            $warehousesList = $this->db->fetchAll("SELECT id, warehouse_name FROM `" . DB::WAREHOUSES . "` WHERE is_active=1 AND id=1 ORDER BY warehouse_name");
+        } catch (\Throwable $e) {
+            log_error('Failed to load form dropdown: ' . $e->getMessage(), 'WARNING', $e->getFile(), $e->getLine(), ['module' => 'debit_notes', 'action' => 'load_form_dropdown']);
+        }
         try {
             $itemsList = $this->db->fetchAll("SELECT id, item_name FROM `" . DB::ITEMS . "` WHERE is_active=1 AND item_type='services' AND organization_id=:org_id ORDER BY item_name", ['org_id' => $this->orgId]);
-        } catch (\Throwable $e) {}
+        } catch (\Throwable $e) {
+            log_error('Failed to load form dropdown: ' . $e->getMessage(), 'WARNING', $e->getFile(), $e->getLine(), ['module' => 'debit_notes', 'action' => 'load_form_dropdown']);
+        }
 
         return Response::html($this->view->render('debit_notes/form.php', [
             'id' => $id,

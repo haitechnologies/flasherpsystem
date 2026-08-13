@@ -38,6 +38,7 @@ if (($action == "delete_$module" && !empty($id))) {
         $error_message = $e->getMessage();
     } catch (\Throwable $e) {
         $error_message = "Annual Leave Entitlement could not be deleted.";
+        log_error($e->getMessage(), 'ERROR', $e->getFile(), $e->getLine(), ['module' => 'annual_leave_entitlements', 'action' => 'delete']);
     }
 }
 

@@ -17,9 +17,9 @@ require_once __DIR__ . '/../config/session.php';
 startDashboardSession();
 $activeOrgId = Session::orgId();
 header("Content-Type: text/html; charset=utf-8");
-require('../config/globals.php');
-require('../config/database.php');
-include('admin_elements/error_logger.php');
+require(__DIR__ . '/../config/globals.php');
+require(__DIR__ . '/../config/database.php');
+include(__DIR__ . '/admin_elements/error_logger.php');
 
 if (function_exists('custom_error_handler')) {
     set_error_handler('custom_error_handler');

@@ -99,6 +99,7 @@ if ($action == "convert_$module" && !empty($invoice_id)) {
         // Refresh the loaded invoice
         $invoice = $invoiceService->getInvoice((int)$invoice_id, $activeOrganizationId);
     } catch (\Throwable $e) {
+        log_error($e->getMessage(), 'ERROR', $e->getFile(), $e->getLine(), ['module' => 'invoices', 'action' => 'overview_action', 'invoice_id' => (int)($invoice_id ?? 0)]);
         $error_message = $e->getMessage();
     }
 } else if ($action == "clone_$module" && !empty($invoice_id)) {
@@ -108,6 +109,7 @@ if ($action == "convert_$module" && !empty($invoice_id)) {
         // Refresh the loaded invoice
         $invoice = $invoiceService->getInvoice((int)$invoice_id, $activeOrganizationId);
     } catch (\Throwable $e) {
+        log_error($e->getMessage(), 'ERROR', $e->getFile(), $e->getLine(), ['module' => 'invoices', 'action' => 'overview_action', 'invoice_id' => (int)($invoice_id ?? 0)]);
         $error_message = $e->getMessage();
     }
 } else if ($action == "update_$module" && !empty($invoice_id) && !empty($invoice_status_req)) {
@@ -198,6 +200,7 @@ if ($action == "convert_$module" && !empty($invoice_id)) {
                                 );
                                 $success_message .= " Journal entry created.";
                             } catch (\Throwable $e) {
+                                log_error($e->getMessage(), 'WARNING', $e->getFile(), $e->getLine(), ['module' => 'invoices', 'action' => 'journal_entry', 'invoice_id' => (int)($invoice_id ?? 0)]);
                                 $success_message .= " Warning: " . $e->getMessage();
                             }
                         } else {
@@ -269,6 +272,7 @@ if ($action == "convert_$module" && !empty($invoice_id)) {
                                 );
                                 $success_message .= " Reversing journal entry created.";
                             } catch (\Throwable $e) {
+                                log_error($e->getMessage(), 'WARNING', $e->getFile(), $e->getLine(), ['module' => 'invoices', 'action' => 'journal_entry', 'invoice_id' => (int)($invoice_id ?? 0)]);
                                 $success_message .= " Warning: " . $e->getMessage();
                             }
                         }
@@ -801,6 +805,7 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
                                     for ($invoice_item = 1; $invoice_item <= $total_rows; $invoice_item++) {
                                         $index = $invoice_item;
                                         $index = $index - 1;
+                                        if (!isset($invoice_item_id_arr[$index])) continue;
 
                                         // $fee_included = '';
                                         // if (isset($fee_included_arr[$index]) && !empty($fee_included_arr[$index])) {

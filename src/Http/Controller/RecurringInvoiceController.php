@@ -12,6 +12,7 @@ use App\Service\RecurringInvoiceService;
 use App\Security\Roles;
 use App\Exception\ValidationException;
 use App\Helper\DateHelper;
+use App\Helper\PdfGeneratorHelper;
 
 class RecurringInvoiceController extends BaseController
 {
@@ -59,6 +60,7 @@ class RecurringInvoiceController extends BaseController
 
         try {
             $this->invoiceService->updateInvoice($id, $invoiceData, $itemsData, $this->orgId, $this->userId);
+            PdfGeneratorHelper::ensure('recurring_invoices', $id);
             $saveAndSend = $request->getString('save_and_send');
             if ($saveAndSend === '1') {
                 return Response::redirect("send_email.php?current_module=recurring_invoices&id=$id");
@@ -88,6 +90,7 @@ class RecurringInvoiceController extends BaseController
 
         try {
             $invoice = $this->invoiceService->createInvoice($invoiceData, $itemsData, $this->orgId, $this->userId);
+            PdfGeneratorHelper::ensure('recurring_invoices', $invoice->id);
             $saveAndSend = $request->getString('save_and_send');
             if ($saveAndSend === '1') {
                 return Response::redirect("send_email.php?current_module=recurring_invoices&id=" . $invoice->id);

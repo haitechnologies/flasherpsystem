@@ -14,6 +14,7 @@ use App\Repository\JournalRepository;
 use App\Exception\NotFoundException;
 use App\Exception\ValidationException;
 use App\Helper\DateHelper;
+use App\Helper\PdfGeneratorHelper;
 
 class PurchaseService
 {
@@ -115,6 +116,8 @@ class PurchaseService
 
             $this->db->commit();
 
+            PdfGeneratorHelper::ensure('purchases', (int)$purchaseId);
+
             return $savedPurchase;
         } catch (\Throwable $e) {
             $this->db->rollBack();
@@ -203,6 +206,8 @@ class PurchaseService
             $this->createPurchaseJournal($id, $purchaseDate, $orgId);
 
             $this->db->commit();
+
+            PdfGeneratorHelper::ensure('purchases', (int)$id);
 
             return $savedPurchase;
         } catch (\Throwable $e) {

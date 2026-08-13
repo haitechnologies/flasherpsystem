@@ -63,9 +63,10 @@ class CreditNotesDataTable extends BaseDataTable
             $placeholders[] = ':' . $key;
             $params[$key] = $v;
         }
+        $params['cn_org'] = (int)$this->organizationId;
         try {
             $lookupRows = $this->db->fetchAll(
-                "SELECT id, display_name FROM `" . DB::CUSTOMERS . "` WHERE id IN (" . implode(',', $placeholders) . ")",
+                "SELECT id, display_name FROM `" . DB::CUSTOMERS . "` WHERE id IN (" . implode(',', $placeholders) . ") AND organization_id = :cn_org",
                 $params
             );
             foreach ($lookupRows as $row) {

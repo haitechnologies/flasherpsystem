@@ -34,13 +34,27 @@ if (empty($credit_note_id) && isset($_REQUEST['id'])) $credit_note_id = e_s__($_
 
 
 // ------------------ CHECK IF EXISTS ----------------
-//VERIFY IF IS VALID 
-$rs_valid     = $mysqli->query("SELECT id FROM `" . DB::CREDIT_NOTES . "` WHERE id='" . $credit_note_id . "' AND organization_id=" . (int)Session::orgId());
-if ($rs_valid->num_rows == 0) {
+//VERIFY IF IS VALID (org-scoped prepared statement)
+$credit_note_id = (int)$credit_note_id;
+$db = Container::getInstance()->get(\App\Core\Database::class);
+$exists = $db->fetchOne("SELECT id FROM `{DB::CREDIT_NOTES}` WHERE id=:id AND organization_id=:org_id", ['id' => $credit_note_id, 'org_id' => (int)Session::orgId()]);
+if ($exists === null) {
     flash_error('Invalid Record in the database.');
     header("Location:listing_credit_notes.php");
     exit;
 }
+
+// ------------------ VIEW GATE ----------------
+if (!granted('view', $module_id)) {
+    log_error("Unauthorized view access: User " . Session::userId() . " tried to view credit note $credit_note_id", 'WARNING', __FILE__, __LINE__);
+    flash_error('You do not have permission to view this credit note.');
+    header("Location:listing_credit_notes.php");
+    exit;
+}
+
+$creditNoteService = Container::getInstance()->get(CreditNoteService::class);
+$note = $creditNoteService->getCreditNote($credit_note_id, (int)Session::orgId());
+$canManageRecord = \App\Core\Roles::hasFullAccess((int)Session::roleId()) || (int)$note->createdBy === (int)Session::userId();
 
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && !empty($action)) {
     if (!validate_csrf_token($_POST['csrf_token'] ?? '')) {
@@ -75,6 +89,13 @@ if (isset($_REQUEST['credit_note_status']) && !empty($_REQUEST['credit_note_stat
 
 if (($action == "convert_$module" && !empty($credit_note_id))) {
 
+    if (!granted('edit', $module_id) || !$canManageRecord) {
+        log_error("IDOR attempt: User " . Session::userId() . " tried to convert credit note $credit_note_id", 'WARNING', __FILE__, __LINE__);
+        flash_error('You do not have permission to perform this action.');
+        header("Location:credit_note_overview.php?credit_note_id=$credit_note_id");
+        exit;
+    }
+
     $creditNoteService = Container::getInstance()->get(CreditNoteService::class);
     $newInvoiceId = $creditNoteService->convertToInvoice((int)$credit_note_id, (int)Session::orgId(), (int)Session::userId());
     if ($newInvoiceId > 0) {
@@ -94,6 +115,13 @@ if (($action == "convert_$module" && !empty($credit_note_id))) {
 |
 */
 } else if (($action == "clone_$module" && !empty($credit_note_id))) {
+
+    if (!granted('create', $module_id) || !$canManageRecord) {
+        log_error("IDOR attempt: User " . Session::userId() . " tried to clone credit note $credit_note_id", 'WARNING', __FILE__, __LINE__);
+        flash_error('You do not have permission to perform this action.');
+        header("Location:credit_note_overview.php?credit_note_id=$credit_note_id");
+        exit;
+    }
 
     $creditNoteService = Container::getInstance()->get(CreditNoteService::class);
     $newCloned = $creditNoteService->cloneNote((int)$credit_note_id, (int)Session::orgId(), (int)Session::userId());
@@ -119,6 +147,13 @@ if (($action == "convert_$module" && !empty($credit_note_id))) {
 */
 } else if (($action == "update_$module" && !empty($credit_note_id) && !empty($credit_note_status))) {
 
+    if (!granted('edit', $module_id) || !$canManageRecord) {
+        log_error("IDOR attempt: User " . Session::userId() . " tried to update status of credit note $credit_note_id", 'WARNING', __FILE__, __LINE__);
+        flash_error('You do not have permission to perform this action.');
+        header("Location:credit_note_overview.php?credit_note_id=$credit_note_id");
+        exit;
+    }
+
     $creditNoteService = Container::getInstance()->get(CreditNoteService::class);
     $orgId = (int)Session::orgId();
     $userId = (int)Session::userId();
@@ -133,6 +168,7 @@ if (($action == "convert_$module" && !empty($credit_note_id))) {
         }
         $success_message = "The $module_caption status has been updated successfully.";
     } catch (\Throwable $e) {
+        log_error($e->getMessage(), 'ERROR', $e->getFile(), $e->getLine(), ['module' => 'credit_notes', 'action' => 'update_status', 'credit_note_id' => (int)$credit_note_id]);
         $success_message = "The $module_caption status could not be updated: " . $e->getMessage();
     }
 
@@ -205,34 +241,31 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
                 */
             if (!empty($credit_note_id)) {
 
-                $result = $mysqli->query("SELECT * FROM `$tbl_name` WHERE id=$credit_note_id");
-                $row = $result->fetch_array();
+                $customer_id            = (int)$note->customerId;
+                $credit_note_no          = (string)$note->creditNoteNo;
+                $credit_note_status      = (string)$note->creditNoteStatus;
+                $credit_note_date        = (string)$note->creditNoteDate;
+                $expiry_date            = $note->expiryDate !== null ? (string)$note->expiryDate : '';
+                $reference_no           = $note->referenceNo !== null ? (string)$note->referenceNo : '';
 
-                $customer_id            = s__($row['customer_id']);
-                $credit_note_no          = s__($row['credit_note_no']);
-                $credit_note_status      = s__($row['credit_note_status']);
-                $credit_note_date        = s__($row['credit_note_date']);
-                $expiry_date            = s__($row['expiry_date']);
-                $reference_no           = s__($row['reference_no']);
+                $expected_shipment_date = $note->expectedShipmentDate !== null ? (string)$note->expectedShipmentDate : '';
+                $payment_term           = $note->paymentTerm !== null ? (string)$note->paymentTerm : '0';
 
-                $expected_shipment_date = s__($row['expected_shipment_date']);
-                $payment_term           = s__($row['payment_term']);
+                $shipment_type          = $note->shipmentType !== null ? (string)$note->shipmentType : '';
+                $sales_person           = $note->salesPerson !== null ? (string)$note->salesPerson : '0';
+                $job_reference_no       = $note->jobReferenceNo !== null ? (string)$note->jobReferenceNo : '';
+                $master_awb_no          = $note->masterAwbNo !== null ? (string)$note->masterAwbNo : '';
+                $shipper                = $note->shipper !== null ? (string)$note->shipper : '0';
+                $consignee              = $note->consignee !== null ? (string)$note->consignee : '0';
+                $origin                 = $note->origin !== null ? (string)$note->origin : '0';
+                $destination            = $note->destination !== null ? (string)$note->destination : '0';
+                $no_of_packs            = $note->noOfPacks !== null ? (string)$note->noOfPacks : '';
+                $gross_weight           = $note->grossWeight !== null ? (string)$note->grossWeight : '';
+                $chargeable_weight      = $note->chargeableWeight !== null ? (string)$note->chargeableWeight : '';
+                $volume                 = $note->volume !== null ? (string)$note->volume : '';
 
-                $shipment_type          = s__($row['shipment_type']);
-                $sales_person           = s__($row['sales_person']);
-                $job_reference_no       = s__($row['job_reference_no']);
-                $master_awb_no          = s__($row['master_awb_no']);
-                $shipper                = s__($row['shipper']);
-                $consignee              = s__($row['consignee']);
-                $origin                 = s__($row['origin']);
-                $destination            = s__($row['destination']);
-                $no_of_packs            = s__($row['no_of_packs']);
-                $gross_weight           = s__($row['gross_weight']);
-                $chargeable_weight      = s__($row['chargeable_weight']);
-                $volume                 = s__($row['volume']);
-
-                $customer_notes         = s__($row['customer_notes']);
-                $terms_and_conditions   = s__($row['terms_and_conditions']);
+                $customer_notes         = $note->customerNotes !== null ? (string)$note->customerNotes : '';
+                $terms_and_conditions   = $note->termsAndConditions !== null ? (string)$note->termsAndConditions : '';
                 // Seprate Line Number on base of Space new line
                 $final_terms_and_conditions = '';
 
@@ -251,15 +284,15 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
 
 
 
-                $grand_subtotal             = s__($row['grand_subtotal']);
-                $grand_discount_type        = s__($row['grand_discount_type']);
-                $grand_discount_type_value  = s__($row['grand_discount_type_value']);
-                $grand_discount_amount      = s__($row['grand_discount_amount']);
-                $grand_after_discount       = s__($row['grand_after_discount']);
-                $grand_tax                  = s__($row['grand_tax']);
-                $grand_total                = s__($row['grand_total']);
+                $grand_subtotal             = (string)$note->grandSubtotal;
+                $grand_discount_type        = (string)$note->grandDiscountType;
+                $grand_discount_type_value  = (string)$note->grandDiscountTypeValue;
+                $grand_discount_amount      = (string)$note->grandDiscountAmount;
+                $grand_after_discount       = (string)$note->grandAfterDiscount;
+                $grand_tax                  = (string)$note->grandTax;
+                $grand_total                = (string)$note->grandTotal;
 
-                $publish                = s__($row['is_active']);
+                $publish                = (int)$note->isActive;
 
 
 
@@ -273,8 +306,7 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
                 $phone          = '';
                 $mobile         = '';
                 $trn            = '';
-                $rs = $mysqli->query("SELECT * FROM `" . DB::CUSTOMERS . "` WHERE id=$customer_id");
-                $row_customer = $rs->fetch_array();
+                $row_customer = $db->fetchOne("SELECT salutation, first_name, last_name, company_name, display_name, email, phone, mobile, trn FROM `{DB::CUSTOMERS}` WHERE id=:id AND organization_id=:org_id", ['id' => $customer_id, 'org_id' => (int)Session::orgId()]);
                 if ($row_customer) {
                     $salutation             = s__($row_customer['salutation']);
                     $first_name             = s__($row_customer['first_name']);
@@ -288,8 +320,7 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
                 }
 
                 // Customer Billing Address 
-                $rs_billing     = $mysqli->query("SELECT * FROM `" . DB::CUSTOMER_ADDRESSES . "` WHERE addressable_type='Customer' AND addressable_id=$customer_id AND type='billing' ");
-                $row_billing    = $rs_billing->fetch_array();
+                $row_billing     = $db->fetchOne("SELECT attention, country, address_line1, address_line2, city, state, zipcode, phone, fax FROM `{DB::CUSTOMER_ADDRESSES}` WHERE addressable_type='Customer' AND addressable_id=:id AND type='billing' LIMIT 1", ['id' => $customer_id]);
 
                 $billing_attention      = (!empty($row_billing['attention']) ? s__($row_billing['attention']) : '');
                 $billing_country        = (!empty($row_billing['country']) ? s__($row_billing['country']) : '');
@@ -319,22 +350,20 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
                 $total_arr               = [];
 
                 // ------------------ TOTAL ITEMS ------------------
-                $result_credit_note_items       = $mysqli->query("SELECT * FROM `" . DB::CREDIT_NOTE_ITEMS . "` WHERE credit_note_id=$credit_note_id ORDER BY id");
-                $total_rows                     = $result_credit_note_items->num_rows;
-
+                $note_items = $creditNoteService->getCreditNoteItems($credit_note_id, (int)Session::orgId());
+                $total_rows = count($note_items);
 
                 if ($total_rows > 0) {
-                    while ($row_credit_note_items = $result_credit_note_items->fetch_array()) {
-
-                        array_push($credit_note_item_id_arr,    $row_credit_note_items['id']);
-                        array_push($service_arr,                $row_credit_note_items['service']);
-                        array_push($description_arr,            $row_credit_note_items['description']);
-                        array_push($qty_arr,                    $row_credit_note_items['qty']);
-                        array_push($rate_arr,                   $row_credit_note_items['rate']);
-                        array_push($sub_total_arr,              $row_credit_note_items['sub_total']);
-                        array_push($tax_arr,                    $row_credit_note_items['tax']);
-                        array_push($tax_amount_arr,             $row_credit_note_items['tax_amount']);
-                        array_push($total_arr,                  $row_credit_note_items['total']);
+                    foreach ($note_items as $item) {
+                        array_push($credit_note_item_id_arr,    $item->id);
+                        array_push($service_arr,                $item->service);
+                        array_push($description_arr,            $item->description);
+                        array_push($qty_arr,                    $item->qty);
+                        array_push($rate_arr,                   $item->rate);
+                        array_push($sub_total_arr,              $item->subTotal);
+                        array_push($tax_arr,                    $item->tax);
+                        array_push($tax_amount_arr,             $item->taxAmount);
+                        array_push($total_arr,                  $item->total);
                     }
                 }
             }
@@ -380,8 +409,7 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
 
                                 <?php
                                 $warehouse_information = '';
-                                $rs_warehouse   = $mysqli->query("SELECT * FROM `" . DB::WAREHOUSES . "` WHERE id=1");
-                                $row_warehouse  = $rs_warehouse->fetch_array();
+                                $row_warehouse  = $db->fetchOne("SELECT warehouse_no, warehouse_name, street1, street2, country, state, phone, email, trn FROM `{DB::WAREHOUSES}` WHERE id=:id LIMIT 1", ['id' => 1]);
 
                                 $warehouse_no       = s__($row_warehouse['warehouse_no']);
                                 $warehouse_name     = s__($row_warehouse['warehouse_name']);
@@ -563,7 +591,8 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
 
                 <?php
                 // ---------------------------------------------------------------------------------------------------------------------------------------
-                $journal_id = getTableAttrV('id', DB::JOURNALS, " reference_type='credit_note' AND reference_id='$credit_note_id' ");
+                $journal_row = $db->fetchOne("SELECT id FROM `{DB::JOURNALS}` WHERE reference_type IN ('credit_note','credit_note_void') AND reference_id=:rid AND organization_id=:org_id ORDER BY id ASC LIMIT 1", ['rid' => $credit_note_id, 'org_id' => (int)Session::orgId()]);
+                $journal_id = $journal_row ? (int)$journal_row['id'] : 0;
                 // ---------------------------------------------------------------------------------------------------------------------------------------
 
                 if (!empty($journal_id)) {
@@ -605,8 +634,8 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
                                     // -------- JOURNAL ENTRIES 
                                     //-------------------------------------------------------------------
 
-                                    $result_journal_items     = $mysqli->query("SELECT * FROM `" . DB::JOURNAL_ITEMS . "` WHERE journal_id=$journal_id");
-                                    while ($row_journal_items = $result_journal_items->fetch_array()) {
+                                    $journal_items_rows = $db->fetchAll("SELECT account, debit, credit FROM `{DB::JOURNAL_ITEMS}` WHERE journal_id=:jid", ['jid' => $journal_id]);
+                                    foreach ($journal_items_rows as $row_journal_items) {
 
                                         $account    = $row_journal_items['account'];
                                         $account    = getTableAttr('account_name', DB::ACCOUNTS, $account);
@@ -618,14 +647,14 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
                                     ?>
                                         <tr>
                                             <td><?php echo $account; ?></td>
-                                            <td class="text-end"><?php echo $debit; ?>.00</td>
-                                            <td class="text-end"><?php echo $credit; ?>.00</td>
+                                            <td class="text-end"><?php echo number_format((float)$debit, 2); ?></td>
+                                            <td class="text-end"><?php echo number_format((float)$credit, 2); ?></td>
                                         </tr>
                                     <?php } ?>
                                     <tr>
                                         <td></td>
-                                        <td class="text-end fw-semibold"><?php echo $total_debit; ?>.00</td>
-                                        <td class="text-end fw-semibold"><?php echo $total_credit; ?>.00</td>
+                                        <td class="text-end fw-semibold"><?php echo number_format((float)$total_debit, 2); ?></td>
+                                        <td class="text-end fw-semibold"><?php echo number_format((float)$total_credit, 2); ?></td>
                                     </tr>
                                 </tbody>
                             </table>

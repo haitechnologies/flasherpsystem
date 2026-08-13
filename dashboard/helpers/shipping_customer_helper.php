@@ -66,7 +66,7 @@ function parseCustomerAddress($address_string) {
  * @param int $organizationId Active organization ID
  * @return int Customer ID
  */
-function findOrCreateShippingCustomer($mysqli, $customer_name, $customer_address = '', $organizationId = 0) {
+function findOrCreateShippingCustomer($mysqli, $customer_name, $customer_address = '', $organizationId = 1) {
     $tbl_name = DB::getPrefix() . 'customers';
 
     $customer_name = trim($customer_name);
@@ -93,7 +93,7 @@ function findOrCreateShippingCustomer($mysqli, $customer_name, $customer_address
         organization_id, entity_type, display_name, company_name, email,
         phone, mobile, address, is_active, created_at, updated_at
     ) VALUES (?, 'shipping', ?, ?, '', ?, '', ?, 1, NOW(), NOW())");
-    $stmt->bind_param('isssss', $organizationId, $customer_name, $customer_name, $parsed['phone'], $parsed['address']);
+    $stmt->bind_param('issss', $organizationId, $customer_name, $customer_name, $parsed['phone'], $parsed['address']);
 
     if ($stmt->execute()) {
         $id = $mysqli->insert_id;

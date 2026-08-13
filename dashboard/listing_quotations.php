@@ -25,22 +25,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action == "delete_$module" && !emp
     if (!validate_csrf_token($_POST['csrf_token'] ?? '')) {
         $error_message = 'Invalid security token. Please refresh the page and try again.';
     } else {
-        if (Session::roleId() == '1') {
-            $mysqli->query("DELETE FROM `" . DB::DIMENSION_ITEMS . "` WHERE module_type='quotations' AND record_id=$id");
-            $mysqli->query("DELETE FROM `" . DB::QUOTATION_ITEMS . "` WHERE quotation_id=$id AND organization_id=$activeOrganizationId");
-            $mysqli->query("DELETE FROM `$tbl_name` WHERE id=$id AND organization_id=$activeOrganizationId");
+        $quotationId = (int)$id;
+        if ($quotationId <= 0) {
+            $error_message = 'Invalid record.';
         } else {
-            $mysqli->query("DELETE FROM `" . DB::DIMENSION_ITEMS . "` WHERE module_type='quotations' AND record_id=$id");
-            $mysqli->query("DELETE FROM `" . DB::QUOTATION_ITEMS . "` WHERE quotation_id=$id AND organization_id=$activeOrganizationId");
-            $mysqli->query("DELETE FROM `$tbl_name` WHERE id=$id AND created_by='" . Session::userId() . "' AND organization_id=$activeOrganizationId");
-        }
+            if (Session::roleId() == '1') {
+                $stmt = $mysqli->prepare("DELETE FROM `" . DB::DIMENSION_ITEMS . "` WHERE module_type='quotations' AND record_id=?");
+                $stmt->bind_param('i', $quotationId);
+                $stmt->execute();
+                $stmt = $mysqli->prepare("DELETE FROM `" . DB::QUOTATION_ITEMS . "` WHERE quotation_id=? AND organization_id=?");
+                $stmt->bind_param('ii', $quotationId, $activeOrganizationId);
+                $stmt->execute();
+                $stmt = $mysqli->prepare("DELETE FROM `$tbl_name` WHERE id=? AND organization_id=?");
+                $stmt->bind_param('ii', $quotationId, $activeOrganizationId);
+                $stmt->execute();
+            } else {
+                $userId = (int)Session::userId();
+                $stmt = $mysqli->prepare("DELETE FROM `" . DB::DIMENSION_ITEMS . "` WHERE module_type='quotations' AND record_id=?");
+                $stmt->bind_param('i', $quotationId);
+                $stmt->execute();
+                $stmt = $mysqli->prepare("DELETE FROM `" . DB::QUOTATION_ITEMS . "` WHERE quotation_id=? AND organization_id=?");
+                $stmt->bind_param('ii', $quotationId, $activeOrganizationId);
+                $stmt->execute();
+                $stmt = $mysqli->prepare("DELETE FROM `$tbl_name` WHERE id=? AND created_by=? AND organization_id=?");
+                $stmt->bind_param('iii', $quotationId, $userId, $activeOrganizationId);
+                $stmt->execute();
+            }
 
-        if ($mysqli->affected_rows > 0) {
-            flash_success("$module_caption Deleted Successfully.");
-            header("Location:listing_$module.php?page=$page");
-            exit;
-        } else {
-            $error_message = "Sorry! $module Could Not Be Deleted. You may not have permission to delete this record.";
+            if ($mysqli->affected_rows > 0) {
+                flash_success("$module_caption Deleted Successfully.");
+                header("Location:listing_$module.php?page=$page");
+                exit;
+            } else {
+                $error_message = "Sorry! $module Could Not Be Deleted. You may not have permission to delete this record.";
+            }
         }
     }
 }

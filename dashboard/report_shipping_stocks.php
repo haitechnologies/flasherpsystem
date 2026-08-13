@@ -9,6 +9,7 @@ use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 $module = 'shipping_stocks';
+$GLOBALS['module'] = $module;
 $module_caption = 'Shipping Invoice';
 $tbl_name = DB::SHIPPING_STOCKS;
 $error_message = '';

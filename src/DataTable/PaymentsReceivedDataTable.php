@@ -37,8 +37,8 @@ class PaymentsReceivedDataTable extends BaseDataTable
         1 => 'payment_no',
         2 => 'reference_no',
         3 => 'customer_id',
-        4 => 'payment_status',
-        5 => 'payment_method',
+        4 => 'payment_method',
+        5 => 'payment_status',
         6 => 'total_amount_received'
     ];
 

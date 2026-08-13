@@ -189,8 +189,6 @@ $container->autowire(\App\Repository\SaleOrderRepository::class);
 $container->autowire(\App\Repository\QuotationRepository::class);
 $container->autowire(\App\Repository\JobRepository::class);
 $container->autowire(\App\Repository\JobItemRepository::class);
-$container->autowire(\App\Repository\ShippingAdviceRepository::class);
-$container->autowire(\App\Repository\ShippingInvoiceRepository::class);
 $container->autowire(\App\Repository\JournalRepository::class);
 $container->autowire(\App\Repository\RecurringInvoiceRepository::class);
 $container->autowire(\App\Repository\CustomerContactRepository::class);
@@ -254,8 +252,6 @@ $container->autowire(\App\Service\SaleOrderService::class);
 $container->autowire(\App\Service\QuotationService::class);
 $container->autowire(\App\Service\JobService::class);
 $container->autowire(\App\Service\JobItemService::class);
-$container->autowire(\App\Service\ShippingAdviceService::class);
-$container->autowire(\App\Service\ShippingInvoiceService::class);
 $container->autowire(\App\Service\SetupGroupService::class);
 $container->autowire(\App\Service\SetupSourceService::class);
 $container->autowire(\App\Service\SetupStatusService::class);
@@ -460,6 +456,15 @@ $container->register(\App\Http\Controller\SetupTagController::class, function (\
         Session::roleId(),
         Session::orgId(),
         $c->get(\App\Service\SetupTagService::class)
+    );
+});
+$container->register(\App\Http\Controller\SetupBankController::class, function (\App\Core\Container $c) {
+    return new \App\Http\Controller\SetupBankController(
+        $c->get(\App\Core\Database::class),
+        Session::userId(),
+        Session::roleId(),
+        Session::orgId(),
+        $c->get(\App\Service\SetupBankService::class)
     );
 });
 $container->register(\App\Http\Controller\UnitController::class, function (\App\Core\Container $c) {
@@ -867,25 +872,6 @@ $container->register(\App\Http\Controller\JobController::class, function (\App\C
         \App\Core\Session::orgId(),
         $c->get(\App\Service\JobService::class),
         $c->get(\App\Service\JobItemService::class)
-    );
-});
-# --- Shipping modules ---
-$container->register(\App\Http\Controller\ShippingAdviceController::class, function (\App\Core\Container $c) {
-    return new \App\Http\Controller\ShippingAdviceController(
-        $c->get(\App\Core\Database::class),
-        \App\Core\Session::userId(),
-        \App\Core\Session::roleId(),
-        \App\Core\Session::orgId(),
-        $c->get(\App\Service\ShippingAdviceService::class)
-    );
-});
-$container->register(\App\Http\Controller\ShippingInvoiceController::class, function (\App\Core\Container $c) {
-    return new \App\Http\Controller\ShippingInvoiceController(
-        $c->get(\App\Core\Database::class),
-        \App\Core\Session::userId(),
-        \App\Core\Session::roleId(),
-        \App\Core\Session::orgId(),
-        $c->get(\App\Service\ShippingInvoiceService::class)
     );
 });
 # --- Entity Notes controllers (Customer Comments & Lead Notes) ---

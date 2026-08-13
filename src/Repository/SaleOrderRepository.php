@@ -261,6 +261,7 @@ class SaleOrderRepository
     /** Delete a sale order and its associated items */
     public function delete(int $id, int $orgId): bool
     {
+        $this->deleteDimensionItemsByRecord($id, 'sale_orders', $orgId);
         $this->deleteItemsBySaleOrder($id, $orgId);
         $sql = "DELETE FROM `{DB::SALE_ORDERS}` WHERE id = :id AND organization_id = :org_id";
         $stmt = $this->db->execute($sql, ['id' => $id, 'org_id' => $orgId]);

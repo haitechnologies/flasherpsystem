@@ -12,7 +12,7 @@ class VendorsDataTable extends BaseDataTable
 {
     protected $table = DB::VENDORS;
     protected $searchFields = ['display_name', 'company_name', 'email'];
-    protected $sortableColumns = [0 => 'display_name', 1 => 'company_name', 2 => 'email', 3 => 'phone', 4 => 'id'];
+    protected $sortableColumns = [0 => 'display_name', 1 => 'company_name', 2 => 'email', 3 => 'phone'];
 
     protected function formatRow($row, $requestData = [])
     {

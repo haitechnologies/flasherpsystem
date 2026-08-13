@@ -14,6 +14,7 @@ use App\Security\Roles;
 use App\Exception\NotFoundException;
 use App\Exception\ValidationException;
 use App\Helper\DateHelper;
+use App\Helper\PdfGeneratorHelper;
 
 class SaleOrderController extends BaseController
 {
@@ -66,6 +67,8 @@ class SaleOrderController extends BaseController
         try {
             $this->saleOrderService->updateSaleOrder($id, $saleOrderData, $itemsData, $this->orgId, $this->userId);
 
+            PdfGeneratorHelper::ensure('sale_orders', $id);
+
             if ($request->get('save_and_send') == 1) {
                 return Response::redirect("send_email.php?current_module=sale_orders&id=$id");
             }
@@ -74,6 +77,7 @@ class SaleOrderController extends BaseController
         } catch (ValidationException $e) {
             $error = current($e->getErrors());
             flash_error($error);
+            $_SESSION['__sale_orders_old_input'] = $_POST;
             return Response::redirect("sale_orders.php?id=$id&action=edit_sale_orders");
         } catch (\Throwable $e) {
             log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
@@ -83,6 +87,7 @@ class SaleOrderController extends BaseController
                 'error_code' => (string)$e->getCode(),
             ]));
             flash_error($e->getMessage());
+            $_SESSION['__sale_orders_old_input'] = $_POST;
             return Response::redirect("sale_orders.php?id=$id&action=edit_sale_orders");
         }
     }
@@ -96,6 +101,8 @@ class SaleOrderController extends BaseController
             $newSaleOrder = $this->saleOrderService->createSaleOrder($saleOrderData, $itemsData, $this->orgId, $this->userId);
             $id = $newSaleOrder->id;
 
+            PdfGeneratorHelper::ensure('sale_orders', $id);
+
             if ($request->get('save_and_send') == 1) {
                 return Response::redirect("send_email.php?current_module=sale_orders&id=$id");
             }
@@ -104,6 +111,7 @@ class SaleOrderController extends BaseController
         } catch (ValidationException $e) {
             $error = current($e->getErrors());
             flash_error($error);
+            $_SESSION['__sale_orders_old_input'] = $_POST;
             return Response::redirect("sale_orders.php");
         } catch (\Throwable $e) {
             log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
@@ -113,6 +121,7 @@ class SaleOrderController extends BaseController
                 'error_code' => (string)$e->getCode(),
             ]));
             flash_error($e->getMessage());
+            $_SESSION['__sale_orders_old_input'] = $_POST;
             return Response::redirect("sale_orders.php");
         }
     }
@@ -205,8 +214,8 @@ class SaleOrderController extends BaseController
             'customer_notes' => $request->getString('customer_notes'),
             'grand_tax' => $request->getString('grand_tax'),
             'grand_total' => $request->getString('grand_total'),
-            'publish' => $request->get('publish') ? true : false,
-            'is_active' => $request->get('publish') ? true : false,
+            'publish' => true,
+            'is_active' => true,
             'sale_order_status' => $request->getString('sale_order_status', 'draft'),
         ];
     }
@@ -318,7 +327,7 @@ class SaleOrderController extends BaseController
                 $created_by = 0;
             }
 
-            $canEdit = Roles::hasFullAccess($session_role_id) || $session_user_id === $created_by;
+            $canEdit = Roles::hasFullAccess($session_role_id) || $this->canEdit() || $session_user_id === $created_by;
 
             if ($canEdit) {
                 try {
@@ -353,7 +362,6 @@ class SaleOrderController extends BaseController
                     $destination_country = (string)$saleOrder->destinationCountry;
                     $invoice_id = $saleOrder->invoiceId !== null ? (string)$saleOrder->invoiceId : '';
                     $quotation_id = $saleOrder->quotationId !== null ? (string)$saleOrder->quotationId : '';
-                    $payment_term = (string)$saleOrder->paymentTerm;
                     $customer_notes = (string)$saleOrder->customerNotes;
                     $terms_and_conditions = (string)$saleOrder->termsAndConditions;
                     $grand_subtotal = (string)$saleOrder->grandSubtotal;
@@ -399,6 +407,56 @@ class SaleOrderController extends BaseController
             $total_rows = 1;
         }
 
+        // Restore old form input after failed save
+        if (session_status() === PHP_SESSION_NONE) {
+            @session_start();
+        }
+        if (isset($_SESSION['__sale_orders_old_input'])) {
+            $old = $_SESSION['__sale_orders_old_input'];
+            unset($_SESSION['__sale_orders_old_input']);
+
+            foreach ([
+                'customer_id', 'sale_order_date', 'expiry_date', 'reference_no', 'warehouse_id',
+                'expected_shipment_date', 'payment_term', 'shipment_type',
+                'sales_person', 'job_reference_no', 'master_awb_no',
+                'hwb_hbol', 'origin_country', 'destination_country',
+                'no_of_packs', 'gross_weight', 'chargeable_weight', 'volume',
+                'cbm', 'terms_and_conditions', 'grand_subtotal',
+                'grand_discount_type', 'grand_discount_type_value',
+                'grand_discount_amount', 'grand_after_discount', 'customer_notes',
+                'grand_tax', 'grand_total', 'sale_order_status',
+            ] as $key) {
+                if (isset($old[$key])) {
+                    $$key = (string)$old[$key];
+                }
+            }
+
+            $remap = ['shipper_id' => 'shipper', 'consignee_id' => 'consignee',
+                       'origin_port' => 'origin', 'destination_port' => 'destination'];
+            foreach ($remap as $postKey => $varName) {
+                if (isset($old[$postKey])) {
+                    $$varName = (string)$old[$postKey];
+                }
+            }
+
+            if (isset($old['publish'])) {
+                $is_active = $old['publish'] ? 1 : 0;
+            }
+
+            if (isset($old['service']) && is_array($old['service'])) {
+                $item_id_arr = $old['item_id'] ?? [];
+                $service_arr = $old['service'];
+                $description_arr = $old['description'] ?? [];
+                $qty_arr = $old['qty'] ?? [];
+                $rate_arr = $old['rate'] ?? [];
+                $sub_total_arr = $old['sub_total'] ?? [];
+                $tax_arr = $old['tax'] ?? [];
+                $tax_amount_arr = $old['tax_amount'] ?? [];
+                $total_arr = $old['total'] ?? [];
+                $total_rows = max(1, count($service_arr));
+            }
+        }
+
         // Fetch dropdown data
         try {
             $customersList = $this->db->fetchAll("SELECT id, display_name FROM `" . DB::CUSTOMERS . "` WHERE is_active=1 AND approved=1 AND organization_id = :org_id ORDER BY id DESC", ['org_id' => $this->orgId]);
@@ -409,7 +467,7 @@ class SaleOrderController extends BaseController
             }
         }
         try {
-            $orgList = $this->db->fetchAll("SELECT id, warehouse_name FROM `" . DB::ORGANIZATIONS . "` WHERE is_active=1");
+            $orgList = $this->db->fetchAll("SELECT id, warehouse_name FROM `" . DB::ORGANIZATIONS . "` WHERE is_active=1 AND id=1");
         } catch (\Throwable $e) {
             $orgList = [];
             if (function_exists('log_error')) {
@@ -444,14 +502,6 @@ class SaleOrderController extends BaseController
             $paymentTermsList = $this->db->fetchAll("SELECT id, payment_term FROM `" . DB::PAYMENT_TERMS . "` WHERE publish=1 ORDER BY id");
         } catch (\Throwable $e) {
             $paymentTermsList = [];
-            if (function_exists('log_error')) {
-                log_error('sale_orders form dropdown load failed: ' . $e->getMessage(), 'WARNING', __FILE__, __LINE__, function_exists('backend_runtime_log_context') ? backend_runtime_log_context(['module' => 'sale_orders', 'module_slug' => 'sale_orders', 'error_code' => (string)$e->getCode()]) : ['module' => 'sale_orders', 'module_slug' => 'sale_orders', 'error_code' => (string)$e->getCode()]);
-            }
-        }
-        try {
-            $leadsList = $this->db->fetchAll("SELECT id, display_name FROM `" . DB::LEADS . "` WHERE is_active=1 AND organization_id = :org_id ORDER BY display_name", ['org_id' => $this->orgId]);
-        } catch (\Throwable $e) {
-            $leadsList = [];
             if (function_exists('log_error')) {
                 log_error('sale_orders form dropdown load failed: ' . $e->getMessage(), 'WARNING', __FILE__, __LINE__, function_exists('backend_runtime_log_context') ? backend_runtime_log_context(['module' => 'sale_orders', 'module_slug' => 'sale_orders', 'error_code' => (string)$e->getCode()]) : ['module' => 'sale_orders', 'module_slug' => 'sale_orders', 'error_code' => (string)$e->getCode()]);
             }
@@ -555,7 +605,6 @@ class SaleOrderController extends BaseController
             'consigneesList' => $consigneesList,
             'itemsList' => $itemsList,
             'paymentTermsList' => $paymentTermsList,
-            'leadsList' => $leadsList,
             'countriesList' => $countriesList,
             'portsList' => $portsList,
             'canCreate' => $this->canCreate(),

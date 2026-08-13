@@ -15,37 +15,14 @@ declare(strict_types=1);
  * @var string $routingNumber
  * @var string $description
  * @var int $isPrimary
- * @var int $publish
  * @var string $moduleCaption
  * @var string $module
  * @var array $allCurrencies
+ * @var array $allBanks
  * @var bool $canCreate
  * @var bool $canEdit
  */
 include 'admin_elements/admin_header.php';
-
-$uaeBanks = [
-    'Emirates NBD',
-    'First Abu Dhabi Bank (FAB)',
-    'Abu Dhabi Commercial Bank (ADCB)',
-    'Dubai Islamic Bank (DIB)',
-    'Mashreq Bank',
-    'Abu Dhabi Islamic Bank (ADIB)',
-    'RAKBANK',
-    'Commercial Bank of Dubai (CBD)',
-    'Sharjah Islamic Bank',
-    'Al Hilal Bank',
-    'Ajman Bank',
-    'Commercial Bank International (CBI)',
-    'HSBC Middle East',
-    'Standard Chartered UAE',
-    'Citibank UAE',
-    'Noor Bank',
-    'National Bank of Fujairah (NBF)',
-    'Bank of Sharjah',
-    'United Arab Bank (UAB)',
-    'Invest Bank',
-];
 ?>
 <div class="content-wrapper">
     <div class="page-header page-header-light shadow carriers-page-header">
@@ -55,10 +32,6 @@ $uaeBanks = [
                 <div class="form-check form-switch mb-0">
                     <input type="checkbox" class="form-check-input form-check-input-success" name="is_primary" id="is_primary" form="frmbanks" <?php echo $isPrimary ? 'checked="checked"' : ''; ?>>
                     <label class="form-check-label fw-semibold" for="is_primary">Is Primary?</label>
-                </div>
-                <div class="form-check form-switch mb-0">
-                    <input type="checkbox" class="form-check-input form-check-input-success" name="publish" id="publish" form="frmbanks" <?php echo $publish ? 'checked="checked"' : ''; ?>>
-                    <label class="form-check-label fw-semibold" for="publish">Publish</label>
                 </div>
             </div>
             <div class="d-flex align-items-center gap-2">
@@ -92,10 +65,10 @@ $uaeBanks = [
                                 <div class="row mb-3">
                                     <label class="col-lg-3 col-form-label"><span class="text-danger">Bank Name:*</span></label>
                                     <div class="col-lg-9">
-                                        <select required class="form-select" name="bank_name" id="uae_bank_select">
+                                        <select required class="form-select select2-enable" name="bank_name" id="uae_bank_select">
                                             <option value="">Please select</option>
-                                            <?php foreach ($uaeBanks as $b) { ?>
-                                                <option value="<?php echo e($b); ?>" <?php echo $bankName === $b ? 'selected' : ''; ?>><?php echo e($b); ?></option>
+                                            <?php foreach ($allBanks as $b) { ?>
+                                                <option value="<?php echo e($b['institution_name']); ?>" <?php echo $bankName === $b['institution_name'] ? 'selected' : ''; ?>><?php echo e($b['institution_name']); ?></option>
                                             <?php } ?>
                                         </select>
                                     </div>
@@ -126,11 +99,7 @@ $uaeBanks = [
                                     <div class="col-lg-9">
                                         <select class="form-select" name="account_id">
                                             <option value="">None</option>
-                                            <?php foreach ($allAccounts as $acc) { ?>
-                                                <option value="<?php echo $acc['id']; ?>" <?php echo (string)$acc['id'] === (string)$accountId ? 'selected' : ''; ?>>
-                                                    <?php echo e($acc['account_code'] . ' - ' . $acc['account_name']); ?>
-                                                </option>
-                                            <?php } ?>
+                                            <?php echo fetchAccountsDropdown(array(1), '', (int)$accountId); ?>
                                         </select>
                                     </div>
                                 </div>
@@ -138,7 +107,6 @@ $uaeBanks = [
                                     <label class="col-lg-3 col-form-label"><span class="text-danger">Currency:*</span></label>
                                     <div class="col-lg-9">
                                         <select class="form-select" name="currency">
-                                            <option value="0">Please select</option>
                                             <?php foreach ($allCurrencies as $cur) { ?>
                                                 <option value="<?php echo $cur['id']; ?>" <?php echo ((string)$cur['id'] === (string)$currency) ? 'selected' : ''; ?>>
                                                     <?php echo e($cur['currency']); ?>

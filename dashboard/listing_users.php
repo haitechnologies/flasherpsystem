@@ -41,12 +41,15 @@ if (($action == "delete_$module" && !empty($id))) {
         flash_success($success_message);
     } catch (ValidationException $e) {
         $error_message = current($e->getErrors());
+        log_error($e->getMessage(), 'WARNING', $e->getFile(), $e->getLine(), ['module' => 'users', 'action' => 'delete']);
         flash_error($error_message);
     } catch (NotFoundException $e) {
         $error_message = $e->getMessage();
+        log_error($e->getMessage(), 'WARNING', $e->getFile(), $e->getLine(), ['module' => 'users', 'action' => 'delete']);
         flash_error($error_message);
     } catch (\Throwable $e) {
         $error_message = "Unable to delete employee account. Please try again.";
+        log_error($e->getMessage(), 'ERROR', $e->getFile(), $e->getLine(), ['module' => 'users', 'action' => 'delete']);
         flash_error($error_message);
     }
 }

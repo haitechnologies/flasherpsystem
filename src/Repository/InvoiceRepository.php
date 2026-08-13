@@ -95,7 +95,7 @@ class InvoiceRepository
                     reference_no, warehouse_id, expected_shipment_date, payment_term, shipment_type,
                     sales_person, job_reference_no, master_awb_no, hwb_hbol, lead_id, shipper, consignee, origin,
                     origin_country, destination, destination_country, no_of_packs, gross_weight, chargeable_weight, volume,
-                    terms_and_conditions, grand_subtotal, grand_discount_type, grand_discount_type_value,
+                    cbm, terms_and_conditions, grand_subtotal, grand_discount_type, grand_discount_type_value,
                     grand_discount_amount, grand_after_discount, customer_notes, grand_tax, grand_total, balance_due,
                     publish, is_active, created_at, updated_at, updated_by, created_by, recurring, pdf
                 ) VALUES (
@@ -103,7 +103,7 @@ class InvoiceRepository
                     :reference_no, :warehouse_id, :expected_shipment_date, :payment_term, :shipment_type,
                     :sales_person, :job_reference_no, :master_awb_no, :hwb_hbol, :lead_id, :shipper, :consignee, :origin,
                     :origin_country, :destination, :destination_country, :no_of_packs, :gross_weight, :chargeable_weight, :volume,
-                    :terms_and_conditions, :grand_subtotal, :grand_discount_type, :grand_discount_type_value,
+                    :cbm, :terms_and_conditions, :grand_subtotal, :grand_discount_type, :grand_discount_type_value,
                     :grand_discount_amount, :grand_after_discount, :customer_notes, :grand_tax, :grand_total, :balance_due,
                     :publish, :is_active, NOW(), NOW(), :updated_by, :created_by, :recurring, :pdf
                 )";
@@ -152,6 +152,7 @@ class InvoiceRepository
                     gross_weight = :gross_weight,
                     chargeable_weight = :chargeable_weight,
                     volume = :volume,
+                    cbm = :cbm,
                     terms_and_conditions = :terms_and_conditions,
                     grand_subtotal = :grand_subtotal,
                     grand_discount_type = :grand_discount_type,
@@ -392,6 +393,7 @@ class InvoiceRepository
             grossWeight: (float)($row['gross_weight'] ?? 0.0),
             chargeableWeight: (float)($row['chargeable_weight'] ?? 0.0),
             volume: (float)($row['volume'] ?? 0.0),
+            cbm: (float)($row['cbm'] ?? 0.0),
             termsAndConditions: $row['terms_and_conditions'] !== null ? (string)$row['terms_and_conditions'] : null,
             grandSubtotal: (float)($row['grand_subtotal'] ?? 0.0),
             grandDiscountType: (string)($row['grand_discount_type'] ?? '0.00'),

@@ -54,6 +54,15 @@ if (!function_exists('isMenuActive')) {
             $pages = [$pages];
         }
 
+        // send_email.php is a shared page; highlight the menu of the module
+        // selected via the current_module query parameter.
+        if ($current_page === 'send_email.php' && isset($_REQUEST['current_module'])) {
+            $emModule = preg_replace('/[^a-z0-9_]/', '', (string)$_REQUEST['current_module']);
+            if (in_array('listing_' . $emModule . '.php', $pages, true)) {
+                return true;
+            }
+        }
+
         foreach ($pages as $page) {
             // If page contains a query string, match path and query string exactly
             if (strpos($page, '?') !== false) {
@@ -150,15 +159,8 @@ $menuConfig = [
                 'href' => 'listing_shipping_advices.php',
                 'label' => 'Shipping Advices',
                 'icon' => 'ph-package',
-                'pages' => ['listing_shipping_advices.php', 'shipping_advices.php', 'view_shipping_advice.php'],
+                'pages' => ['listing_shipping_advices.php', 'shipping_advices.php', 'import_shipping_advices.php', 'view_shipping_advice.php'],
                 'condition' => function() { return has_full_access() || hasModuleAccess('shipping_advices'); }
-            ],
-            [
-                'href' => 'listing_shipping_invoices.php',
-                'label' => 'Shipping Invoices',
-                'icon' => 'ph-receipt',
-                'pages' => ['listing_shipping_invoices.php', 'shipping_invoices.php', 'view_shipping_invoice.php'],
-                'condition' => function() { return has_full_access() || hasModuleAccess('shipping_invoices'); }
             ],
             [
                 'href' => 'listing_shipping_stocks.php',
@@ -312,7 +314,7 @@ $menuConfig = [
                 'href' => 'listing_banks.php',
                 'label' => 'Banking',
                 'icon' => 'ph-bank',
-                'pages' => ['listing_banks.php', 'banks.php'],
+                'pages' => ['listing_banks.php', 'banks.php', 'listing_setup_banks.php', 'setup_banks.php'],
                 'condition' => function() { return has_full_access() || hasModuleAccess('banks'); }
             ],
             [
@@ -448,7 +450,7 @@ $sectionSystemMap = [
 ];
 
 $sectionModuleMap = [
-    'shipping' => ['shipping_advices', 'shipping_invoices', 'shipping_stocks', 'shipping_customers', 'hscodes', 'geo_countries', 'ports', 'carriers', 'consignees', 'shippers'],
+    'shipping' => ['shipping_advices', 'shipping_stocks', 'shipping_customers', 'hscodes', 'geo_countries', 'ports', 'carriers', 'consignees', 'shippers'],
     'accounting' => ['items', 'banks', 'customers', 'quotations', 'sale_orders', 'invoices', 'payments_received', 'credit_notes', 'vendors', 'expenses', 'purchase_orders', 'purchases', 'payments_made', 'debit_notes', 'journals', 'accounts'],
     'crm' => ['leads', 'projects', 'jobs', 'job_statuses'],
     'hr' => ['departments', 'designations', 'attendance', 'leave_requests', 'leave_types', 'annual_leave_entitlements', 'payroll_components', 'salary_structures', 'employee_salaries', 'payroll_runs', 'payslips', 'user_documents', 'document_categories', 'air_tickets', 'gratuity_settlements', 'report_hr'],

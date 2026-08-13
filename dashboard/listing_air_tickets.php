@@ -37,6 +37,7 @@ if (($action == "delete_$module" && !empty($id))) {
         $error_message = $e->getMessage();
     } catch (\Throwable $e) {
         $error_message = "Air Ticket could not be deleted.";
+        log_error($e->getMessage(), 'ERROR', $e->getFile(), $e->getLine(), ['module' => 'air_tickets', 'action' => 'delete']);
     }
 }
 
@@ -63,6 +64,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'generate' && granted_('create
         }
     } catch (\Throwable $e) {
         $error_message = 'Air Ticket generation failed: ' . $e->getMessage();
+        log_error($e->getMessage(), 'ERROR', $e->getFile(), $e->getLine(), ['module' => 'air_tickets', 'action' => 'generate']);
     }
 
     header("Location:listing_$module.php");

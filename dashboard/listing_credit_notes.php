@@ -30,6 +30,12 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && !empty($action)) {
 }
 
 if (($action == "delete_$module" && !empty($id)) && granted('delete', $module_id)) {
+    if (!validate_csrf_token($_GET['csrf_token'] ?? $_POST['csrf_token'] ?? '')) {
+        log_error('CSRF token validation failed on delete in listing_credit_notes.php', 'WARNING', __FILE__, __LINE__);
+        flash_error('Invalid security token. Please refresh the page and try again.');
+        header("Location:listing_$module.php?page=$page");
+        exit;
+    }
     try {
         $creditNoteService = Container::getInstance()->get(CreditNoteService::class);
         $creditNote = $creditNoteService->getCreditNote((int)$id, (int)$activeOrganizationId);
@@ -46,6 +52,7 @@ if (($action == "delete_$module" && !empty($id)) && granted('delete', $module_id
             exit;
         }
     } catch (\Throwable $e) {
+        log_error('Delete failed for credit note: ' . $e->getMessage(), 'ERROR', $e->getFile(), $e->getLine(), ['module' => 'credit_notes', 'action' => 'delete', 'id' => (int)($id ?? 0)]);
         flash_error($e->getMessage());
     }
 }
@@ -110,13 +117,14 @@ if (($action == "delete_$module" && !empty($id)) && granted('delete', $module_id
 
                 <div class="table-responsive">
 <table id="grid-<?php echo $module; ?>" class="table table-hover align-middle mb-0 custom_datatables datatable-professional display responsive nowrap" width="100%">
-                    <thead class="table-light border-bottom text-uppercase fs-8 fw-semibold text-muted">
+                    <thead>
                         <tr>
-                            <th class="ps-4">Credit Note</th>
-                            <th>Reference</th>
-                            <th>Customer</th>
-                            <th class="text-end">Amount</th>
-                            <th class="text-center">Status</th>
+                            <th width="100">DATE</th>
+                            <th width="150">CREDIT NOTE #</th>
+                            <th>REFERENCE #</th>
+                            <th>CUSTOMER NAME</th>
+                            <th width="100" class="col-center">STATUS</th>
+                            <th width="100" class="text-end">AMOUNT</th>
                         </tr>
                     </thead>
                 </table>
@@ -154,34 +162,28 @@ $(document).ready(function() {
             }
         },
         columns: [
-            { data: null }, // col 0: Credit Note info
-            { data: 2 }, // col 1: Reference
-            { data: null }, // col 2: Customer
-            { data: 5, className: 'text-end fw-semibold text-dark' }, // col 3: Amount
-            { data: 4, className: 'text-center' } // col 4: Status
+            { data: 0 }, // col 0: Date
+            { data: 1 }, // col 1: Credit Note #
+            { data: 2 }, // col 2: Reference
+            { data: 3 }, // col 3: Customer
+            { data: 4, className: 'col-center' }, // col 4: Status
+            { data: 5, className: 'text-end' } // col 5: Amount
         ],
         columnDefs: [
             {
-                targets: 0,
+                targets: 1,
                 render: function(data, type, row) {
-                    var cnDate = row[0] || '-';
                     var cnNo = row[1] || '';
                     var id = row[6] || '';
-                    var html = '<div class="d-flex flex-column">';
-                    html += '<a href="credit_note_overview.php?credit_note_id=' + id + '" class="fw-semibold text-primary text-decoration-none hover-primary">' + cnNo + '</a>';
-                    html += '<span class="text-muted fs-8">' + cnDate + '</span>';
-                    html += '</div>';
-                    return html;
+                    return '<a href="credit_note_overview.php?credit_note_id=' + id + '" class="text-primary text-decoration-none hover-primary">' + cnNo + '</a>';
                 }
             },
             {
-                targets: 2,
+                targets: 3,
                 render: function(data, type, row) {
                     var custName = row[3] || '';
                     var id = row[6] || '';
-                    return '<div class="d-flex flex-column">' +
-                           '<a href="credit_note_overview.php?credit_note_id=' + id + '" class="text-dark fw-medium text-decoration-none hover-primary">' + custName + '</a>' +
-                           '</div>';
+                    return '<a href="credit_note_overview.php?credit_note_id=' + id + '" class="text-dark text-decoration-none hover-primary">' + custName + '</a>';
                 }
             },
             {

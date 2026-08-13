@@ -30,6 +30,7 @@ $userService = \App\Core\Container::getInstance()->get(\App\Service\UserService:
 try {
     $user = $userService->getById((int)$id);
 } catch (\App\Exception\NotFoundException $e) {
+    log_error('User not found: ' . $e->getMessage(), 'WARNING', __FILE__, __LINE__, ['module' => 'users', 'id' => (int)($id ?? 0)]);
     flash_error('User Information is not accessible');
     header("Location:listing_users.php");
     exit;

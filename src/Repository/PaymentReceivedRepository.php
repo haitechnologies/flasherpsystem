@@ -29,7 +29,10 @@ class PaymentReceivedRepository
      */
     public function find(int $id, int $orgId): ?PaymentReceived
     {
-        $sql = "SELECT * FROM `{DB::PAYMENTS_RECEIVED}` WHERE id = :id AND organization_id = :org_id";
+        $sql = "SELECT id, organization_id, payment_no, payment_status, customer_id, total_amount_received,
+                       bank_charges, payment_date, payment_method, deposit_to, reference_no,
+                       publish, is_active, created_at, updated_at, updated_by, created_by
+                FROM `{DB::PAYMENTS_RECEIVED}` WHERE id = :id AND organization_id = :org_id";
         $row = $this->db->fetchOne($sql, ['id' => $id, 'org_id' => $orgId]);
         if ($row === null) {
             return null;
@@ -42,7 +45,9 @@ class PaymentReceivedRepository
      */
     public function findItemsByPayment(int $paymentId, int $orgId): array
     {
-        $sql = "SELECT * FROM `{DB::PAYMENT_RECEIVED_ITEMS}` WHERE payment_id = :payment_id AND organization_id = :org_id ORDER BY id ASC";
+        $sql = "SELECT id, payment_id, organization_id, invoice_id, amount_received_on, amount_received,
+                       created_at, updated_at, updated_by, created_by
+                FROM `{DB::PAYMENT_RECEIVED_ITEMS}` WHERE payment_id = :payment_id AND organization_id = :org_id ORDER BY id ASC";
         $rows = $this->db->fetchAll($sql, ['payment_id' => $paymentId, 'org_id' => $orgId]);
         $items = [];
         foreach ($rows as $row) {
@@ -56,7 +61,10 @@ class PaymentReceivedRepository
      */
     public function findAll(int $orgId): array
     {
-        $sql = "SELECT * FROM `{DB::PAYMENTS_RECEIVED}` WHERE organization_id = :org_id ORDER BY id DESC";
+        $sql = "SELECT id, organization_id, payment_no, payment_status, customer_id, total_amount_received,
+                       bank_charges, payment_date, payment_method, deposit_to, reference_no,
+                       publish, is_active, created_at, updated_at, updated_by, created_by
+                FROM `{DB::PAYMENTS_RECEIVED}` WHERE organization_id = :org_id ORDER BY id DESC";
         $rows = $this->db->fetchAll($sql, ['org_id' => $orgId]);
         $payments = [];
         foreach ($rows as $row) {
@@ -170,7 +178,7 @@ class PaymentReceivedRepository
 
         $insertId = (int)$this->db->insert($sql, $params);
 
-        $inserted = $this->findItem($insertId, $item->paymentId);
+        $inserted = $this->findItem($insertId, $item->paymentId, $item->organizationId);
         if ($inserted === null) {
             throw new \RuntimeException("Failed to retrieve inserted payment item.");
         }
@@ -193,7 +201,7 @@ class PaymentReceivedRepository
 
         $this->db->execute($sql, $params);
 
-        $updated = $this->findItem((int)$item->id, $item->paymentId);
+        $updated = $this->findItem((int)$item->id, $item->paymentId, $item->organizationId);
         if ($updated === null) {
             throw new \RuntimeException("Failed to retrieve updated payment item.");
         }
@@ -202,12 +210,14 @@ class PaymentReceivedRepository
     }
 
     /**
-     * Find a single PaymentReceivedItem by ID
+     * Find a single PaymentReceivedItem by ID (org-scoped)
      */
-    public function findItem(int $id, int $paymentId): ?PaymentReceivedItem
+    public function findItem(int $id, int $paymentId, int $orgId): ?PaymentReceivedItem
     {
-        $sql = "SELECT * FROM `{DB::PAYMENT_RECEIVED_ITEMS}` WHERE id = :id AND payment_id = :payment_id";
-        $row = $this->db->fetchOne($sql, ['id' => $id, 'payment_id' => $paymentId]);
+        $sql = "SELECT id, payment_id, organization_id, invoice_id, amount_received_on, amount_received,
+                       created_at, updated_at, updated_by, created_by
+                FROM `{DB::PAYMENT_RECEIVED_ITEMS}` WHERE id = :id AND payment_id = :payment_id AND organization_id = :org_id";
+        $row = $this->db->fetchOne($sql, ['id' => $id, 'payment_id' => $paymentId, 'org_id' => $orgId]);
         if ($row === null) {
             return null;
         }

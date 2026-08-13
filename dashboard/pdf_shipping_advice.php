@@ -33,6 +33,7 @@ require_once('../tcpdf/examples/tcpdf_include.php');
 
 $id = isset($_REQUEST['id']) ? (int)$_REQUEST['id'] : 0;
 $token = isset($_REQUEST['token']) ? $_REQUEST['token'] : '';
+$GLOBALS['module'] = 'shipping_advices';
 
 if (empty($token)) {
     header("Location: index.php");
@@ -41,17 +42,33 @@ if (empty($token)) {
 
 $sent_token = hash("sha512", 'bushogai' . $id);
 if ($token != $sent_token) {
+    if (function_exists('log_error')) {
+        log_error('Shipping Advice PDF access denied: invalid token for id=' . $id, 'WARNING', __FILE__, __LINE__, ['module' => 'shipping_advices']);
+    }
     die('Access Denied');
 }
 
 if (empty($id)) {
+    if (function_exists('log_error')) {
+        log_error('Shipping Advice PDF requested with empty id', 'WARNING', __FILE__, __LINE__, ['module' => 'shipping_advices']);
+    }
     die('Invalid ID');
 }
 
 // Fetch shipping advice
-$result = $mysqli->query("SELECT * FROM `" . DB::SHIPPING_ADVICES . "` WHERE id=$id");
-$row = $result->fetch_array();
+try {
+    $result = $mysqli->query("SELECT * FROM `" . DB::SHIPPING_ADVICES . "` WHERE id=$id");
+    $row = $result->fetch_array();
+} catch (\Throwable $e) {
+    if (function_exists('log_error')) {
+        log_error('Shipping Advice PDF load failed: ' . $e->getMessage(), 'ERROR', __FILE__, __LINE__, ['module' => 'shipping_advices']);
+    }
+    die('An error occurred while loading the Shipping Advice.');
+}
 if (!$row) {
+    if (function_exists('log_error')) {
+        log_error('Shipping Advice PDF requested for missing advice id=' . $id, 'WARNING', __FILE__, __LINE__, ['module' => 'shipping_advices']);
+    }
     die('Shipping Advice not found.');
 }
 

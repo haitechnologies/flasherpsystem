@@ -223,7 +223,7 @@ include 'admin_elements/admin_header.php';
 ?>
 <div class="content-wrapper">
     <div class="page-header page-header-light shadow carriers-page-header">
-        <div class="page-header-content border-top py-2 px-3 carriers-page-header-content">
+        <div class="page-header-content d-lg-flex border-top py-2 px-3 carriers-page-header-content align-items-center">
             <div class="my-1 d-flex align-items-center gap-2">
                 <h5 class="mb-0"><?php echo ($id > 0) ? 'Edit' : 'New'; ?> <?php echo $moduleCaption; ?></h5>
                 <?php if ($id > 0): ?>
@@ -233,7 +233,7 @@ include 'admin_elements/admin_header.php';
                     <span class="badge bg-primary bg-opacity-10 text-primary ms-2"><?php echo ucwords($job_status); ?></span>
                 <?php endif; ?>
             </div>
-            <div class="my-1 d-flex align-items-center gap-2">
+            <div class="my-1 ms-auto d-flex align-items-center gap-2">
                 <?php if ($canCreate || $canEdit): ?>
                     <button type="submit" form="frm<?php echo $module; ?>" class="btn btn-primary btn-sm">Save</button>
                 <?php endif; ?>
@@ -277,7 +277,7 @@ include 'admin_elements/admin_header.php';
                         <div class="col-lg-6">
                             <div class="card">
                                 <div class="card-body">
-                                    <?php $field = ['name'=>'currency', 'label'=>'Currency:', 'options_html'=>$currency_options_html, 'selected'=>$currency]; include 'admin_elements/form_field_select.php'; ?>
+                                    <?php $field = ['name'=>'currency', 'label'=>'Currency:', 'options_html'=>$currency_options_html, 'selected'=>$currency, 'empty_option'=>false]; include 'admin_elements/form_field_select.php'; ?>
 
                                     <?php $field = ['name'=>'exchange_rate', 'label'=>'Exchange Rate:', 'value'=>$exchange_rate, 'type'=>'number']; include 'admin_elements/form_field_text.php'; ?>
 

@@ -37,10 +37,13 @@ if (($action == "delete_$module" && !empty($id)) && granted('delete', $module_id
         }
     } catch (ValidationException $e) {
         $error_message = current($e->getErrors());
+        log_error($e->getMessage(), 'WARNING', $e->getFile(), $e->getLine(), ['module' => 'setup_groups', 'action' => 'delete']);
     } catch (NotFoundException $e) {
         $error_message = $e->getMessage();
+        log_error($e->getMessage(), 'WARNING', $e->getFile(), $e->getLine(), ['module' => 'setup_groups', 'action' => 'delete']);
     } catch (\Throwable $e) {
         $error_message = "An error occurred while deleting the record.";
+        log_error($e->getMessage(), 'ERROR', $e->getFile(), $e->getLine(), ['module' => 'setup_groups', 'action' => 'delete']);
     }
 }
 

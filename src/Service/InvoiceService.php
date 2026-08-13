@@ -152,6 +152,7 @@ class InvoiceService
                 grossWeight: !empty($data['gross_weight']) ? (float)$data['gross_weight'] : 0.0,
                 chargeableWeight: !empty($data['chargeable_weight']) ? (float)$data['chargeable_weight'] : 0.0,
                 volume: !empty($data['volume']) ? (float)$data['volume'] : 0.0,
+                cbm: !empty($data['cbm']) ? (float)$data['cbm'] : 0.0,
                 termsAndConditions: !empty($data['terms_and_conditions']) ? trim((string)$data['terms_and_conditions']) : null,
                 grandSubtotal: $grandSubtotal,
                 grandDiscountType: !empty($data['grand_discount_type']) ? trim((string)$data['grand_discount_type']) : '',
@@ -221,6 +222,14 @@ class InvoiceService
         $invoice = $this->getInvoice($id, $orgId);
         $this->validateInvoiceData($data, $orgId);
 
+        if (isset($data['invoice_status'])) {
+            $allowedStatuses = ['draft', 'sent', 'paid', 'partially_paid', 'overdue', 'cancelled', 'confirmed', 'writeoff', 'void'];
+            $status = trim((string)$data['invoice_status']);
+            if (!in_array($status, $allowedStatuses, true)) {
+                throw new ValidationException(['invoice_status' => "Invalid status: {$status}"]);
+            }
+        }
+
         $this->db->beginTransaction();
         try {
             // Date parsing (accepts d-m-Y / d/m/Y / Y-m-d)
@@ -270,6 +279,7 @@ class InvoiceService
                 grossWeight: isset($data['gross_weight']) ? (float)$data['gross_weight'] : $invoice->grossWeight,
                 chargeableWeight: isset($data['chargeable_weight']) ? (float)$data['chargeable_weight'] : $invoice->chargeableWeight,
                 volume: isset($data['volume']) ? (float)$data['volume'] : $invoice->volume,
+                cbm: isset($data['cbm']) ? (float)$data['cbm'] : $invoice->cbm,
                 termsAndConditions: isset($data['terms_and_conditions']) ? (!empty($data['terms_and_conditions']) ? trim((string)$data['terms_and_conditions']) : null) : $invoice->termsAndConditions,
                 grandSubtotal: $grandSubtotal,
                 grandDiscountType: isset($data['grand_discount_type']) ? trim((string)$data['grand_discount_type']) : $invoice->grandDiscountType,
@@ -419,6 +429,7 @@ class InvoiceService
                 grossWeight: $invoice->grossWeight,
                 chargeableWeight: $invoice->chargeableWeight,
                 volume: $invoice->volume,
+                cbm: $invoice->cbm,
                 termsAndConditions: $invoice->termsAndConditions,
                 grandSubtotal: $invoice->grandSubtotal,
                 grandDiscountType: $invoice->grandDiscountType,
@@ -430,7 +441,7 @@ class InvoiceService
                 grandTotal: $invoice->grandTotal,
                 balanceDue: $invoice->grandTotal,
                 publish: $invoice->publish,
-                isActive: $invoice->publish,
+                isActive: $invoice->isActive,
                 createdBy: $userId
             );
 

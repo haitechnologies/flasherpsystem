@@ -87,6 +87,8 @@ $sitemap = [
         ['name'=>'Add/Edit Status','url'=>'setup_statuses.php'],
         ['name'=>'Tags','url'=>'listing_setup_tags.php'],
         ['name'=>'Add/Edit Tag','url'=>'setup_tags.php'],
+        ['name'=>'Banks (Institutions)','url'=>'listing_setup_banks.php'],
+        ['name'=>'Add/Edit Bank Institution','url'=>'setup_banks.php'],
         ['name'=>'Job Statuses','url'=>'listing_job_statuses.php']
     ],
     'Operations & Automation' => [

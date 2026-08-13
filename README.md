@@ -44,10 +44,9 @@ Serve via Apache (`.htaccess` included) or PHP built-in server.
 
 | File | Purpose |
 |------|---------|
-| `docs/AGENTS.md` | **AI agent context** — DeepSeek-optimized coding guide |
+| `docs/AGENTS.md` | **AI agent context** — architecture, key files, conventions |
 | `docs/MODULES.md` | Module slug → DataTable handler → controller map |
-| `docs/ARCHITECTURE.md` | Architecture layers, key files, multi-tenancy |
+| `docs/DEEPSEEK_AGENTS.md` | Minimal DeepSeek-optimized cheat sheet |
 | `docs/DATABASE.md` | DB engine, polymorphic tables, org-scoping |
 | `docs/MANPOWER_FLOW.md` | Org hierarchy, employee lifecycle, approval workflow |
-| `docs/MIGRATION-AUDIT-REMAINING.md` | Migration status, remaining modules |
-| `docs/ARCHITECTURE-MIGRATION-PLAN.md` | 8-phase migration execution plan |
+| `docs/MIGRATION.md` | 8-phase migration plan, progress status, remaining modules |

@@ -515,6 +515,24 @@ $pdf->writeHTML($tbl, true, false, false, false, '');
 $salt = '}#f4ga~g%7hjg4&jokho!bj30ab-wi=6gia^7-$^R9F|GaK5Jzxs#E6WT;IOJN';
 $encrypted_filename = hash('sha256', $salt . $id);
 
-$pdf->Output($encrypted_filename, 'I');
+$pdfs_dir = dirname(__DIR__) . '/pdfs_debit_notes';
+if (!is_dir($pdfs_dir)) {
+    @mkdir($pdfs_dir, 0755, true);
+}
+$pdf_path = $pdfs_dir . '/' . $encrypted_filename . '.pdf';
 
+$save_mode = isset($_GET['mode']) && $_GET['mode'] === 'save';
+if ($save_mode) {
+    $pdf->Output($pdf_path, 'F');
+    $mysqli->query("UPDATE `" . DB::DEBIT_NOTES . "` SET pdf = '" . $encrypted_filename . "' WHERE id=$id");
+    header('Content-Type: application/json');
+    echo json_encode(['success' => true, 'filename' => $encrypted_filename . '.pdf', 'path' => $pdf_path]);
+    exit;
+}
+
+if (!is_file($pdf_path)) {
+    $pdf->Output($pdf_path, 'F');
+}
 $mysqli->query("UPDATE `" . DB::DEBIT_NOTES . "` SET pdf = '" . $encrypted_filename . "' WHERE id=$id");
+
+$pdf->Output($encrypted_filename, 'I');

@@ -80,6 +80,7 @@ if ($action == "update_$module") {
         $updated_count = $settingsService->updateSettings($_POST);
         $success_message = "Settings updated successfully! ({$updated_count} settings saved)";
     } catch (\Throwable $e) {
+        log_error($e->getMessage(), 'ERROR', $e->getFile(), $e->getLine(), ['module' => 'settings', 'action' => 'update_settings']);
         $error_message = "Error updating settings: " . $e->getMessage();
     }
 }
@@ -133,6 +134,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_ui_colors'])) {
             exit;
         }
     } catch (\Throwable $e) {
+        log_error($e->getMessage(), 'ERROR', $e->getFile(), $e->getLine(), ['module' => 'settings', 'action' => 'save_ui_colors']);
         $error_message = "Error saving UI colors: " . htmlspecialchars($e->getMessage());
     }
 }

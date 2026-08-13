@@ -409,7 +409,7 @@ include 'admin_elements/admin_header.php';
                             <div class="col-lg-12">
                                 <div class="ms-sm-3 mb-3 mb-sm-0">
                                     <label class="col-lg-6 col-form-label">Customer Notes:</label>
-                                    <textarea class="form-control" name="customer_notes" id="customer_notes" style="field-sizing: content;" placeholder="Enter any notes to be displayed in your transaction"><?php echo htmlspecialchars($customer_notes); ?></textarea>
+                                    <textarea class="form-control" name="customer_notes" id="customer_notes" style="field-sizing: content;" placeholder=""><?php echo htmlspecialchars($customer_notes); ?></textarea>
                                 </div>
                             </div>
                         </div>
@@ -417,17 +417,7 @@ include 'admin_elements/admin_header.php';
                             <div class="col-lg-12">
                                 <div class="ms-sm-3 mb-3 mb-sm-0">
                                     <label class="col-lg-6 col-form-label">Terms & Conditions:</label>
-                                    <textarea class="form-control text-wrap" name="terms_and_conditions" id="terms_and_conditions" style="field-sizing: content;" placeholder="Enter the terms and conditions of your business to be displayed in your transaction"><?php echo htmlspecialchars($terms_and_conditions); ?></textarea>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-lg-12">
-                                <div class="ms-sm-3 mb-3 mt-2">
-                                    <div class="form-check form-switch">
-                                        <input type="checkbox" class="form-check-input form-check-input-success" name="publish" id="publish" <?php echo $is_active == 1 ? 'checked="checked"' : ''; ?>>
-                                        <label class="form-check-label fw-semibold" for="publish">Active Status</label>
-                                    </div>
+                                    <textarea class="form-control text-wrap" name="terms_and_conditions" id="terms_and_conditions" style="field-sizing: content;" placeholder=""><?php echo htmlspecialchars($terms_and_conditions); ?></textarea>
                                 </div>
                             </div>
                         </div>

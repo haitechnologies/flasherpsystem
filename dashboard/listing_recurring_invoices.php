@@ -85,7 +85,7 @@ $listingConfig = [
             table.column(1, { page: 'current' }).nodes().each(function(cell, i) {
                 var row = table.row(cell).data();
                 if (row && row[9]) {
-                    var link = '<a href=\"recurring_invoice_overview.php?recurring_invoice_id=' + row[9] + '\" class=\"text-primary fw-semibold\">' + row[1] + '</a>';
+                    var link = '<a href=\"recurring_invoice_overview.php?recurring_invoice_id=' + row[9] + '\" class=\"text-primary\">' + row[1] + '</a>';
                     $(cell).html(link);
                 }
             });

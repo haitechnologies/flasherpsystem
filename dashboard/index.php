@@ -40,7 +40,7 @@ if ($roleId === 6) {
                     'icon'  => 'ph-lifebuoy',
                     'color' => 'success',
                     'link'  => 'dashboard_shipping.php',
-                    'modules' => ['shipping_advices', 'shipping_invoices', 'shipping_stocks', 'shipping_customers', 'hscodes', 'ports', 'carriers', 'consignees', 'shippers'],
+                    'modules' => ['shipping_advices', 'shipping_stocks', 'shipping_customers', 'hscodes', 'ports', 'carriers', 'consignees', 'shippers'],
                 ],
                 'accounting' => [
                     'label' => 'Accounting System',

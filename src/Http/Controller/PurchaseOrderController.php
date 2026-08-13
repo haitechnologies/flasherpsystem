@@ -185,7 +185,7 @@ class PurchaseOrderController extends BaseController
                 $created_by = 0;
             }
 
-            $canEdit = Roles::hasFullAccess($session_role_id) || $session_user_id === $created_by;
+            $canEdit = Roles::hasFullAccess($session_role_id) || $this->canEdit() || $session_user_id === $created_by;
 
             if ($canEdit) {
                 try {
@@ -243,7 +243,7 @@ class PurchaseOrderController extends BaseController
 
         $warehouseOptions = [];
         try {
-            $warehouseOptions = $this->db->fetchAll("SELECT id, warehouse_name FROM `" . DB::WAREHOUSES . "` WHERE is_active=1");
+            $warehouseOptions = $this->db->fetchAll("SELECT id, warehouse_name FROM `" . DB::WAREHOUSES . "` WHERE is_active=1 AND id=1");
         } catch (\Throwable $e) {
             $this->logError("PurchaseOrderController::showForm error: " . $e->getMessage());
             $warehouseOptions = [];
@@ -358,7 +358,7 @@ class PurchaseOrderController extends BaseController
 
         $warehouseOptions = [];
         try {
-            $warehouseOptions = $this->db->fetchAll("SELECT id, warehouse_name FROM `" . DB::WAREHOUSES . "` WHERE is_active=1");
+            $warehouseOptions = $this->db->fetchAll("SELECT id, warehouse_name FROM `" . DB::WAREHOUSES . "` WHERE is_active=1 AND id=1");
         } catch (\Throwable $e) {
             $this->logError("PurchaseOrderController::renderFormWithData error: " . $e->getMessage());
         }

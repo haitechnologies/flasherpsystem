@@ -23,6 +23,11 @@ class PdfHelper
         'credit_notes'       => ['page' => 'pdf_credit_note.php',        'id_param' => 'credit_note_id'],
         'payments_received'  => ['page' => 'pdf_payment_received.php',   'id_param' => 'payment_received_id'],
         'recurring_invoices' => ['page' => 'pdf_recurring_invoice.php',  'id_param' => 'recurring_invoice_id'],
+        'purchase_orders'    => ['page' => 'pdf_purchase_order.php',     'id_param' => 'id'],
+        'purchases'          => ['page' => 'pdf_purchase.php',           'id_param' => 'id'],
+        'debit_notes'        => ['page' => 'pdf_debit_note.php',         'id_param' => 'id'],
+        'payments_made'      => ['page' => 'pdf_payment_made.php',       'id_param' => 'id'],
+        'expenses'           => ['page' => 'pdf_expense.php',            'id_param' => 'id'],
     ];
 
     public static function filename(int $id): string

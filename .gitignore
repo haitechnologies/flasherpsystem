@@ -97,6 +97,9 @@ deploy-exclude.txt
 # ----- Only README is allowed (minimal public info) -----
 !/README.md
 
+# ----- Migration deployment instructions (tracked for live deploys) -----
+!/migrations.md
+
 # ----- Changelogs are internal — NOT deployed to production -----
 # !/CHANGELOG.md          (removed for production safety)
 # !/HR_CHANGELOG.md       (removed for production safety)

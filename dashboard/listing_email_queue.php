@@ -191,6 +191,7 @@ if (($action == "send_now_{$module}" && !empty($id)) && granted('edit', $module_
                                 $error_message = 'Manual send failed for queue item #' . $queueId . '.';
                             }
                         } catch (Throwable $e) {
+                            log_error('Manual email send exception: ' . $e->getMessage(), 'ERROR', $e->getFile(), $e->getLine(), ['module' => 'email_queue', 'action' => 'manual_send', 'queue_id' => (int)($queueId ?? 0)]);
                             $retries = (int)($queueRow['retries'] ?? 0) + 1;
                             $maxRetries = (int)($queueRow['max_retries'] ?? 3);
                             if ($maxRetries <= 0) {

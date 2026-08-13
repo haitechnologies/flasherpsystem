@@ -108,6 +108,10 @@ class CreditNoteRepository
         $params = $creditNote->toArray();
         unset($params['id'], $params['created_at'], $params['updated_at']);
 
+        if (($params['expected_shipment_date'] ?? null) === null) {
+            $params['expected_shipment_date'] = '1970-01-01';
+        }
+
         $insertId = (int)$this->db->insert($sql, $params);
 
         $inserted = $this->find($insertId, $creditNote->organizationId);
@@ -163,6 +167,10 @@ class CreditNoteRepository
 
         $params = $creditNote->toArray();
         unset($params['created_at'], $params['updated_at'], $params['created_by']);
+
+        if (($params['expected_shipment_date'] ?? null) === null) {
+            $params['expected_shipment_date'] = '1970-01-01';
+        }
 
         $this->db->execute($sql, $params);
 
@@ -288,7 +296,7 @@ class CreditNoteRepository
             subject: $row['subject'] !== null ? (string)$row['subject'] : null,
             paymentTerm: (int)($row['payment_term'] ?? 0),
             expiryDate: $row['expiry_date'] !== null ? (string)$row['expiry_date'] : null,
-            expectedShipmentDate: $row['expected_shipment_date'] !== null ? (string)$row['expected_shipment_date'] : null,
+            expectedShipmentDate: $row['expected_shipment_date'] !== null && $row['expected_shipment_date'] !== '1970-01-01' ? (string)$row['expected_shipment_date'] : null,
             shipmentType: $row['shipment_type'] !== null ? (string)$row['shipment_type'] : null,
             salesPerson: (int)($row['sales_person'] ?? 0),
             jobReferenceNo: $row['job_reference_no'] !== null ? (string)$row['job_reference_no'] : null,

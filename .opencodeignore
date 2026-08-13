@@ -19,11 +19,26 @@ node_modules/
 # Backups & logs
 backups/
 logs/
+dashboard/CONSOLIDATED_ERROR_LOG.txt
+dashboard/CONSOLIDATED_ERROR_LOG.lock
 
 # Large generated files
 *.min.css
 *.min.js
 *.lock
+
+# Vendored dashboard libs (fullcalendar, tinymce)
+dashboard/fullcalendar/
+
+# Generated QR codes & root images
+qrcodes_invoices/
+images/
+
+# Config data files (large blocklists, never code)
+*.conf
+
+# Secrets (never in agent context)
+.env
 
 # Binary / export artifacts (keep out of agent context)
 *.xlsx

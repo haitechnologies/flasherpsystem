@@ -3,6 +3,7 @@
 use App\Core\DB;
 include('admin_elements/admin_header.php');
 $module = 'shipping_advice_items';
+$GLOBALS['module'] = $module;
 $module_caption = 'Shipping Advice Items';
 $tbl_name = DB::SHIPPING_ADVICE_ITEMS;
 $error_message = '';

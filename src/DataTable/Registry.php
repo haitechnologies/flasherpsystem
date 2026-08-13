@@ -243,6 +243,7 @@ class Registry
 
         // Phase 2 Final: Last handlers (completed)
         $this->register('listing_setup_tags', SetupTagsDataTable::class);
+        $this->register('listing_setup_banks', SetupBanksDataTable::class);
         $this->register('listing_banned_words', BannedWordsDataTable::class);
         $this->register('listing_email_history', EmailHistoryDataTable::class);
         $this->register('listing_email_queue', EmailQueueDataTable::class);
@@ -273,7 +274,8 @@ class Registry
 
         // Shipping module listings
         $this->register('listing_shipping_advices', ShippingAdvicesDataTable::class);
-        $this->register('listing_shipping_invoices', ShippingInvoicesDataTable::class);
+        $this->register('listing_shipping_advice_items', ShippingAdviceItemsDataTable::class);
+        $this->register('listing_shipping_customers', ShippingCustomersDataTable::class);
         $this->register('listing_shipping_stocks', ShippingStocksDataTable::class);
         $this->register('listing_ports', PortsDataTable::class);
         $this->register('listing_carriers', CarriersDataTable::class);

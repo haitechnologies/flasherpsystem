@@ -169,6 +169,7 @@ try {
 
 } catch (\Throwable $e) {
     $mysqli->rollback();
+    log_error($e->getMessage(), 'ERROR', $e->getFile(), $e->getLine(), ['module' => 'payroll_runs', 'action' => 'generate_payslips', 'payroll_run_id' => $payrollRunId]);
     $_SESSION['error_message'] = 'Error generating payslips: ' . $e->getMessage();
 }
 

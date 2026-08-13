@@ -377,76 +377,55 @@ if ($total_rows == 0) $total_rows = 1;
 <div class="content-wrapper">
 
     <!-- Page header -->
-    <div class="page-header page-header-light shadow">
-        <div class="page-header-content d-lg-flex border-top">
-            <div class="row mt-2">
-
-                <a href="#breadcrumb_elements" class="btn btn-light align-self-center collapsed d-lg-none border-transparent rounded-pill p-0 ms-auto" data-bs-toggle="collapse">
-                    <i class="ph-caret-down collapsible-indicator ph-sm m-1"></i>
-                </a>
-            </div>
-
-            <?php if (($action == "edit_$module" || $action == "update_$module") && !empty($id)) { ?>
-                <div class="mt-3">
-                    <div class="form-check form-check-inline form-switch">
-                        <label class="form-check-label fw-semibold" for="sc_r_success">Job #: <?php echo $id; ?></label>
-                    </div>
-                </div>
-            <?php } ?>
-
-            <div class="mt-3">
-                <div class="form-check form-check-inline form-switch">
-                    <label class="form-check-label" for="sc_r_success"> <strong><?php if (!empty($job_status)) echo getTableAttr("job_status", DB::JOB_STATUSES, $job_status); ?></strong></label>
+    <div class="page-header page-header-light shadow carriers-page-header">
+        <div class="page-header-content d-lg-flex border-top py-2 px-3 carriers-page-header-content align-items-center">
+            <div class="my-1">
+                <h5 class="ms-2"><?php echo (!empty($job_no) ? htmlspecialchars((string)$job_no) : ('Job #: ' . (int)$id)); ?></h5>
+                <div class="p-3 rounded mt-1">
+                    <label class="form-check-label text-muted small"><?php echo (!empty($job_status) ? strtoupper((string)getTableAttr("job_status", DB::JOB_STATUSES, $job_status)) : ''); ?></label>
                 </div>
             </div>
+            <div class="my-1 ms-auto d-flex align-items-center gap-2 flex-wrap">
 
-            <div class="collapse d-lg-block ms-lg-auto" id="breadcrumb_elements">
-                <div class="d-lg-flex mb-2 mb-lg-0 ms-auto">
-                    <div class="mt-2 mb-2">
+                <?php
+                $draft_row = $db->fetchOne("SELECT id FROM `" . DB::JOB_STATUSES . "` WHERE LOWER(job_status) = 'draft' LIMIT 1");
+                $draft_job_status_id = $draft_row ? (int)$draft_row['id'] : 0;
 
-                        <?php
-                        $draft_row = $db->fetchOne("SELECT id FROM `" . DB::JOB_STATUSES . "` WHERE LOWER(job_status) = 'draft' LIMIT 1");
-                        $draft_job_status_id = $draft_row ? (int)$draft_row['id'] : 0;
+                $approved_row = $db->fetchOne("SELECT id FROM `" . DB::JOB_STATUSES . "` WHERE LOWER(job_status) = 'approved' LIMIT 1");
+                $approved_job_status_id = $approved_row ? (int)$approved_row['id'] : 0;
 
-                        $approved_row = $db->fetchOne("SELECT id FROM `" . DB::JOB_STATUSES . "` WHERE LOWER(job_status) = 'approved' LIMIT 1");
-                        $approved_job_status_id = $approved_row ? (int)$approved_row['id'] : 0;
+                $pending_approval_row = $db->fetchOne("SELECT id FROM `" . DB::JOB_STATUSES . "` WHERE LOWER(job_status) = 'pending_approval' LIMIT 1");
+                $pending_approval_status_id = $pending_approval_row ? (int)$pending_approval_row['id'] : 0;
 
-                        $pending_approval_row = $db->fetchOne("SELECT id FROM `" . DB::JOB_STATUSES . "` WHERE LOWER(job_status) = 'pending_approval' LIMIT 1");
-                        $pending_approval_status_id = $pending_approval_row ? (int)$pending_approval_row['id'] : 0;
+                $current_role_id = \App\Core\Session::roleId();
+                $is_accounts = ($current_role_id === \App\Security\Roles::ACCOUNTS) || \App\Security\Roles::hasFullAccess($current_role_id);
+                ?>
 
-                        $current_role_id = \App\Core\Session::roleId();
-                        $is_accounts = ($current_role_id === \App\Security\Roles::ACCOUNTS) || \App\Security\Roles::hasFullAccess($current_role_id);
-                        ?>
+                <?php if ($project_created == 0) { ?>
 
-                        <?php if ($project_created == 0) { ?>
+                    <?php if ($job_status == $draft_job_status_id) { ?>
+                        <button type="button" onclick="window.location.href='<?php echo $module; ?>.php?action=edit_<?php echo $module; ?>&id=<?php echo $id; ?>'; " class="btn btn-primary btn-sm me-2">Edit</button>
+                    <?php } ?>
 
-                            <?php if ($job_status == $draft_job_status_id) { ?>
-                                <button type="button" onclick="window.location.href='<?php echo $module; ?>.php?action=edit_<?php echo $module; ?>&id=<?php echo $id; ?>'; " class="btn btn-primary btn-sm me-2">Edit</button>
-                            <?php } ?>
-
-                            <?php if ($job_status == $pending_approval_status_id) { ?>
-                                <?php if ($is_accounts) { ?>
-                                    <button type="button" onclick="if(confirm('Approve this job?')){ document.getElementById('frmjobs').action='jobs.php?action=approve_job&id=<?php echo $id; ?>'; document.getElementById('frmjobs').submit(); }" class="btn btn-success btn-sm me-2"><i class="ph-check-circle me-1"></i> Approve</button>
-                                    <button type="button" onclick="if(confirm('Send back to draft? Operations will be able to edit again.')){ document.getElementById('frmjobs').action='jobs.php?action=reject_job&id=<?php echo $id; ?>'; document.getElementById('frmjobs').submit(); }" class="btn btn-danger btn-sm me-2"><i class="ph-x-circle me-1"></i> Reject</button>
-                                <?php } else { ?>
-                                    <span class="badge bg-warning bg-opacity-10 text-warning px-3 py-2"><i class="ph-clock-countdown me-1"></i> Under Review — Awaiting Accounts Approval</span>
-                                <?php } ?>
-                            <?php } ?>
-
-                            <?php if ($job_status == $approved_job_status_id) { ?>
-                                <button type="button" onclick="window.location.href='view_job.php?action=create_project&id=<?php echo $id; ?>';" class="btn btn-primary btn-sm me-2">Create Project</button>
-                            <?php } ?>
-
+                    <?php if ($job_status == $pending_approval_status_id) { ?>
+                        <?php if ($is_accounts) { ?>
+                            <button type="button" onclick="if(confirm('Approve this job?')){ document.getElementById('frmjobs').action='jobs.php?action=approve_job&id=<?php echo $id; ?>'; document.getElementById('frmjobs').submit(); }" class="btn btn-success btn-sm me-2"><i class="ph-check-circle me-1"></i> Approve</button>
+                            <button type="button" onclick="if(confirm('Send back to draft? Operations will be able to edit again.')){ document.getElementById('frmjobs').action='jobs.php?action=reject_job&id=<?php echo $id; ?>'; document.getElementById('frmjobs').submit(); }" class="btn btn-danger btn-sm me-2"><i class="ph-x-circle me-1"></i> Reject</button>
                         <?php } else { ?>
-                            <button type="button" class=" btn btn-light my-1 me-2" disabled>Project Created</button>
+                            <span class="badge bg-warning bg-opacity-10 text-warning px-3 py-2"><i class="ph-clock-countdown me-1"></i> Under Review — Awaiting Accounts Approval</span>
                         <?php } ?>
+                    <?php } ?>
 
+                    <?php if ($job_status == $approved_job_status_id) { ?>
+                        <button type="button" onclick="window.location.href='view_job.php?action=create_project&id=<?php echo $id; ?>';" class="btn btn-primary btn-sm me-2">Create Project</button>
+                    <?php } ?>
 
-                        <a href="listing_<?php echo $module; ?>.php" class="btn btn-light btn-sm">Cancel</a>
-                    </div>
-                </div>
+                <?php } else { ?>
+                    <button type="button" class=" btn btn-light my-1 me-2" disabled>Project Created</button>
+                <?php } ?>
+
+                <a href="listing_<?php echo $module; ?>.php" class="btn btn-light btn-sm">Cancel</a>
             </div>
-
         </div>
     </div>
     <!-- /page header -->
@@ -500,14 +479,14 @@ if ($total_rows == 0) $total_rows = 1;
                                     <div class="row">
                                         <label class="col-lg-3 col-form-label">Sale Person from Lead:</label>
                                         <div class="col-lg-9">
-                                            <?php echo $sales_person_from_lead; ?>
+                                            <?php echo nz($sales_person_from_lead); ?>
                                         </div>
                                     </div>
 
                                     <div class="row">
                                         <label class="col-lg-3 col-form-label">Job Seq:</label>
                                         <div class="col-lg-9">
-                                            <?php echo $job_seq; ?>
+                                            <?php echo nz($job_seq); ?>
                                         </div>
                                     </div>
 
@@ -543,14 +522,14 @@ if ($total_rows == 0) $total_rows = 1;
                                     <div class="row">
                                         <label class="col-lg-3 col-form-label">Exchange Rate:</label>
                                         <div class="col-lg-9 mt-2">
-                                            <?php echo $exchange_rate; ?>
+                                            <?php echo nz($exchange_rate); ?>
                                         </div>
                                     </div>
 
                                     <div class="row">
                                         <label class="col-lg-3 col-form-label">Transport Mode: </label>
                                         <div class="col-lg-9 mt-2">
-                                            <?php echo $transport_mode; ?>
+                                            <?php echo nz($transport_mode); ?>
                                         </div>
                                     </div>
 
@@ -675,14 +654,14 @@ if ($total_rows == 0) $total_rows = 1;
                                     <div class="row">
                                         <label class="col-lg-3 col-form-label">Supplier Rates:</label>
                                         <div class="col-lg-9 mt-2">
-                                            <?php echo $supplier_rate; ?>
+                                            <?php echo nz($supplier_rate); ?>
                                         </div>
                                     </div>
 
                                     <div class="row">
                                         <label class="col-lg-3 col-form-label">Estimated Net Profit:</label>
                                         <div class="col-lg-9 mt-2">
-                                            <?php echo $estimated_net_profit; ?>
+                                            <?php echo nz($estimated_net_profit); ?>
                                         </div>
                                     </div>
 
@@ -711,7 +690,7 @@ if ($total_rows == 0) $total_rows = 1;
                                     <div class="row">
                                         <label class="col-lg-3 col-form-label">Estimated Invoice Amount:</label>
                                         <div class="col-lg-9 mt-2">
-                                            <?php echo $estimated_invoice_amount; ?>
+                                            <?php echo nz($estimated_invoice_amount); ?>
                                         </div>
                                     </div>
 
@@ -795,7 +774,7 @@ if ($total_rows == 0) $total_rows = 1;
                                     <div class="row">
                                         <label class="col-lg-3 col-form-label">Estimated Cost Amount:</label>
                                         <div class="col-lg-9 mt-2">
-                                            <?php echo $estimated_cost_amount; ?>
+                                            <?php echo nz($estimated_cost_amount); ?>
                                         </div>
                                     </div>
 
@@ -981,28 +960,28 @@ if ($total_rows == 0) $total_rows = 1;
                                         <div class="row">
                                             <label class="col-lg-3 col-form-label">Gross Weight: </label>
                                             <div class="col-lg-9 mt-2">
-                                                <?php echo $gross_weight; ?>
+                                                <?php echo nz($gross_weight); ?>
                                             </div>
                                         </div>
 
                                         <div class="row">
                                             <label class="col-lg-3 col-form-label">Volume Weight: </label>
                                             <div class="col-lg-9 mt-2">
-                                                <?php echo $volume_weight; ?>
+                                                <?php echo nz($volume_weight); ?>
                                             </div>
                                         </div>
 
                                         <div class="row">
                                             <label class="col-lg-3 col-form-label">CBM: </label>
                                             <div class="col-lg-9 mt-2">
-                                                <?php echo $cbm; ?>
+                                                <?php echo nz($cbm); ?>
                                             </div>
                                         </div>
 
                                         <div class="row">
                                             <label class="col-lg-3 col-form-label">Chargable Weight: </label>
                                             <div class="col-lg-9 mt-2">
-                                                <?php echo $chargeable_weight; ?>
+                                                <?php echo nz($chargeable_weight); ?>
                                             </div>
                                         </div>
 
@@ -1010,7 +989,7 @@ if ($total_rows == 0) $total_rows = 1;
                                         <div class="row">
                                             <label class="col-lg-3 col-form-label">No. of Pieces: </label>
                                             <div class="col-lg-9 mt-2">
-                                                <?php echo $no_of_pieces; ?>
+                                                <?php echo nz($no_of_pieces); ?>
                                             </div>
                                         </div>
 
@@ -1040,14 +1019,14 @@ if ($total_rows == 0) $total_rows = 1;
                                         <div class="row">
                                             <label class="col-lg-3 col-form-label">No. of Contaiers:</label>
                                             <div class="col-lg-9 mt-2">
-                                                <?php echo $no_of_containers; ?>
+                                                <?php echo nz($no_of_containers); ?>
                                             </div>
                                         </div>
 
                                         <div class="row">
                                             <label class="col-lg-3 col-form-label">Insurance Needed?:</label>
                                             <div class="col-lg-9 mt-2">
-                                                <?php echo $insurance_needed; ?>
+                                                <?php echo ($insurance_needed === '1' ? 'Yes' : 'No'); ?>
                                             </div>
                                         </div>
 
@@ -1061,7 +1040,7 @@ if ($total_rows == 0) $total_rows = 1;
                                         <div class="row">
                                             <label class="col-lg-3 col-form-label">Temperature Control Required: </label>
                                             <div class="col-lg-9 mt-2">
-                                                <?php echo $temperature_control_required; ?>
+                                                <?php echo ($temperature_control_required === '1' ? 'Yes' : 'No'); ?>
                                             </div>
                                         </div>
 
@@ -1329,7 +1308,7 @@ if ($total_rows == 0) $total_rows = 1;
                                         <div class="row">
                                             <label class="col-lg-3 col-form-label">Quote: </label>
                                             <div class="col-lg-9 mt-1">
-                                                <input type="text" class="form-control" value="<?php echo $quote_id; ?>" disabled>
+                                                <input type="text" class="form-control" value="<?php echo nz($quote_id); ?>" disabled>
                                             </div>
                                         </div>
 
@@ -1351,7 +1330,7 @@ if ($total_rows == 0) $total_rows = 1;
                                         <div class="row">
                                             <label class="col-lg-3 col-form-label">Books Customer ID:</label>
                                             <div class="col-lg-9 mt-1">
-                                                <input type="text" class="form-control" value="<?php echo $books_customer_id; ?>" disabled>
+                                                <input type="text" class="form-control" value="<?php echo nz($books_customer_id); ?>" disabled>
                                             </div>
                                         </div>
 
@@ -1365,7 +1344,7 @@ if ($total_rows == 0) $total_rows = 1;
                                         <div class="row">
                                             <label class="col-lg-3 col-form-label">Project ID:</label>
                                             <div class="col-lg-9 mt-1">
-                                                <input type="text" class="form-control" value="<?php echo $project_id; ?>" disabled>
+                                                <input type="text" class="form-control" value="<?php echo nz($project_id); ?>" disabled>
                                             </div>
                                         </div>
 

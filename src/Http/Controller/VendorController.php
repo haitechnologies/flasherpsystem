@@ -110,7 +110,7 @@ class VendorController extends BaseController
         $vendor_status = (string)($vendorData['vendor_status'] ?? '0');
         $vendor_source = (string)($vendorData['vendor_source'] ?? '0');
         $assigned_to = (string)($vendorData['assigned_to'] ?? '0');
-        $vendor_type = (string)($vendorData['vendor_type'] ?? '');
+        $vendor_type = (string)($vendorData['vendor_type'] ?? 'business');
         $salutation = (string)($vendorData['salutation'] ?? '');
         $first_name = (string)($vendorData['first_name'] ?? '');
         $last_name = (string)($vendorData['last_name'] ?? '');
@@ -146,14 +146,54 @@ class VendorController extends BaseController
         $instagram = (string)($vendorData['instagram'] ?? '');
         $is_active = !empty($vendorData['is_active']) ? 1 : 0;
 
-        try { $tagsList = $this->db->fetchAll("SELECT id, value FROM `" . DB::TAXONOMIES . "` WHERE is_active=1 AND type='vendor_tag' ORDER BY value"); } catch (\Throwable $e) { $tagsList = []; }
-        try { $statusesList = $this->db->fetchAll("SELECT id, value FROM `" . DB::TAXONOMIES . "` WHERE is_active=1 AND type='vendor_status' ORDER BY value"); } catch (\Throwable $e) { $statusesList = []; }
-        try { $sourcesList = $this->db->fetchAll("SELECT id, value FROM `" . DB::TAXONOMIES . "` WHERE is_active=1 AND type='vendor_source' ORDER BY value"); } catch (\Throwable $e) { $sourcesList = []; }
-        try { $usersList = $this->db->fetchAll("SELECT id, full_name FROM `" . DB::USERS . "` WHERE is_active=1 ORDER BY full_name"); } catch (\Throwable $e) { $usersList = []; }
-        try { $departmentsList = $this->db->fetchAll("SELECT id, department, email FROM `" . DB::DEPARTMENTS . "` WHERE publish=1 ORDER BY department"); } catch (\Throwable $e) { $departmentsList = []; }
-        try { $taxTreatmentsList = $this->db->fetchAll("SELECT id, tax_treatment FROM `" . DB::TAX_TREATMENTS . "` WHERE is_active=1 ORDER BY id ASC"); } catch (\Throwable $e) { $taxTreatmentsList = []; }
-        try { $currencyList = $this->db->fetchAll("SELECT id, currency FROM `" . DB::CURRENCIES . "` WHERE is_active=1 ORDER BY id ASC"); } catch (\Throwable $e) { $currencyList = []; }
-        try { $accountsList = $this->db->fetchAll("SELECT id, account_name FROM `" . DB::ACCOUNTS . "` WHERE is_active=1 ORDER BY account_name"); } catch (\Throwable $e) { $accountsList = []; }
+        try {
+            $tagsList = $this->db->fetchAll("SELECT id, value FROM `" . DB::TAXONOMIES . "` WHERE is_active=1 AND type='vendor_tag' AND organization_id=:org_id ORDER BY value", ['org_id' => $this->orgId]);
+        } catch (\Throwable $e) {
+            $tagsList = [];
+            log_error('Failed to load form dropdown: ' . $e->getMessage(), 'WARNING', $e->getFile(), $e->getLine(), ['module' => 'vendors', 'action' => 'load_form_dropdown']);
+        }
+        try {
+            $statusesList = $this->db->fetchAll("SELECT id, value FROM `" . DB::TAXONOMIES . "` WHERE is_active=1 AND type='vendor_status' AND organization_id=:org_id ORDER BY value", ['org_id' => $this->orgId]);
+        } catch (\Throwable $e) {
+            $statusesList = [];
+            log_error('Failed to load form dropdown: ' . $e->getMessage(), 'WARNING', $e->getFile(), $e->getLine(), ['module' => 'vendors', 'action' => 'load_form_dropdown']);
+        }
+        try {
+            $sourcesList = $this->db->fetchAll("SELECT id, value FROM `" . DB::TAXONOMIES . "` WHERE is_active=1 AND type='vendor_source' AND organization_id=:org_id ORDER BY value", ['org_id' => $this->orgId]);
+        } catch (\Throwable $e) {
+            $sourcesList = [];
+            log_error('Failed to load form dropdown: ' . $e->getMessage(), 'WARNING', $e->getFile(), $e->getLine(), ['module' => 'vendors', 'action' => 'load_form_dropdown']);
+        }
+        try {
+            $usersList = $this->db->fetchAll("SELECT id, full_name FROM `" . DB::USERS . "` WHERE is_active=1 AND organization_id=:org_id ORDER BY full_name", ['org_id' => $this->orgId]);
+        } catch (\Throwable $e) {
+            $usersList = [];
+            log_error('Failed to load form dropdown: ' . $e->getMessage(), 'WARNING', $e->getFile(), $e->getLine(), ['module' => 'vendors', 'action' => 'load_form_dropdown']);
+        }
+        try {
+            $departmentsList = $this->db->fetchAll("SELECT id, department, email FROM `" . DB::DEPARTMENTS . "` WHERE publish=1 AND organization_id=:org_id ORDER BY department", ['org_id' => $this->orgId]);
+        } catch (\Throwable $e) {
+            $departmentsList = [];
+            log_error('Failed to load form dropdown: ' . $e->getMessage(), 'WARNING', $e->getFile(), $e->getLine(), ['module' => 'vendors', 'action' => 'load_form_dropdown']);
+        }
+        try {
+            $taxTreatmentsList = $this->db->fetchAll("SELECT id, tax_treatment FROM `" . DB::TAX_TREATMENTS . "` WHERE is_active=1 AND organization_id=:org_id ORDER BY id ASC", ['org_id' => $this->orgId]);
+        } catch (\Throwable $e) {
+            $taxTreatmentsList = [];
+            log_error('Failed to load form dropdown: ' . $e->getMessage(), 'WARNING', $e->getFile(), $e->getLine(), ['module' => 'vendors', 'action' => 'load_form_dropdown']);
+        }
+        try {
+            $currencyList = $this->db->fetchAll("SELECT id, currency FROM `" . DB::CURRENCIES . "` WHERE is_active=1 AND organization_id=:org_id ORDER BY id ASC", ['org_id' => $this->orgId]);
+        } catch (\Throwable $e) {
+            $currencyList = [];
+            log_error('Failed to load form dropdown: ' . $e->getMessage(), 'WARNING', $e->getFile(), $e->getLine(), ['module' => 'vendors', 'action' => 'load_form_dropdown']);
+        }
+        try {
+            $accountsList = $this->db->fetchAll("SELECT id, account_name FROM `" . DB::ACCOUNTS . "` WHERE is_active=1 ORDER BY account_name");
+        } catch (\Throwable $e) {
+            $accountsList = [];
+            log_error('Failed to load form dropdown: ' . $e->getMessage(), 'WARNING', $e->getFile(), $e->getLine(), ['module' => 'vendors', 'action' => 'load_form_dropdown']);
+        }
 
         return Response::html($this->view->render('vendors/form.php', [
             'id' => $id,
@@ -220,7 +260,7 @@ class VendorController extends BaseController
             'vendor_status' => $request->getString('vendor_status'),
             'vendor_source' => $request->getString('vendor_source'),
             'assigned_to' => $request->getString('assigned_to'),
-            'vendor_type' => $request->getString('vendor_type', ''),
+            'vendor_type' => $request->getString('vendor_type', 'business'),
             'salutation' => $request->getString('salutation'),
             'first_name' => $request->getString('first_name'),
             'last_name' => $request->getString('last_name'),
@@ -291,7 +331,7 @@ class VendorController extends BaseController
         $vendor_status = '0';
         $vendor_source = '0';
         $assigned_to = '0';
-        $vendor_type = '';
+        $vendor_type = 'business';
         $salutation = '';
         $first_name = '';
         $last_name = '';
@@ -378,44 +418,52 @@ class VendorController extends BaseController
         }
 
         try {
-            $tagsList = $this->db->fetchAll("SELECT id, value FROM `" . DB::TAXONOMIES . "` WHERE is_active=1 AND type='vendor_tag' ORDER BY value");
+            $tagsList = $this->db->fetchAll("SELECT id, value FROM `" . DB::TAXONOMIES . "` WHERE is_active=1 AND type='vendor_tag' AND organization_id=:org_id ORDER BY value", ['org_id' => $this->orgId]);
         } catch (\Throwable $e) {
             $tagsList = [];
+            log_error('Failed to load form dropdown: ' . $e->getMessage(), 'WARNING', $e->getFile(), $e->getLine(), ['module' => 'vendors', 'action' => 'load_form_dropdown']);
         }
         try {
-            $statusesList = $this->db->fetchAll("SELECT id, value FROM `" . DB::TAXONOMIES . "` WHERE is_active=1 AND type='vendor_status' ORDER BY value");
+            $statusesList = $this->db->fetchAll("SELECT id, value FROM `" . DB::TAXONOMIES . "` WHERE is_active=1 AND type='vendor_status' AND organization_id=:org_id ORDER BY value", ['org_id' => $this->orgId]);
         } catch (\Throwable $e) {
             $statusesList = [];
+            log_error('Failed to load form dropdown: ' . $e->getMessage(), 'WARNING', $e->getFile(), $e->getLine(), ['module' => 'vendors', 'action' => 'load_form_dropdown']);
         }
         try {
-            $sourcesList = $this->db->fetchAll("SELECT id, value FROM `" . DB::TAXONOMIES . "` WHERE is_active=1 AND type='vendor_source' ORDER BY value");
+            $sourcesList = $this->db->fetchAll("SELECT id, value FROM `" . DB::TAXONOMIES . "` WHERE is_active=1 AND type='vendor_source' AND organization_id=:org_id ORDER BY value", ['org_id' => $this->orgId]);
         } catch (\Throwable $e) {
             $sourcesList = [];
+            log_error('Failed to load form dropdown: ' . $e->getMessage(), 'WARNING', $e->getFile(), $e->getLine(), ['module' => 'vendors', 'action' => 'load_form_dropdown']);
         }
         try {
-            $usersList = $this->db->fetchAll("SELECT id, full_name FROM `" . DB::USERS . "` WHERE is_active=1 ORDER BY full_name");
+            $usersList = $this->db->fetchAll("SELECT id, full_name FROM `" . DB::USERS . "` WHERE is_active=1 AND organization_id=:org_id ORDER BY full_name", ['org_id' => $this->orgId]);
         } catch (\Throwable $e) {
             $usersList = [];
+            log_error('Failed to load form dropdown: ' . $e->getMessage(), 'WARNING', $e->getFile(), $e->getLine(), ['module' => 'vendors', 'action' => 'load_form_dropdown']);
         }
         try {
-            $departmentsList = $this->db->fetchAll("SELECT id, department, email FROM `" . DB::DEPARTMENTS . "` WHERE publish=1 ORDER BY department");
+            $departmentsList = $this->db->fetchAll("SELECT id, department, email FROM `" . DB::DEPARTMENTS . "` WHERE publish=1 AND organization_id=:org_id ORDER BY department", ['org_id' => $this->orgId]);
         } catch (\Throwable $e) {
             $departmentsList = [];
+            log_error('Failed to load form dropdown: ' . $e->getMessage(), 'WARNING', $e->getFile(), $e->getLine(), ['module' => 'vendors', 'action' => 'load_form_dropdown']);
         }
         try {
-            $taxTreatmentsList = $this->db->fetchAll("SELECT id, tax_treatment FROM `" . DB::TAX_TREATMENTS . "` WHERE is_active=1 ORDER BY id ASC");
+            $taxTreatmentsList = $this->db->fetchAll("SELECT id, tax_treatment FROM `" . DB::TAX_TREATMENTS . "` WHERE is_active=1 AND organization_id=:org_id ORDER BY id ASC", ['org_id' => $this->orgId]);
         } catch (\Throwable $e) {
             $taxTreatmentsList = [];
+            log_error('Failed to load form dropdown: ' . $e->getMessage(), 'WARNING', $e->getFile(), $e->getLine(), ['module' => 'vendors', 'action' => 'load_form_dropdown']);
         }
         try {
-            $currencyList = $this->db->fetchAll("SELECT id, currency FROM `" . DB::CURRENCIES . "` WHERE is_active=1 ORDER BY id ASC");
+            $currencyList = $this->db->fetchAll("SELECT id, currency FROM `" . DB::CURRENCIES . "` WHERE is_active=1 AND organization_id=:org_id ORDER BY id ASC", ['org_id' => $this->orgId]);
         } catch (\Throwable $e) {
             $currencyList = [];
+            log_error('Failed to load form dropdown: ' . $e->getMessage(), 'WARNING', $e->getFile(), $e->getLine(), ['module' => 'vendors', 'action' => 'load_form_dropdown']);
         }
         try {
             $accountsList = $this->db->fetchAll("SELECT id, account_name FROM `" . DB::ACCOUNTS . "` WHERE is_active=1 ORDER BY account_name");
         } catch (\Throwable $e) {
             $accountsList = [];
+            log_error('Failed to load form dropdown: ' . $e->getMessage(), 'WARNING', $e->getFile(), $e->getLine(), ['module' => 'vendors', 'action' => 'load_form_dropdown']);
         }
 
         return Response::html($this->view->render('vendors/form.php', [

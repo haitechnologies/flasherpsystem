@@ -165,8 +165,11 @@ class VendorRepository
 
     public function delete(int $id, int $orgId): bool
     {
-        $this->db->execute("DELETE FROM `{DB::VENDORS}` WHERE id = :id AND organization_id = :org_id", ['id' => $id, 'org_id' => $orgId]);
-        return true;
+        $stmt = $this->db->execute(
+            "UPDATE `{DB::VENDORS}` SET is_active = 0 WHERE id = :id AND organization_id = :org_id",
+            ['id' => $id, 'org_id' => $orgId]
+        );
+        return $stmt->rowCount() > 0;
     }
 
     public function getPayables(int $vendorId, int $orgId): float
@@ -454,7 +457,7 @@ class VendorRepository
             taxTreatment: isset($row['tax_treatment']) ? (int)$row['tax_treatment'] : null,
             trn: (string)($row['trn'] ?? '') !== '' ? (string)$row['trn'] : null,
             corporateTaxNumber: (string)($row['corporate_tax_number'] ?? '') !== '' ? (string)$row['corporate_tax_number'] : null,
-            licenseNumber: isset($row['license_number']) ? (int)$row['license_number'] : null,
+            licenseNumber: (string)($row['license_number'] ?? '') !== '' ? (string)$row['license_number'] : null,
             licenseExpiry: (string)($row['license_expiry'] ?? ''),
             salesPerson: isset($row['sales_person']) ? (int)$row['sales_person'] : null,
             leadCategory: (string)($row['lead_category'] ?? '') !== '' ? (string)$row['lead_category'] : null,

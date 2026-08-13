@@ -5,6 +5,7 @@ use App\Security\Roles;
 include('admin_elements/admin_header.php');
 
 $module = 'shipping_advices';
+$GLOBALS['module'] = $module;
 $module_caption = 'Shipping Dashboard';
 $tbl_name = $tbl_prefix . $module;
 $error_message = '';
@@ -131,7 +132,7 @@ $revenue_growth = $last_month_revenue > 0 ? round((($current_month_revenue - $la
 							<a class="dropdown-item" href="add_quotation.php"><i class="ph-file-text me-2"></i>Quotation</a>
 							<a class="dropdown-item" href="add_sale_order.php"><i class="ph-shopping-cart me-2"></i>Sale Order</a>
 							<a class="dropdown-item" href="add_job.php"><i class="ph-briefcase me-2"></i>Job</a>
-							<a class="dropdown-item" href="add_shipping_advice.php"><i class="ph-truck me-2"></i>Delivery Advice</a>
+							<a class="dropdown-item" href="import_shipping_advices.php"><i class="ph-truck me-2"></i>Delivery Advice</a>
 							<a class="dropdown-item" href="add_shipping_stock.php"><i class="ph-package me-2"></i>Shipping Stock</a>
 						</div>
 					</div>

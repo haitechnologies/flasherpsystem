@@ -31,7 +31,7 @@ readonly class Vendor
         public ?int $taxTreatment = null,
         public ?string $trn = null,
         public ?string $corporateTaxNumber = null,
-        public ?int $licenseNumber = null,
+        public ?string $licenseNumber = null,
         public ?string $licenseExpiry = null,
         public ?int $salesPerson = null,
         public ?string $leadCategory = null,

@@ -8,7 +8,6 @@ global $mysqli;
  * @var string $module
  * @var string $moduleCaption
  * @var string $customer_id
- * @var string $lead_id
  * @var string $sale_order_no
  * @var string $sale_order_status
  * @var string $sale_order_date
@@ -54,7 +53,6 @@ global $mysqli;
  * @var array $tax_amount_arr
  * @var array $total_arr
  * @var array $customersList
- * @var array $leadsList
  * @var array $orgList
  * @var array $shippersList
  * @var array $consigneesList
@@ -70,7 +68,6 @@ global $mysqli;
 include 'admin_elements/admin_header.php';
 
 $customersList = $customersList ?? [];
-$leadsList = $leadsList ?? [];
 $orgList = $orgList ?? [];
 $shippersList = $shippersList ?? [];
 $consigneesList = $consigneesList ?? [];
@@ -82,31 +79,25 @@ $servicesList = $servicesList ?? [];
 ?>
 <div class="content-wrapper">
 
-    <div class="page-header page-header-light shadow">
-        <div class="page-header-content d-lg-flex border-top py-2 px-3 align-items-center">
-            <div class="my-1">
-                <h5 class="ms-2">
-                    <?php if ($id > 0): ?>
-                        <?php echo $sale_order_no; ?>
-                    <?php else: ?>
-                        New <?php echo $moduleCaption; ?>
-                    <?php endif; ?>
-                </h5>
-            </div>
-            <div class="p-3 rounded mt-1">
-                <label class="form-check-label text-muted small"><?php echo (!empty($sale_order_status) ? strtoupper($sale_order_status) : ''); ?></label>
-            </div>
-            <div class="my-1 ms-auto d-flex align-items-center gap-2 flex-wrap">
+    <div class="page-header page-header-light shadow carriers-page-header">
+        <div class="page-header-content border-top py-2 px-3 carriers-page-header-content">
+            <div class="my-1 d-flex align-items-center gap-2">
+                <h5 class="mb-0"><?php echo ($id > 0) ? 'Edit' : 'New'; ?> <?php echo $moduleCaption; ?></h5>
                 <?php if ($id > 0): ?>
-                    <?php if ($canEdit): ?>
-                        <button type="button" form="frm<?php echo $module; ?>" class="submit-form btn btn-primary btn-sm">Save</button>
-                        <button type="button" form="frm<?php echo $module; ?>" class="save-and-send-sale-order btn btn-light btn-sm">Save and Send</button>
+                    <span class="badge bg-success bg-opacity-10 text-success ms-2">Sale Order #: <?php echo $sale_order_no; ?></span>
+                <?php endif; ?>
+                <span class="badge bg-primary bg-opacity-10 text-primary ms-2"><?php echo !empty($sale_order_status) ? ucwords($sale_order_status) : ''; ?></span>
+            </div>
+            <div class="my-1 d-flex align-items-center gap-2">
+                <?php if ($canCreate): ?>
+                    <?php if ($id > 0): ?>
+                        <?php if ($canEdit): ?>
+                            <button type="button" form="frm<?php echo $module; ?>" class="submit-form btn btn-primary btn-sm">Save</button>
+                        <?php endif; ?>
+                    <?php else: ?>
+                        <button type="button" form="frm<?php echo $module; ?>" class="save-draft-sale-order btn btn-primary btn-sm">Save as Draft</button>
                     <?php endif; ?>
-                <?php else: ?>
-                    <?php if ($canCreate): ?>
-                        <button type="button" form="frm<?php echo $module; ?>" class="save-draft-sale-order btn btn-light btn-sm">Save as Draft</button>
-                        <button type="button" form="frm<?php echo $module; ?>" class="save-and-send-sale-order btn btn-light btn-sm">Save and Send</button>
-                    <?php endif; ?>
+                    <button type="button" form="frm<?php echo $module; ?>" class="save-and-send-sale-order btn btn-info btn-sm">Save and Send</button>
                 <?php endif; ?>
                 <?php if ($id > 0): ?>
                     <a href="sale_order_overview.php?sale_order_id=<?php echo $id; ?>" class="btn btn-light btn-sm">Cancel</a>
@@ -153,20 +144,6 @@ $servicesList = $servicesList ?? [];
                                                 <option value="0">Please select</option>
                                                 <?php foreach ($customersList as $row): ?>
                                                     <option value="<?php echo $row['id']; ?>" <?php echo (string)$row['id'] === $customer_id ? 'selected' : ''; ?>>
-                                                        <?php echo htmlspecialchars($row['display_name']); ?>
-                                                    </option>
-                                                <?php endforeach; ?>
-                                            </select>
-                                        </div>
-                                    </div>
-
-                                    <div class="row mb-2">
-                                        <label class="col-lg-3 col-form-label">Lead Name:</label>
-                                        <div class="col-lg-9">
-                                            <select name="lead_id" id="lead_id" class="form-select" onchange="toggleSaleOrderPartySelectors()">
-                                                <option value="0">Please select</option>
-                                                <?php foreach ($leadsList as $row): ?>
-                                                    <option value="<?php echo $row['id']; ?>" <?php echo (string)$row['id'] === $lead_id ? 'selected' : ''; ?>>
                                                         <?php echo htmlspecialchars($row['display_name']); ?>
                                                     </option>
                                                 <?php endforeach; ?>
@@ -519,7 +496,7 @@ $servicesList = $servicesList ?? [];
                             <div class="col-lg-12">
                                 <div class="ms-sm-3 mb-3 mb-sm-0">
                                     <label class="col-lg-6 col-form-label">Customer Notes:</label>
-                                    <textarea class="form-control" name="customer_notes" id="customer_notes" style="field-sizing: content;" placeholder="Enter any notes to be displayed in your transaction"><?php echo htmlspecialchars($customer_notes); ?></textarea>
+                                    <textarea class="form-control" name="customer_notes" id="customer_notes" style="field-sizing: content;" placeholder=""><?php echo htmlspecialchars($customer_notes); ?></textarea>
                                 </div>
                             </div>
                         </div>
@@ -527,17 +504,7 @@ $servicesList = $servicesList ?? [];
                             <div class="col-lg-12">
                                 <div class="ms-sm-3 mb-3 mb-sm-0">
                                     <label class="col-lg-6 col-form-label">Terms & Conditions:</label>
-                                    <textarea class="form-control text-wrap" name="terms_and_conditions" id="terms_and_conditions" style="field-sizing: content;" placeholder="Enter the terms and conditions of your business to be displayed in your transaction"><?php echo htmlspecialchars($terms_and_conditions); ?></textarea>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-lg-12">
-                                <div class="ms-sm-3 mb-3 mt-2">
-                                    <div class="form-check form-switch">
-                                        <input type="checkbox" class="form-check-input form-check-input-success" name="publish" id="publish" <?php echo $is_active == 1 ? 'checked="checked"' : ''; ?>>
-                                        <label class="form-check-label fw-semibold" for="publish">Active Status</label>
-                                    </div>
+                                    <textarea class="form-control text-wrap" name="terms_and_conditions" id="terms_and_conditions" style="field-sizing: content;" placeholder=""><?php echo htmlspecialchars($terms_and_conditions); ?></textarea>
                                 </div>
                             </div>
                         </div>
@@ -846,12 +813,8 @@ $servicesList = $servicesList ?? [];
 
     function toggleSaleOrderPartySelectors() {
         const customerSelect = document.getElementById('customer_id');
-        const leadSelect = document.getElementById('lead_id');
-        if (!customerSelect || !leadSelect) return;
-        const customerSelected = customerSelect.value && customerSelect.value !== '0' && customerSelect.value !== 'Please select';
-        const leadSelected = leadSelect.value && leadSelect.value !== '0' && leadSelect.value !== 'Please select';
-        if (customerSelected) { leadSelect.disabled = true; } else { leadSelect.disabled = false; }
-        if (leadSelected) { customerSelect.disabled = true; } else { customerSelect.disabled = false; }
+        if (!customerSelect) return;
+        customerSelect.disabled = false;
     }
 
     function calculateChargeableWeight() {

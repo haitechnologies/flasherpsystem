@@ -66,7 +66,6 @@ use App\Security\Roles;
 
                 // Shipping
                 'shipping_advices' => 'shipping',
-                'shipping_invoices' => 'shipping',
                 'shipping_stocks' => 'shipping',
                 'shipping_customers' => 'shipping',
                 'ports' => 'shipping',

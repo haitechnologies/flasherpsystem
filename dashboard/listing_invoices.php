@@ -81,6 +81,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($action)) {
 */
 if (($action == "delete_$module" && !empty($id)) && granted('delete', $module_id)) {
 
+    // CSRF: enforce a valid token for the delete action (GET or POST)
+    if (!validate_csrf_token($_GET['csrf_token'] ?? $_POST['csrf_token'] ?? '')) {
+        log_error('CSRF token validation failed for delete in listing_invoices.php', 'WARNING', __FILE__, __LINE__);
+        flash_error('Invalid security token. Please refresh the page and try again.');
+    } else {
     // INPUT VALIDATION: Validate invoice ID
     $idResult = InputValidator::integer($id, 1);
     if (!$idResult['valid']) {
@@ -109,8 +114,10 @@ if (($action == "delete_$module" && !empty($id)) && granted('delete', $module_id
                 }
             }
         } catch (\Throwable $e) {
+            log_error('Delete failed for invoice: ' . $e->getMessage(), 'ERROR', $e->getFile(), $e->getLine(), ['module' => 'invoices', 'action' => 'delete', 'id' => (int)($id ?? 0)]);
             flash_error($e->getMessage());
         }
+    }
     }
 }
 
@@ -182,7 +189,7 @@ if (($action == "delete_$module" && !empty($id)) && granted('delete', $module_id
                 
                 <div class="table-responsive">
 <table id="grid-<?php echo $module; ?>" class="table table-hover align-middle mb-0 custom_datatables datatable-professional display responsive nowrap" width="100%">
-                    <thead class="table-light border-bottom text-uppercase fs-8 fw-semibold text-muted">
+                    <thead>
                         <tr>
                             <th class="ps-4">Invoice Info</th>
                             <th>Customer</th>
@@ -230,7 +237,7 @@ $(document).ready(function() {
         columns: [
             { data: null }, // col 0: Invoice Info
             { data: null }, // col 1: Customer
-            { data: 6, className: 'text-end fw-semibold text-dark' }, // col 2: Amount
+            { data: 6, className: 'text-end' }, // col 2: Amount
             { data: 7, className: 'text-end' }, // col 3: Balance Due
             { data: 4, className: 'text-center' }, // col 4: Status
             { data: 9, className: 'text-center' }, // col 5: Days Overdue
@@ -244,7 +251,7 @@ $(document).ready(function() {
                     var orderNo = row[2] || '';
                     var id = row[8] || '';
                     var html = '<div class="d-flex flex-column">';
-                    html += '<a href="invoice_overview.php?invoice_id=' + id + '" class="fw-semibold text-primary text-decoration-none hover-primary">' + invNo + '</a>';
+                    html += '<a href="invoice_overview.php?invoice_id=' + id + '" class="text-primary text-decoration-none hover-primary">' + invNo + '</a>';
                     if (orderNo) {
                         html += '<span class="text-muted fs-8">SO: ' + orderNo + '</span>';
                     }
@@ -258,7 +265,7 @@ $(document).ready(function() {
                     var custName = row[3] || '';
                     var id = row[8] || '';
                     return '<div class="d-flex flex-column">' +
-                           '<a href="invoice_overview.php?invoice_id=' + id + '" class="text-dark fw-medium text-decoration-none hover-primary">' + custName + '</a>' +
+                           '<a href="invoice_overview.php?invoice_id=' + id + '" class="text-dark text-decoration-none hover-primary">' + custName + '</a>' +
                            '</div>';
                 }
             },
@@ -267,7 +274,7 @@ $(document).ready(function() {
                 render: function(data, type, row) {
                     var balanceText = row[7] || '';
                     var numericVal = parseFloat(balanceText.replace(/[^0-9.-]+/g, '')) || 0;
-                    var textClass = numericVal > 0 ? 'text-danger fw-semibold' : 'text-success fw-medium';
+                    var textClass = numericVal > 0 ? 'text-danger' : 'text-success';
                     return '<span class="' + textClass + '">' + balanceText + '</span>';
                 }
             },
@@ -282,7 +289,7 @@ $(document).ready(function() {
                     else if (status === 'draft') badgeClass = 'bg-warning bg-opacity-10 text-warning';
                     else if (status === 'sent') badgeClass = 'bg-info bg-opacity-10 text-info';
                     
-                    return '<span class="badge ' + badgeClass + ' px-2.5 py-1.5 rounded-pill text-uppercase fw-bold fs-8">' + status + '</span>';
+                    return '<span class="badge ' + badgeClass + ' px-2.5 py-1.5 rounded-pill text-uppercase fs-8">' + status + '</span>';
                 }
             },
             {
@@ -294,11 +301,11 @@ $(document).ready(function() {
                         return '<span class="text-muted fs-7">-</span>';
                     }
                     if (days > 0) {
-                        return '<span class="badge bg-danger bg-opacity-10 text-danger px-2.5 py-1 rounded fw-bold fs-8">' + days + ' Days Overdue</span>';
+                        return '<span class="badge bg-danger bg-opacity-10 text-danger px-2.5 py-1 rounded fs-8">' + days + ' Days Overdue</span>';
                     } else if (days < 0) {
-                        return '<span class="text-success fs-7 fw-medium">Due in ' + Math.abs(days) + ' days</span>';
+                        return '<span class="text-success fs-7">Due in ' + Math.abs(days) + ' days</span>';
                     } else {
-                        return '<span class="text-warning fs-7 fw-medium">Due Today</span>';
+                        return '<span class="text-warning fs-7">Due Today</span>';
                     }
                 }
             },

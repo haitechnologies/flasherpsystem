@@ -45,10 +45,12 @@ if (($action == "delete_$module" && !empty($id)) && granted('delete', $module_id
         }
     } catch (ValidationException $e) {
         $error_message = current($e->getErrors());
+        log_error($e->getMessage(), 'WARNING', $e->getFile(), $e->getLine(), ['module' => 'designations', 'action' => 'delete']);
     } catch (NotFoundException $e) {
         $error_message = $e->getMessage();
+        log_error($e->getMessage(), 'WARNING', $e->getFile(), $e->getLine(), ['module' => 'designations', 'action' => 'delete']);
     } catch (\Throwable $e) {
-        error_log("Designation delete error: " . $e->getMessage());
+        log_error($e->getMessage(), 'ERROR', $e->getFile(), $e->getLine(), ['module' => 'designations', 'action' => 'delete']);
         $error_message = "Sorry! $module Could Not Be Deleted.";
     }
 }

@@ -38,6 +38,7 @@ if ($action == "delete_$module" && !empty($id) && (is_SystemAdmin() || is_SuperA
         $error_message = $e->getMessage();
     } catch (\Throwable $e) {
         $error_message = "Leave request could not be deleted.";
+        log_error($e->getMessage(), 'ERROR', $e->getFile(), $e->getLine(), ['module' => 'leave_requests', 'action' => 'delete']);
     }
 }
 $listingConfig = [

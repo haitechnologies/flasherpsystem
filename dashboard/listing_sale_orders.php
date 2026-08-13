@@ -24,21 +24,45 @@ include('admin_elements/permissions.php');
 
 $activeOrganizationId = dashboardRequireActiveOrganization();
 
-if (($action == "delete_$module" && !empty($id))) {
-    if (Session::roleId() == '1') {
-        $mysqli->query("DELETE FROM `" . DB::SALE_ORDER_ITEMS . "` WHERE sale_order_id=$id");
-        $mysqli->query("DELETE FROM `$tbl_name` WHERE id=$id ");
-    } else {
-        $mysqli->query("DELETE FROM `" . DB::SALE_ORDER_ITEMS . "` WHERE sale_order_id=$id");
-        $mysqli->query("DELETE FROM `$tbl_name` WHERE id=$id AND created_by='" . Session::userId() . "'");
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['action'])) {
+    if (!validate_csrf_token($_POST['csrf_token'] ?? '')) {
+        $error_message = 'Invalid security token. Please refresh the page and try again.';
+        log_error('CSRF token validation failed in listing_sale_orders.php', 'WARNING', __FILE__, __LINE__);
+        $_POST['action'] = '';
     }
+}
 
-    if ($mysqli->affected_rows > 0) {
-        $success_message = "$module_caption Deleted Successfully.";
-        flash_success($success_message);
-        header("Location:listing_$module.php?page=$page");
+$action = $_POST['action'] ?? $_REQUEST['action'] ?? '';
+$id = $_POST['id'] ?? $_REQUEST['id'] ?? 0;
+
+if (($action == "delete_$module" && !empty($id))) {
+    $idResult = \App\Security\InputValidator::integer($id, 1);
+    if (!$idResult['valid']) {
+        $error_message = "Invalid sale order ID: " . $idResult['error'];
     } else {
-        $error_message = "Sorry! $module Could Not Be Deleted. Only Super Administrator can delete this record.";
+        $validId = $idResult['value'];
+        try {
+            $saleOrderService = \App\Core\Container::getInstance()->get(\App\Service\SaleOrderService::class);
+
+            if (!\App\Security\Roles::hasFullAccess(\App\Core\Session::roleId())) {
+                $so = $saleOrderService->getSaleOrder($validId, $activeOrganizationId);
+                if ($so->createdBy !== \App\Core\Session::userId()) {
+                    throw new \Exception("You do not have permission to delete this sale order");
+                }
+            }
+
+            if ($saleOrderService->deleteSaleOrder($validId, $activeOrganizationId)) {
+                $success_message = "$module_caption Deleted Successfully.";
+                flash_success($success_message);
+                header("Location:listing_$module.php?page=$page");
+                exit;
+            } else {
+                $error_message = "Sorry! $module_caption Could Not Be Deleted.";
+            }
+        } catch (\Throwable $e) {
+            $error_message = $e->getMessage();
+            log_error("Delete failed for sale order $validId: " . $e->getMessage(), 'ERROR', __FILE__, __LINE__);
+        }
     }
 }
 
@@ -71,7 +95,7 @@ $listingConfig = [
             table.column(1, { page: 'current' }).nodes().each(function(cell, i) {
                 var row = table.row(cell).data();
                 if (row && row[6]) {
-                    var link = '<a href=\"sale_order_overview.php?sale_order_id=' + row[6] + '\" class=\"text-primary fw-semibold\">' + row[1] + '</a>';
+                    var link = '<a href=\"sale_order_overview.php?sale_order_id=' + row[6] + '\" class=\"text-primary\">' + row[1] + '</a>';
                     $(cell).html(link);
                 }
             });

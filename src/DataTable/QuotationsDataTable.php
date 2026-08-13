@@ -71,7 +71,7 @@ class QuotationsDataTable extends BaseDataTable
         $currencyCode = defined('BASE_CURRENCY') ? BASE_CURRENCY['code'] : 'AED';
         return [
             $this->formatDate($date) ?: '-',
-            '<a href="quotation_overview.php?quotation_id=' . $id . '" class="fw-semibold text-primary text-decoration-none">' . htmlspecialchars($no) . '</a>',
+            '<a href="quotation_overview.php?quotation_id=' . $id . '" class="text-primary text-decoration-none">' . htmlspecialchars($no) . '</a>',
             htmlspecialchars($jobRef),
             htmlspecialchars($custName),
             $statusBadge,

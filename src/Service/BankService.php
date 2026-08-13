@@ -53,7 +53,7 @@ class BankService
             routingNumber: trim((string)($data['routing_number'] ?? '')),
             description: trim((string)($data['description'] ?? '')),
             isPrimary: !empty($data['is_primary']),
-            isActive: !empty($data['publish'] ?? $data['is_active'] ?? true),
+            isActive: true,
             createdBy: $userId
         );
 
@@ -88,7 +88,7 @@ class BankService
             routingNumber: trim((string)($data['routing_number'] ?? $bank->routingNumber)),
             description: trim((string)($data['description'] ?? $bank->description)),
             isPrimary: isset($data['is_primary']) ? !empty($data['is_primary']) : $bank->isPrimary,
-            isActive: isset($data['publish']) ? !empty($data['publish']) : (isset($data['is_active']) ? !empty($data['is_active']) : $bank->isActive),
+            isActive: $bank->isActive,
             createdAt: $bank->createdAt,
             updatedAt: null,
             updatedBy: $userId,

@@ -41,7 +41,6 @@ return [
             'summary' => 'Coordinate advice notes, invoices, stocks, ports, carriers, and shipping master data for operations teams.',
             'modules' => [
                 'Shipping advices',
-                'Shipping invoices',
                 'Shipping stocks',
                 'Ports, carriers, consignees, shippers',
             ],

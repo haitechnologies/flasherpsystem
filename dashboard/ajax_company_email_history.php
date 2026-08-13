@@ -79,7 +79,7 @@ try {
         'data' => $rows,
     ]);
 } catch (Throwable $e) {
-    error_log('Company email history endpoint error: ' . $e->getMessage());
+    log_error('Company email history endpoint error: ' . $e->getMessage(), 'ERROR', $e->getFile(), $e->getLine(), ['module' => 'email', 'action' => 'company_email_history']);
     http_response_code(500);
     echo json_encode(['success' => false, 'error' => 'Server error']);
 }

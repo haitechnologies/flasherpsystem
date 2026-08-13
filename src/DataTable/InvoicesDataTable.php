@@ -34,13 +34,12 @@ class InvoicesDataTable extends BaseDataTable
      */
     protected $sortableColumns = [
         0 => 'invoice_date',
-        1 => 'invoice_no',
-        2 => 'sale_order_id',
-        3 => 'customer_id',
+        1 => 'customer_id',
+        2 => 'grand_total',
+        3 => 'balance_due',
         4 => 'invoice_status',
         5 => 'expiry_date',
-        6 => 'grand_total',
-        7 => 'grand_total'
+        6 => 'invoice_date'
     ];
 
     /**

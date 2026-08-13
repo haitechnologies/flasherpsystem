@@ -132,12 +132,12 @@ $d_job_no           = s__((string)($row['job_no'] ?? ''));
 $d_job_ref          = s__((string)($row['job_ref_no'] ?? ''));
 $d_job_date         = $job_date;
 $d_status           = s__($status_label);
-$d_job_seq          = s__((string)($row['job_seq'] ?? ''));
+$d_job_seq          = nz((string)($row['job_seq'] ?? ''));
 $d_customer         = s__($customer_name);
 $d_carrier          = s__($carrier_name);
 $d_sales_person     = s__($sales_person_name);
 $d_cs_agent         = s__($cs_agent_name);
-$d_sales_lead       = s__((string)($row['sales_person_from_lead'] ?? ''));
+$d_sales_lead       = nz((string)($row['sales_person_from_lead'] ?? ''));
 $d_tags             = s__((string)($row['tags'] ?? ''));
 $d_services         = $services_display;
 $d_warehouse        = s__(getTableAttr('warehouse_name', DB::ORGANIZATIONS, $warehouse_id));
@@ -145,7 +145,7 @@ $d_email            = s__((string)($row['email'] ?? ''));
 $d_incoterm         = s__((string)($row['incoterm'] ?? ''));
 $d_subject          = s__((string)($row['subject'] ?? ''));
 $d_job_owner        = s__((string)($row['job_owner'] ?? ''));
-$d_quotation_id     = s__((string)($row['quotation_id'] ?? ''));
+$d_quotation_id     = nz((string)($row['quotation_id'] ?? ''));
 
 $d_loading_country  = s__($landing_country);
 $d_loading_place    = s__((string)($row['loading_place'] ?? ''));
@@ -159,7 +159,7 @@ $d_shipping_state   = s__((string)($row['shipping_state'] ?? ''));
 $d_shipping_code    = s__((string)($row['shipping_code'] ?? ''));
 
 $d_shipment_type    = s__((string)($row['shipment_type'] ?? ''));
-$d_transport_mode   = s__((string)($row['transport_mode'] ?? ''));
+$d_transport_mode   = nz((string)($row['transport_mode'] ?? ''));
 $d_etd              = $etd;
 $d_eta              = $eta;
 $d_vessel           = s__((string)($row['vessel_name'] ?? ''));
@@ -175,14 +175,14 @@ $d_shipping_date    = $shipping_date;
 $d_job_completion   = $job_completion;
 
 $d_commodity        = s__((string)($row['commodity_type'] ?? ''));
-$d_containers       = s__((string)($row['no_of_containers'] ?? ''));
+$d_containers       = nz((string)($row['no_of_containers'] ?? ''));
 $d_container_type   = s__($container_type_label);
 $d_container_number = s__((string)($row['container_number'] ?? ''));
-$d_gross_weight     = s__((string)($row['gross_weight'] ?? ''));
-$d_volume_weight    = s__((string)($row['volume_weight'] ?? ''));
-$d_cbm              = s__((string)($row['cbm'] ?? ''));
-$d_chargeable_weight = s__((string)($row['chargeable_weight'] ?? ''));
-$d_no_pieces        = s__((string)($row['no_of_pieces'] ?? ''));
+$d_gross_weight     = nz((string)($row['gross_weight'] ?? ''));
+$d_volume_weight    = nz((string)($row['volume_weight'] ?? ''));
+$d_cbm              = nz((string)($row['cbm'] ?? ''));
+$d_chargeable_weight = nz((string)($row['chargeable_weight'] ?? ''));
+$d_no_pieces        = nz((string)($row['no_of_pieces'] ?? ''));
 $d_insurance        = ((string)($row['insurance_needed'] ?? '') === '1') ? 'Yes' : 'No';
 $d_temp_control     = ((string)($row['temperature_control_required'] ?? '') === '1') ? 'Yes' : 'No';
 $d_special_comments = s__((string)($row['special_comments'] ?? ''));
@@ -193,11 +193,11 @@ $d_discount_amount  = number_format((float)($row['grand_discount_amount'] ?? 0),
 $d_after_discount   = number_format((float)($row['grand_after_discount'] ?? 0), 2);
 $d_tax              = number_format((float)($row['grand_tax'] ?? 0), 2);
 $d_total            = number_format((float)($row['grand_total'] ?? 0), 2);
-$d_currency         = s__((string)($row['currency'] ?? ''));
-$d_exchange_rate    = s__((string)($row['exchange_rate'] ?? ''));
-$d_est_invoice      = number_format((float)($row['estimated_invoice_amount'] ?? 0), 2);
-$d_est_net_profit   = number_format((float)($row['estimated_net_profit'] ?? 0), 2);
-$d_supplier_rate    = s__((string)($row['supplier_rate'] ?? ''));
+$d_currency         = nz((string)($row['currency'] ?? ''));
+$d_exchange_rate    = nz((string)($row['exchange_rate'] ?? ''));
+$d_est_invoice      = nz(number_format((float)($row['estimated_invoice_amount'] ?? 0), 2));
+$d_est_net_profit   = nz(number_format((float)($row['estimated_net_profit'] ?? 0), 2));
+$d_supplier_rate    = nz((string)($row['supplier_rate'] ?? ''));
 $d_subtotal_after   = s__((string)($row['grand_subtotal'] ?? '0'));
 
 $d_billing_country  = s__($billing_country);
@@ -216,10 +216,10 @@ $d_customer_notes   = s__((string)($row['customer_notes'] ?? ''));
 
 $d_created_by       = s__($created_by_name);
 $d_modified_by      = s__($modified_by_name);
-$d_quote_id         = s__((string)($row['quote_id'] ?? ''));
-$d_project_id       = s__((string)($row['project_id'] ?? ''));
+$d_quote_id         = nz((string)($row['quote_id'] ?? ''));
+$d_project_id       = nz((string)($row['project_id'] ?? ''));
 $d_customer_type    = s__((string)($row['customer_type'] ?? ''));
-$d_books_customer_id = s__((string)($row['books_customer_id'] ?? ''));
+$d_books_customer_id = nz((string)($row['books_customer_id'] ?? ''));
 
 // Job items
 $jobItems = $db->fetchAll(

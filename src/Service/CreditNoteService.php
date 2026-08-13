@@ -390,8 +390,8 @@ class CreditNoteService
                 grandAfterDiscount: $creditNote->grandAfterDiscount,
                 grandTax: $creditNote->grandTax,
                 grandTotal: $creditNote->grandTotal,
-                publish: true,
-                isActive: true,
+                publish: $creditNote->publish,
+                isActive: $creditNote->isActive,
                 createdBy: $userId,
             );
 
@@ -454,7 +454,7 @@ class CreditNoteService
                     customer_notes, terms_and_conditions, invoice_status,
                     grand_subtotal, grand_discount_type, grand_discount_type_value,
                     grand_discount_amount, grand_after_discount, grand_tax, grand_total,
-                    publish, is_active, created_at, updated_at, created_by
+                    balance_due, publish, is_active, created_at, updated_at, created_by
                 ) VALUES (
                     :organization_id, :invoice_no, :customer_id, :warehouse_id, :subject, :reference_no,
                     :invoice_date, :expiry_date, :expected_shipment_date, :payment_term, :shipment_type,
@@ -463,7 +463,7 @@ class CreditNoteService
                     :customer_notes, :terms_and_conditions, :invoice_status,
                     :grand_subtotal, :grand_discount_type, :grand_discount_type_value,
                     :grand_discount_amount, :grand_after_discount, :grand_tax, :grand_total,
-                    :publish, :is_active, NOW(), NOW(), :created_by
+                    :balance_due, :publish, :is_active, NOW(), NOW(), :created_by
                 )",
                 [
                     'organization_id' => $orgId,
@@ -474,7 +474,7 @@ class CreditNoteService
                     'reference_no' => $creditNote->referenceNo,
                     'invoice_date' => $creditNote->creditNoteDate,
                     'expiry_date' => $creditNote->expiryDate,
-                    'expected_shipment_date' => $creditNote->expectedShipmentDate,
+                    'expected_shipment_date' => $creditNote->expectedShipmentDate !== null ? $creditNote->expectedShipmentDate : '1970-01-01',
                     'payment_term' => $creditNote->paymentTerm,
                     'shipment_type' => $creditNote->shipmentType,
                     'sales_person' => $creditNote->salesPerson,
@@ -498,6 +498,7 @@ class CreditNoteService
                     'grand_after_discount' => $creditNote->grandAfterDiscount,
                     'grand_tax' => $creditNote->grandTax,
                     'grand_total' => $creditNote->grandTotal,
+                    'balance_due' => $creditNote->grandTotal,
                     'publish' => $creditNote->publish ? 1 : 0,
                     'is_active' => $creditNote->isActive ? 1 : 0,
                     'created_by' => $userId,
@@ -706,6 +707,11 @@ class CreditNoteService
         $customer = $this->customerRepo->find($customerId, $orgId);
         if ($customer === null) {
             throw new ValidationException(['customer_id' => "Selected customer does not exist in your organization."]);
+        }
+
+        $status = isset($data['credit_note_status']) ? trim((string)$data['credit_note_status']) : '';
+        if ($status !== '' && !in_array($status, ['draft', 'sent', 'approved', 'open', 'paid', 'void', 'not_confirmed'], true)) {
+            throw new ValidationException(['credit_note_status' => "Invalid credit note status: {$status}"]);
         }
     }
 

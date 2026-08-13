@@ -175,7 +175,8 @@ class VendorCommentController extends BaseController
         try {
             $allNotes = $this->service->getByEntity($this->entityType, $vendorId, $this->orgId);
         } catch (\Throwable $e) {
-        }
+                log_error('Failed to load form dropdown: ' . $e->getMessage(), 'WARNING', $e->getFile(), $e->getLine(), ['module' => 'vendor_comments', 'action' => 'load_form_dropdown']);
+}
 
         $userNames = [];
         if (!empty($allNotes)) {
@@ -189,7 +190,8 @@ class VendorCommentController extends BaseController
                         $userNames[(int)$row['id']] = $row['full_name'] ?? 'Unknown';
                     }
                 } catch (\Throwable $e) {
-                }
+                                log_error('Failed to load form dropdown: ' . $e->getMessage(), 'WARNING', $e->getFile(), $e->getLine(), ['module' => 'vendor_comments', 'action' => 'load_form_dropdown']);
+}
             }
         }
 

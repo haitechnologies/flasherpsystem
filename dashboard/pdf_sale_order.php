@@ -309,7 +309,7 @@ $tbl = <<<EOD
 <table width="100%" border="0" cellpadding="0" cellspacing="0">
 <tr>
     <td width="275" style="background-color: #f1f1f1;"></td>
-    <td width="120" align="center"><span style="color: #007B8B; font-size: 16px; font-weight: bold;">QUOTATION</span></td>
+    <td width="120" align="center"><span style="color: #007B8B; font-size: 16px; font-weight: bold;">SALE ORDER</span></td>
     <td width="275" style="background-color: #f1f1f1;"></td>
 </tr>
 </table>
@@ -442,7 +442,7 @@ $item_row
 </tr>
 
 <tr>
-<td colspan="7" align="right"> Total in Words: <strong> UAE Dirham  $grand_total_in_words </strong> </td>
+<td colspan="7" align="right"> Total in Words: <strong> $base_currency_code  $grand_total_in_words </strong> </td>
 </tr>
 
 </table>
@@ -517,8 +517,8 @@ $tbl = <<<EOD
 </tr>
 <tr>
 <td width="670">
-1. This quotation is subject to availability of space and rates may change without prior notice.<br />
-2. The quotation is valid until the expiry date mentioned above.<br />
+1. This sale order is subject to availability of space and rates may change without prior notice.<br />
+2. The sale order is valid until the expiry date mentioned above.<br />
 3. Payment terms as agreed will apply.<br />
 </td>
 </tr>

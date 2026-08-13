@@ -23,7 +23,6 @@ $listingConfig = [
     'thead' => '
         <th width="40">SR.</th>
         <th width="50" class="col-center">PRIMARY</th>
-        <th width="80" class="col-center">STATUS</th>
         <th>ACCOUNT NAME</th>
         <th width="150">CURRENCY</th>
         <th>ACCOUNT CODE</th>
@@ -37,7 +36,7 @@ $listingConfig = [
     'columns' => [
         ['data' => 0, 'orderable' => false, 'searchable' => false],
         ['data' => 1, 'orderable' => false, 'searchable' => false, 'className' => 'col-center'],
-        ['data' => 2, 'orderable' => false, 'searchable' => false, 'className' => 'col-center'],
+        ['data' => 2],
         ['data' => 3],
         ['data' => 4],
         ['data' => 5],
@@ -45,10 +44,9 @@ $listingConfig = [
         ['data' => 7],
         ['data' => 8],
         ['data' => 9],
-        ['data' => 10],
-        ['data' => 11, 'orderable' => false, 'searchable' => false, 'className' => 'col-center'],
+        ['data' => 10, 'orderable' => false, 'searchable' => false, 'className' => 'col-center'],
     ],
-    'order' => [[3, 'asc']],
+    'order' => [[2, 'asc']],
     'page_length' => 25,
 ];
 

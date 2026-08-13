@@ -3,6 +3,7 @@ use App\Core\DB;
 include('admin_elements/admin_header.php');
 
 $module             = 'shipping_advices';
+$GLOBALS['module']  = $module;
 $module_caption     = 'Shipping Advice';
 $tbl_name             = DB::SHIPPING_ADVICES;
 $error_message         = '';
@@ -38,10 +39,6 @@ $customer_id = 0;
 if (isset($_REQUEST['customer_id']) && !empty($_REQUEST['customer_id'])) {
     $customer_id     = e_s__($_REQUEST['customer_id']);
 }
-
-
-$publish = 0;
-if (isset($_POST['publish']))   $publish     = 1;
 
 
 // ---------------------- Shipping Advice Items -----------------------------
@@ -286,7 +283,7 @@ if ($action == "add_$module") {
                         $invoice_date   = processDateDtoY($invoice_date);
 
                         $insert_row = $mysqli->query("INSERT INTO `" . DB::SHIPPING_ADVICES . "`(shipment_type, destination_port, exit_point, transport_mode, incoterm, invoice_date, invoice_no, customer_id, awb_no, license_no, mirsal_II_code, country_of_origin, grand_advice_qty, grand_advice_weight, currency, grand_advice_value, payment_method, invoice_pkgs, invoice_pkgs_unit, invoice_weight, invoice_weight_unit, invoice_grand_qty, invoice_grand_total_amount, is_active)
-                        VALUES ('" . $shipment_type . "', '" . $destination_port . "', '" . $exit_point . "', '" . $transport_mode . "', '" . $incoterm . "', '" . $invoice_date . "', '" . $invoice_no . "', " . ($customer_id > 0 ? $customer_id : 'NULL') . ", '" . $awb_no . "', '" . $license_no . "', '" . $mirsal_II_code . "', '" . $country_of_origin . "', '" . $grand_advice_qty . "', '" . $grand_advice_weight . "', '" . $currency . "', '" . $grand_advice_value . "', '" . $payment_method . "', '" . $invoice_pkgs . "', '" . $invoice_pkgs_unit . "', '" . $invoice_weight . "', '" . $invoice_weight_unit . "', '" . $invoice_grand_qty . "', '" . $invoice_grand_total_amount . "', '" . $publish . "'); ");
+                        VALUES ('" . $shipment_type . "', '" . $destination_port . "', '" . $exit_point . "', '" . $transport_mode . "', '" . $incoterm . "', '" . $invoice_date . "', '" . $invoice_no . "', " . ($customer_id > 0 ? $customer_id : 'NULL') . ", '" . $awb_no . "', '" . $license_no . "', '" . $mirsal_II_code . "', '" . $country_of_origin . "', '" . $grand_advice_qty . "', '" . $grand_advice_weight . "', '" . $currency . "', '" . $grand_advice_value . "', '" . $payment_method . "', '" . $invoice_pkgs . "', '" . $invoice_pkgs_unit . "', '" . $invoice_weight . "', '" . $invoice_weight_unit . "', '" . $invoice_grand_qty . "', '" . $invoice_grand_total_amount . "', 1); ");
 
 
                         $id = $mysqli->insert_id;
@@ -714,6 +711,7 @@ if ($action == "add_$module") {
 
 
                         } catch (Exception $e) {
+                            log_error('Excel import error: ' . $e->getMessage(), 'ERROR', $e->getFile(), $e->getLine(), ['module' => 'shipping_advices', 'action' => 'import']);
                             $error_message = "Error reading Excel file: " . $e->getMessage();
                         }
                     } else {
@@ -1333,6 +1331,7 @@ if ($action == "add_$module") {
 
 
                         } catch (Exception $e) {
+                            log_error('Excel import error: ' . $e->getMessage(), 'ERROR', $e->getFile(), $e->getLine(), ['module' => 'shipping_advices', 'action' => 'import']);
                             $error_message = "Error reading Excel file: " . $e->getMessage();
                         }
                     } else {

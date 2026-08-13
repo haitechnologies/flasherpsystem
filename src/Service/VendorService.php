@@ -47,7 +47,7 @@ class VendorService
             organizationId: $orgId,
             leadId: !empty($data['lead_id']) ? (int)$data['lead_id'] : null,
             vendorOwner: !empty($data['vendor_owner']) ? (int)$data['vendor_owner'] : null,
-            vendorType: !empty($data['vendor_type']) ? trim((string)$data['vendor_type']) : '',
+            vendorType: !empty($data['vendor_type']) ? trim((string)$data['vendor_type']) : 'business',
             vendorStatus: !empty($data['vendor_status']) ? (int)$data['vendor_status'] : null,
             vendorSource: !empty($data['vendor_source']) ? (int)$data['vendor_source'] : null,
             assignedTo: !empty($data['assigned_to']) ? (int)$data['assigned_to'] : null,
@@ -67,7 +67,7 @@ class VendorService
             taxTreatment: !empty($data['tax_treatment']) ? (int)$data['tax_treatment'] : null,
             trn: !empty($data['trn']) ? trim((string)$data['trn']) : null,
             corporateTaxNumber: !empty($data['corporate_tax_number']) ? trim((string)$data['corporate_tax_number']) : null,
-            licenseNumber: !empty($data['license_number']) ? (int)$data['license_number'] : null,
+            licenseNumber: !empty($data['license_number']) ? trim((string)$data['license_number']) : null,
             licenseExpiry: !empty($data['license_expiry']) ? $this->convertDateToDb((string)$data['license_expiry']) : '1970-01-01',
             salesPerson: !empty($data['sales_person']) ? (int)$data['sales_person'] : null,
             leadCategory: !empty($data['lead_category']) ? trim((string)$data['lead_category']) : null,
@@ -116,7 +116,7 @@ class VendorService
             organizationId: $vendor->organizationId,
             leadId: isset($data['lead_id']) ? (!empty($data['lead_id']) ? (int)$data['lead_id'] : null) : $vendor->leadId,
             vendorOwner: isset($data['vendor_owner']) ? (!empty($data['vendor_owner']) ? (int)$data['vendor_owner'] : null) : $vendor->vendorOwner,
-            vendorType: isset($data['vendor_type']) ? trim((string)$data['vendor_type']) : $vendor->vendorType,
+            vendorType: isset($data['vendor_type']) ? (!empty($data['vendor_type']) ? trim((string)$data['vendor_type']) : $vendor->vendorType) : $vendor->vendorType,
             vendorStatus: isset($data['vendor_status']) ? (!empty($data['vendor_status']) ? (int)$data['vendor_status'] : null) : $vendor->vendorStatus,
             vendorSource: isset($data['vendor_source']) ? (!empty($data['vendor_source']) ? (int)$data['vendor_source'] : null) : $vendor->vendorSource,
             assignedTo: isset($data['assigned_to']) ? (!empty($data['assigned_to']) ? (int)$data['assigned_to'] : null) : $vendor->assignedTo,
@@ -136,7 +136,7 @@ class VendorService
             taxTreatment: isset($data['tax_treatment']) ? (!empty($data['tax_treatment']) ? (int)$data['tax_treatment'] : null) : $vendor->taxTreatment,
             trn: isset($data['trn']) ? (!empty($data['trn']) ? trim((string)$data['trn']) : null) : $vendor->trn,
             corporateTaxNumber: isset($data['corporate_tax_number']) ? (!empty($data['corporate_tax_number']) ? trim((string)$data['corporate_tax_number']) : null) : $vendor->corporateTaxNumber,
-            licenseNumber: isset($data['license_number']) ? (!empty($data['license_number']) ? (int)$data['license_number'] : null) : $vendor->licenseNumber,
+            licenseNumber: isset($data['license_number']) ? (!empty($data['license_number']) ? trim((string)$data['license_number']) : null) : $vendor->licenseNumber,
             licenseExpiry: isset($data['license_expiry']) ? (!empty($data['license_expiry']) ? $this->convertDateToDb((string)$data['license_expiry']) : '1970-01-01') : $vendor->licenseExpiry,
             salesPerson: isset($data['sales_person']) ? (!empty($data['sales_person']) ? (int)$data['sales_person'] : null) : $vendor->salesPerson,
             leadCategory: isset($data['lead_category']) ? (!empty($data['lead_category']) ? trim((string)$data['lead_category']) : null) : $vendor->leadCategory,
@@ -164,7 +164,13 @@ class VendorService
             createdBy: $vendor->createdBy,
         );
 
-        return $this->repo->save($updated);
+        $saved = $this->repo->save($updated);
+
+        if ($vendor->openingBalance != $saved->openingBalance) {
+            $this->syncOpeningBalanceJournal((int)$saved->id, (float)$saved->openingBalance, $orgId, $userId, $saved->displayName, $saved->payableAccountId);
+        }
+
+        return $saved;
     }
 
     public function deleteVendor(int $id, int $orgId): bool
@@ -525,6 +531,25 @@ class VendorService
         $journalService->createJournal($journalData, $itemsData, $orgId, $userId);
     }
 
+    private function syncOpeningBalanceJournal(int $vendorId, float $balance, int $orgId, int $userId, string $vendorName, ?int $payableAccountId = null): void
+    {
+        try {
+            $journalService = Container::getInstance()->get(JournalService::class);
+            $journalRepo = Container::getInstance()->get(\App\Repository\JournalRepository::class);
+
+            $existing = $journalRepo->findByReference('vendor_opening_balance', $vendorId, $orgId);
+            foreach ($existing as $journal) {
+                $journalService->deleteJournal((int)$journal->id, $orgId);
+            }
+
+            if ($balance != 0) {
+                $this->createOpeningBalanceJournal($vendorId, $balance, $orgId, $userId, $vendorName, $payableAccountId);
+            }
+        } catch (\Throwable $e) {
+            error_log('Vendor opening balance journal sync failed: ' . $e->getMessage());
+        }
+    }
+
     /**
      * Clone vendor
      */
@@ -600,7 +625,6 @@ class VendorService
              FROM `" . DB::ENTITY_LOGS . "`
              WHERE entity_type = 'vendor' AND entity_id = :id
                AND (organization_id IS NULL OR organization_id = :org)
-               AND module NOT IN ('comment', 'comments')
              ORDER BY created_at DESC LIMIT 30",
             ['id' => $vendorId, 'org' => $orgId]
         );
@@ -740,6 +764,14 @@ class VendorService
                     $entry['body'] = 'Payment of amount ' . $currency . $amount . ' made';
                     $entry['details_url'] = 'payments_made_overview.php?payment_id=' . $recordId;
                 }
+            } elseif ($module === 'comment' || $module === 'comments') {
+                $entry['icon'] = 'ph-chat-centered-text';
+                $entry['title'] = match ($action) {
+                    'added', 'add' => 'Comment added',
+                    'updated', 'edit' => 'Comment updated',
+                    'deleted', 'delete' => 'Comment deleted',
+                    default => 'Comment added',
+                };
             }
 
             $entries[] = $entry;
@@ -922,8 +954,12 @@ class VendorService
         }
 
         $exchangeRate = $data['exchange_rate'] ?? ($existing ? $existing->exchangeRate : null);
-        if ($exchangeRate !== null && $exchangeRate !== '' && !is_numeric($exchangeRate)) {
-            $errors['exchange_rate'] = 'Exchange rate must be a valid number.';
+        if ($exchangeRate !== null && $exchangeRate !== '') {
+            if (!is_numeric($exchangeRate)) {
+                $errors['exchange_rate'] = 'Exchange rate must be a valid number.';
+            } elseif ((float)$exchangeRate <= 0) {
+                $errors['exchange_rate'] = 'Exchange rate must be a positive number.';
+            }
         }
 
         if (!empty($errors)) {

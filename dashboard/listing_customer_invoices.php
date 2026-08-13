@@ -116,34 +116,44 @@ if ($page_no) {
 |
 */
 if (($action == "delete_$module" && !empty($id))) {
-    // INPUT VALIDATION: Validate invoice ID
-    $idResult = InputValidator::integer($id, 1);
-    if (!$idResult['valid']) {
-        $error_message = "Invalid invoice ID: " . $idResult['error'];
+    // CSRF: enforce a valid token for the delete action (GET or POST)
+    $csrfCheck = validate_csrf_token($_GET['csrf_token'] ?? $_POST['csrf_token'] ?? '');
+    if (!$csrfCheck) {
+        $error_message = 'Invalid security token. Please refresh the page and try again.';
+        log_error('CSRF token validation failed in listing_customer_invoices.php delete action', 'WARNING', __FILE__, __LINE__);
+    } elseif (!granted('delete', $module_id)) {
+        $error_message = 'You do not have permission to delete this invoice';
+        log_error("IDOR attempt: User tried to delete invoice in listing_customer_invoices.php without delete permission", 'WARNING', __FILE__, __LINE__);
     } else {
-        $validInvoiceId = $idResult['value'];
-        try {
-            $invoiceService = \App\Core\Container::getInstance()->get(\App\Service\InvoiceService::class);
-            
-            // Check ownership if not superadmin
-            if (!Roles::hasFullAccess($session_role_id)) {
-                $invoice = $invoiceService->getInvoice($validInvoiceId, $activeOrganizationId);
-                if ($invoice->createdBy !== (int)Session::userId()) {
-                    throw new \Exception("You do not have permission to delete this invoice");
+        // INPUT VALIDATION: Validate invoice ID
+        $idResult = InputValidator::integer($id, 1);
+        if (!$idResult['valid']) {
+            $error_message = "Invalid invoice ID: " . $idResult['error'];
+        } else {
+            $validInvoiceId = $idResult['value'];
+            try {
+                $invoiceService = \App\Core\Container::getInstance()->get(\App\Service\InvoiceService::class);
+                
+                // Check ownership if not superadmin
+                if (!Roles::hasFullAccess($session_role_id)) {
+                    $invoice = $invoiceService->getInvoice($validInvoiceId, $activeOrganizationId);
+                    if ($invoice->createdBy !== (int)Session::userId()) {
+                        throw new \Exception("You do not have permission to delete this invoice");
+                    }
                 }
-            }
 
-            if ($invoiceService->deleteInvoice($validInvoiceId, $activeOrganizationId)) {
-                $success_message = "$module_caption Deleted Successfully.";
-                flash_success($success_message);
-                header("Location:listing_customer_invoices.php?customer_id=$customer_id");
-                exit;
-            } else {
-                $error_message = "Sorry! $module Could Not Be Deleted.";
+                if ($invoiceService->deleteInvoice($validInvoiceId, $activeOrganizationId)) {
+                    $success_message = "$module_caption Deleted Successfully.";
+                    flash_success($success_message);
+                    header("Location:listing_customer_invoices.php?customer_id=$customer_id");
+                    exit;
+                } else {
+                    $error_message = "Sorry! $module Could Not Be Deleted.";
+                }
+            } catch (\Throwable $e) {
+                $error_message = $e->getMessage();
+                log_error("Delete failed for invoice $validInvoiceId: " . $e->getMessage(), 'ERROR', __FILE__, __LINE__);
             }
-        } catch (\Throwable $e) {
-            $error_message = $e->getMessage();
-            log_error("Delete failed for invoice $validInvoiceId: " . $e->getMessage(), 'ERROR', __FILE__, __LINE__);
         }
     }
 }
@@ -169,14 +179,18 @@ $db = \App\Core\Container::getInstance()->get(\App\Core\Database::class);
 
 //COUNT QUERY
 $countRow = $db->fetchOne(
-    "SELECT COUNT(id) as cnt FROM `erp_invoices` WHERE customer_id = :customer_id AND organization_id = :org_id",
+    "SELECT COUNT(id) as cnt FROM `{DB::INVOICES}` WHERE customer_id = :customer_id AND organization_id = :org_id AND recurring = 0 AND is_active = 1",
     ['customer_id' => $customer_id, 'org_id' => $activeOrganizationId]
 );
 $total_pages = (int)($countRow['cnt'] ?? 0);
 
 //NORMAL QUERY
 $result_customer_invoices = $db->fetchAll(
-    "SELECT * FROM `erp_invoices` WHERE customer_id = :customer_id AND organization_id = :org_id ORDER BY id DESC LIMIT :start, :limit",
+    "SELECT id, invoice_no, customer_id, sale_order_id, invoice_date, expiry_date, invoice_status,
+            grand_subtotal, grand_tax, grand_total, balance_due, created_at, is_active
+     FROM `{DB::INVOICES}`
+     WHERE customer_id = :customer_id AND organization_id = :org_id AND recurring = 0 AND is_active = 1
+     ORDER BY id DESC LIMIT :start, :limit",
     [
         'customer_id' => $customer_id,
         'org_id' => $activeOrganizationId,
@@ -295,6 +309,7 @@ $result_customer_invoices = $db->fetchAll(
                                                 $grand_subtotal         = s__($row['grand_subtotal']);
                                                 $grand_tax              = s__($row['grand_tax']);
                                                 $grand_total            = s__($row['grand_total']);
+                                                $balance_due            = s__($row['balance_due']);
                                                 $created_at             = s__($row['created_at']);
                                                 $is_active = s__($row['is_active']);
 
@@ -314,7 +329,7 @@ $result_customer_invoices = $db->fetchAll(
                                                     <td><a href="invoice_overview.php?id=<?php echo $id; ?>" target="_blank"><span class="badge text-dark"><?php echo ucwords($invoice_status); ?></a></span></td>
                                                     <td><a href="invoice_overview.php?id=<?php echo $id; ?>"><?php echo $expiry_date; ?></a></td>
                                                     <td class="text-end p3"><a href="invoice_overview.php?id=<?php echo $id; ?>"><?php echo BASE_CURRENCY['code']; ?><?php echo $grand_total; ?></a></td>
-                                                    <td class="text-end p3"><a href="invoice_overview.php?id=<?php echo $id; ?>"><?php echo BASE_CURRENCY['code']; ?><?php echo '0'; ?></a></td>
+                                                    <td class="text-end p3"><a href="invoice_overview.php?id=<?php echo $id; ?>"><?php echo BASE_CURRENCY['code']; ?><?php echo $balance_due; ?></a></td>
                                                 </tr>
 
                                             <?php

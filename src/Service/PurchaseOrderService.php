@@ -13,6 +13,7 @@ use App\Repository\VendorRepository;
 use App\Exception\NotFoundException;
 use App\Exception\ValidationException;
 use App\Helper\DateHelper;
+use App\Helper\PdfGeneratorHelper;
 
 class PurchaseOrderService
 {
@@ -105,6 +106,8 @@ class PurchaseOrderService
 
             $this->db->commit();
 
+            PdfGeneratorHelper::ensure('purchase_orders', (int)$orderId);
+
             return $savedOrder;
         } catch (\Throwable $e) {
             $this->db->rollBack();
@@ -187,6 +190,8 @@ class PurchaseOrderService
             }
 
             $this->db->commit();
+
+            PdfGeneratorHelper::ensure('purchase_orders', (int)$id);
 
             return $savedOrder;
         } catch (\Throwable $e) {

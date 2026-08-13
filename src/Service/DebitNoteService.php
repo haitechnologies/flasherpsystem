@@ -13,6 +13,7 @@ use App\Repository\JournalRepository;
 use App\Exception\NotFoundException;
 use App\Exception\ValidationException;
 use App\Helper\DateHelper;
+use App\Helper\PdfGeneratorHelper;
 
 class DebitNoteService
 {
@@ -160,6 +161,8 @@ class DebitNoteService
 
             $this->db->commit();
 
+            PdfGeneratorHelper::ensure('debit_notes', (int)$debitNoteId);
+
             return $savedDebitNote;
         } catch (\Throwable $e) {
             $this->db->rollBack();
@@ -277,6 +280,8 @@ class DebitNoteService
             }
 
             $this->db->commit();
+
+            PdfGeneratorHelper::ensure('debit_notes', (int)$id);
 
             return $savedDebitNote;
         } catch (\Throwable $e) {

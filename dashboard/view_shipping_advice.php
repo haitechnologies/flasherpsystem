@@ -5,6 +5,7 @@ use App\Core\Session;
 include('admin_elements/admin_header.php');
 
 $module             = 'shipping_advices';
+$GLOBALS['module']  = $module;
 $module_caption     = 'Shipping Advice';
 $tbl_name = DB::SHIPPING_ADVICES;
 $error_message      = '';
@@ -153,8 +154,17 @@ if ($action == "add_$module") {
                     (!empty($id) && $_SESSION[$project_pre]['DASHBOARD']['admin_id'] == $created_by)
                 ) {
 
+                    try {
                     $result = $mysqli->query("SELECT * FROM `$tbl_name` WHERE id=$id");
                     $row = $result->fetch_array();
+                    } catch (\Throwable $e) {
+                        if (function_exists('log_error')) {
+                            log_error('Shipping Advice view load failed: ' . $e->getMessage(), 'ERROR', __FILE__, __LINE__, ['module' => 'shipping_advices']);
+                        }
+                        $_SESSION[$project_pre]['DASHBOARD']['error_message'] = 'An error occurred while loading the Shipping Advice.';
+                        header("Location: listing_$module.php");
+                        exit();
+                    }
 
                     // Redirect if record not found
                     if (!$row) {
@@ -194,7 +204,6 @@ if ($action == "add_$module") {
                         $invoice_weight_unit        = s__($row['invoice_weight_unit']);
                         $invoice_grand_qty          = s__($row['invoice_grand_qty']);
                         $invoice_grand_total_amount = s__($row['invoice_grand_total_amount']);
-                        $publish                    = s__($row['is_active'] ?? 0);
                     } else {
                         // Initialize with default values if no row found
                         $shipment_type        = '';
@@ -226,7 +235,6 @@ if ($action == "add_$module") {
                         $invoice_weight_unit        = '';
                         $invoice_grand_qty          = 0;
                         $invoice_grand_total_amount = 0;
-                        $publish                    = '';
                     }
 
                     $invoice_date = processDateYtoD($invoice_date);

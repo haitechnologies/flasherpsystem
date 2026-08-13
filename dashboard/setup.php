@@ -34,6 +34,7 @@ $setupSections = [
 		'links' => [
 			['href' => 'listing_inquiries.php', 'label' => 'Inquiries', 'desc' => 'Customer inquiries and follow-ups.', 'icon' => 'ph-chat-circle-dots', 'visible' => setupCanSee('inquiries')],
 			['href' => 'listing_setup_groups.php', 'label' => 'Setup Groups', 'desc' => 'Reusable setup group definitions.', 'icon' => 'ph-sliders', 'visible' => setupCanSee('setup_groups')],
+			['href' => 'listing_setup_banks.php', 'label' => 'Banks (Institutions)', 'desc' => 'Bank institutions master data (CBUAE register).', 'icon' => 'ph-bank', 'visible' => setupCanSee('setup_banks')],
 			['href' => 'listing_document_categories.php', 'label' => 'Document Categories', 'desc' => 'Document taxonomy and filing categories.', 'icon' => 'ph-folders', 'visible' => setupCanSee('document_categories')],
 			['href' => 'listing_incoterms.php', 'label' => 'Incoterms', 'desc' => 'Trade incoterm definitions.', 'icon' => 'ph-globe-hemisphere-west', 'visible' => setupCanSee('incoterms')],
 			['href' => 'listing_units.php', 'label' => 'Units of Measure', 'desc' => 'Measurement units used in pricing and inventory.', 'icon' => 'ph-ruler', 'visible' => setupCanSee('units')],

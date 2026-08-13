@@ -7,6 +7,7 @@ use App\Core\DB;
 include('admin_elements/admin_header.php');
 
 $module = 'shipping_customers';
+$GLOBALS['module'] = $module;
 $module_caption = 'Shipping Customer';
 $tbl_name = DB::CUSTOMERS;
 $error_message = '';

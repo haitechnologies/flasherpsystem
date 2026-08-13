@@ -184,7 +184,8 @@ class LeadNoteController extends BaseController
         try {
             $allNotes = $this->service->getByEntity($this->entityType, $leadId, $this->orgId);
         } catch (\Throwable $e) {
-        }
+                log_error('Failed to load form dropdown: ' . $e->getMessage(), 'WARNING', $e->getFile(), $e->getLine(), ['module' => 'lead_notes', 'action' => 'load_form_dropdown']);
+}
 
         $userNames = [];
         if (!empty($allNotes)) {
@@ -198,7 +199,8 @@ class LeadNoteController extends BaseController
                         $userNames[(int)$row['id']] = $row['full_name'] ?? 'Unknown';
                     }
                 } catch (\Throwable $e) {
-                }
+                                log_error('Failed to load form dropdown: ' . $e->getMessage(), 'WARNING', $e->getFile(), $e->getLine(), ['module' => 'lead_notes', 'action' => 'load_form_dropdown']);
+}
             }
         }
 

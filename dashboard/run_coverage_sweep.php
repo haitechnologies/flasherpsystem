@@ -108,6 +108,7 @@ $QA_PAGES = [
     'listing_sale_orders.php',
     'listing_sale_types.php',
     'listing_services.php',
+    'listing_setup_banks.php',
     'listing_setup_groups.php',
     'listing_setup_sources.php',
     'listing_setup_statuses.php',
@@ -116,7 +117,6 @@ $QA_PAGES = [
     'listing_shipping_advice_items.php',
     'listing_shipping_advices.php',
     'listing_shipping_customers.php',
-    'listing_shipping_invoices.php',
     'listing_shipping_stocks.php',
     'listing_storage_subtypes.php',
     'listing_storage_types.php',
@@ -234,14 +234,13 @@ $QA_PAGES = [
     'seo_health_check.php',
     'services.php',
     'setup.php',
+    'setup_banks.php',
     'setup_groups.php',
     'setup_sources.php',
     'setup_statuses.php',
     'setup_tags.php',
     'shippers.php',
-    'shipping_advices.php',
     'shipping_customers.php',
-    'shipping_invoices.php',
     'shipping_stocks.php',
     'sitemap.php',
     'sitemaps.php',
@@ -386,6 +385,60 @@ if (coverage_table_exists($mysqli, DB::BACKEND_ERROR_LOGS)) {
     if ($r2) { $er = $r2->fetch_assoc(); $totalErrors = (int)($er['cnt'] ?? 0); $r2->free(); }
 }
 $coveragePct = $totalCount > 0 ? round(($okCount / $totalCount) * 100, 1) : 0;
+
+// ── Logging verification: per-module PASS/FAIL ────────────────────
+// PASS  = module has >=1 observed page (heartbeat fired) AND no coverage
+//         rows with blank/unknown slug, page_name or page_path.
+// PARTIAL = module pages exist but none observed yet (untested).
+// The logged-errors column counts ERROR/CRITICAL rows actually captured
+// in erp_backend_error_logs for that module (proves bug capture works).
+$verifyResults = [];
+if (coverage_table_exists($mysqli, DB::BACKEND_LOG_COVERAGE)) {
+    $vc = $mysqli->query("SELECT module_slug,
+            COUNT(*) AS page_count,
+            SUM(CASE WHEN seen_count > 0 THEN 1 ELSE 0 END) AS observed_pages,
+            SUM(CASE WHEN page_name = 'unknown' OR page_name = '' OR page_path = ''
+                     OR module_slug = 'unknown' OR module_slug = '' THEN 1 ELSE 0 END) AS bad_rows
+        FROM `" . DB::BACKEND_LOG_COVERAGE . "`
+        GROUP BY module_slug");
+    if ($vc) {
+        while ($row = $vc->fetch_assoc()) {
+            $verifyResults[(string)$row['module_slug']] = [
+                'page_count'     => (int)$row['page_count'],
+                'observed_pages' => (int)$row['observed_pages'],
+                'bad_rows'       => (int)$row['bad_rows'],
+                'log_errors'     => 0,
+            ];
+        }
+        $vc->free();
+    }
+}
+if ($verifyResults && coverage_table_exists($mysqli, DB::BACKEND_ERROR_LOGS)) {
+    $ve = $mysqli->query("SELECT module_slug, COUNT(*) AS cnt
+        FROM `" . DB::BACKEND_ERROR_LOGS . "`
+        WHERE module_slug IS NOT NULL AND module_slug != ''
+          AND severity IN ('ERROR', 'CRITICAL')
+        GROUP BY module_slug");
+    if ($ve) {
+        while ($row = $ve->fetch_assoc()) {
+            $m = (string)$row['module_slug'];
+            if (isset($verifyResults[$m])) {
+                $verifyResults[$m]['log_errors'] = (int)$row['cnt'];
+            }
+        }
+        $ve->free();
+    }
+}
+uksort($verifyResults, fn($a, $b) => strcmp($a, $b));
+$verifyPassCount = 0;
+$verifyPartialCount = 0;
+foreach ($verifyResults as $v) {
+    if ($v['observed_pages'] > 0 && $v['bad_rows'] === 0) {
+        $verifyPassCount++;
+    } else {
+        $verifyPartialCount++;
+    }
+}
 ?>
 
 <style>
@@ -494,6 +547,61 @@ $coveragePct = $totalCount > 0 ? round(($okCount / $totalCount) * 100, 1) : 0;
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="d-flex align-items-center gap-2 mb-2 mt-4">
+                <h5 class="mb-0"><i class="ph-shield-check me-1"></i> Logging Verification</h5>
+                <span class="small text-muted">per-module capture of bugs/logs in <code>view_backend_error_logs.php</code></span>
+            </div>
+            <div class="d-flex flex-wrap gap-2 mb-3">
+                <div class="stat-card">
+                    <div class="stat-val text-success"><?php echo number_format($verifyPassCount); ?></div>
+                    <div class="stat-lbl">Modules PASS</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-val text-warning"><?php echo number_format($verifyPartialCount); ?></div>
+                    <div class="stat-lbl">Untested / Needs Attention</div>
+                </div>
+            </div>
+
+            <div class="sweep-table-card">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover align-middle mb-0 sweep-table">
+                        <thead>
+                            <tr>
+                                <th>Module</th>
+                                <th style="width:90px;">Pages</th>
+                                <th style="width:110px;">Observed</th>
+                                <th style="width:130px;">Logged ERR/CRIT</th>
+                                <th style="width:110px;">Verification</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($verifyResults as $moduleName => $v): ?>
+                                <?php $pass = $v['observed_pages'] > 0 && $v['bad_rows'] === 0; ?>
+                                <tr>
+                                    <td><code><?php echo htmlspecialchars($moduleName, ENT_QUOTES); ?></code></td>
+                                    <td><?php echo (int)$v['page_count']; ?></td>
+                                    <td><?php echo (int)$v['observed_pages']; ?></td>
+                                    <td>
+                                        <?php if ((int)$v['log_errors'] > 0): ?>
+                                            <span class="badge bg-danger"><?php echo (int)$v['log_errors']; ?></span>
+                                        <?php else: ?>
+                                            <span class="badge bg-light text-muted">0</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <?php if ($pass): ?>
+                                            <span class="badge bg-success">PASS</span>
+                                        <?php else: ?>
+                                            <span class="badge bg-warning text-dark">PARTIAL</span>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
                             <?php endforeach; ?>
                         </tbody>
                     </table>

@@ -4,6 +4,7 @@
 use App\Core\DB;
 use App\Core\Session;
 use App\Service\JournalService;
+use App\Security\Roles;
 include('admin_elements/admin_header.php');
 
 $module             = 'payments_made';
@@ -293,6 +294,8 @@ if ($action == "update_$module" && !empty($id)) {
                     $mysqli->query("DELETE FROM `{$journal_table}` WHERE id={$existing_journal_id}");
                 }
 
+                \App\Helper\PdfGeneratorHelper::ensure('payments_made', (int)$payment_id);
+
                 flash_success($success_message);
                 header("Location:listing_$module.php");
             }
@@ -427,6 +430,8 @@ if ($action == "update_$module" && !empty($id)) {
                     }
                 }
 
+                \App\Helper\PdfGeneratorHelper::ensure('payments_made', (int)$payment_id);
+
                 flash_success($success_message);
                 header("Location:listing_$module.php");
             }
@@ -445,7 +450,9 @@ $tbl_payment_made = defined('DB::PAYMENTS_MADE') ? DB::PAYMENTS_MADE : $tbl_name
 $created_by = getTableAttr('created_by', $tbl_payment_made, $id);
 
 if (
-    (!empty($id) && Session::roleId() == '1')
+    (!empty($id) && Roles::currentUserHasFullAccess())
+    ||
+    (!empty($id) && (!empty($module_id) && granted('edit', $module_id)))
     ||
     (!empty($id) && Session::userId() == $created_by)
 ) {

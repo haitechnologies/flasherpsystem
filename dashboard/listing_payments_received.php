@@ -31,6 +31,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($action)) {
 }
 
 if (($action == "delete_$module" && !empty($id)) && granted('delete', $module_id)) {
+    if (!validate_csrf_token($_GET['csrf_token'] ?? $_POST['csrf_token'] ?? '')) {
+        log_error('CSRF token validation failed in listing_payments_received.php for delete action', 'WARNING', __FILE__, __LINE__, ['module' => 'payments_received', 'action' => 'delete', 'id' => (int)($id ?? 0)]);
+        flash_error('Invalid security token. Please refresh the page and try again.');
+        header("Location:listing_$module.php?page=$page");
+        exit;
+    }
     $idResult = InputValidator::integer($id, 1);
     if (!$idResult['valid']) {
         flash_error("Invalid payment ID: " . $idResult['error']);
@@ -53,6 +59,7 @@ if (($action == "delete_$module" && !empty($id)) && granted('delete', $module_id
                 exit;
             }
         } catch (\Throwable $e) {
+            log_error('Delete failed for payment: ' . $e->getMessage(), 'ERROR', $e->getFile(), $e->getLine(), ['module' => 'payments_received', 'action' => 'delete', 'id' => (int)($id ?? 0)]);
             flash_error($e->getMessage());
         }
     }
@@ -118,14 +125,15 @@ if (($action == "delete_$module" && !empty($id)) && granted('delete', $module_id
 
                 <div class="table-responsive">
 <table id="grid-<?php echo $module; ?>" class="table table-hover align-middle mb-0 custom_datatables datatable-professional display responsive nowrap" width="100%">
-                    <thead class="table-light border-bottom text-uppercase fs-8 fw-semibold text-muted">
+                    <thead>
                         <tr>
-                            <th class="ps-4">Payment</th>
-                            <th>Reference</th>
-                            <th>Customer</th>
-                            <th>Mode</th>
-                            <th class="text-end">Amount</th>
-                            <th class="text-center">Status</th>
+                            <th width="100">DATE</th>
+                            <th width="150">PAYMENT #</th>
+                            <th>REFERENCE #</th>
+                            <th>CUSTOMER NAME</th>
+                            <th>MODE</th>
+                            <th width="100" class="col-center">STATUS</th>
+                            <th width="100" class="text-end">AMOUNT</th>
                         </tr>
                     </thead>
                 </table>
@@ -163,35 +171,29 @@ $(document).ready(function() {
             }
         },
         columns: [
-            { data: null }, // col 0: Payment info
-            { data: 2 }, // col 1: Reference
-            { data: null }, // col 2: Customer
-            { data: 5 }, // col 3: Mode
-            { data: 6, className: 'text-end fw-semibold text-dark' }, // col 4: Amount
-            { data: 4, className: 'text-center' } // col 5: Status
+            { data: 0 }, // col 0: Date
+            { data: 1 }, // col 1: Payment #
+            { data: 2 }, // col 2: Reference
+            { data: 3 }, // col 3: Customer
+            { data: 5 }, // col 4: Mode
+            { data: 4, className: 'col-center' }, // col 5: Status
+            { data: 6, className: 'text-end' } // col 6: Amount
         ],
         columnDefs: [
             {
-                targets: 0,
+                targets: 1,
                 render: function(data, type, row) {
-                    var payDate = row[0] || '-';
                     var payNo = row[1] || '';
                     var id = row[7] || '';
-                    var html = '<div class="d-flex flex-column">';
-                    html += '<a href="payment_received_overview.php?payment_received_id=' + id + '" class="fw-semibold text-primary text-decoration-none hover-primary">' + payNo + '</a>';
-                    html += '<span class="text-muted fs-8">' + payDate + '</span>';
-                    html += '</div>';
-                    return html;
+                    return '<a href="payment_received_overview.php?payment_received_id=' + id + '" class="text-primary text-decoration-none hover-primary">' + payNo + '</a>';
                 }
             },
             {
-                targets: 2,
+                targets: 3,
                 render: function(data, type, row) {
                     var custName = row[3] || '';
                     var id = row[7] || '';
-                    return '<div class="d-flex flex-column">' +
-                           '<a href="payment_received_overview.php?payment_received_id=' + id + '" class="text-dark fw-medium text-decoration-none hover-primary">' + custName + '</a>' +
-                           '</div>';
+                    return '<a href="payment_received_overview.php?payment_received_id=' + id + '" class="text-dark text-decoration-none hover-primary">' + custName + '</a>';
                 }
             },
             {

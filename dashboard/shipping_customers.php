@@ -17,6 +17,7 @@ if (function_exists('handle_fatal_error')) {
 
 // Compatibility endpoint for a legacy shipping route.
 // Canonical page for this module in flasherpsystem is listing_shipping_customers.php.
+$GLOBALS['module'] = 'shipping_customers';
 header('Location: listing_shipping_customers.php');
 exit;
 

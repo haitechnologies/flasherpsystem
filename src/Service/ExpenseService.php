@@ -12,6 +12,7 @@ use App\Repository\ExpenseRepository;
 use App\Exception\NotFoundException;
 use App\Exception\ValidationException;
 use App\Helper\DateHelper;
+use App\Helper\PdfGeneratorHelper;
 
 class ExpenseService
 {
@@ -92,6 +93,8 @@ class ExpenseService
 
             $this->db->commit();
 
+            PdfGeneratorHelper::ensure('expenses', (int)$expenseId);
+
             return $savedExpense;
         } catch (\Throwable $e) {
             $this->db->rollBack();
@@ -167,6 +170,8 @@ class ExpenseService
             $this->createJournalEntry($id, $expenseDate, (int)($data['paid_through'] ?? $expense->paidThrough), (int)($data['vendor_id'] ?? $expense->vendorId), $updatedExpense->billable, (float)($data['grand_total'] ?? $expense->grandTotal));
 
             $this->db->commit();
+
+            PdfGeneratorHelper::ensure('expenses', (int)$id);
 
             return $savedExpense;
         } catch (\Throwable $e) {
