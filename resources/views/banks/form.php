@@ -63,7 +63,7 @@ include 'admin_elements/admin_header.php';
                         <div class="card">
                             <div class="card-body">
                                 <div class="row mb-3">
-                                    <label class="col-lg-3 col-form-label"><span class="text-danger">Bank Name:*</span></label>
+                                    <label class="col-lg-3 col-form-label"><span class="text-danger">Bank Name:*</span> <a href="listing_setup_banks.php" class="text-primary" title="Manage Banks (Institutions)"><i class="ph-bank"></i></a></label>
                                     <div class="col-lg-9">
                                         <select required class="form-select select2-enable" name="bank_name" id="uae_bank_select">
                                             <option value="">Please select</option>

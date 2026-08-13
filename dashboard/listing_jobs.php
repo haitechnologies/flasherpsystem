@@ -19,21 +19,28 @@ include('admin_elements/permissions.php');
 $activeOrganizationId = dashboardRequireActiveOrganization();
 
 if (($action == "delete_$module" && !empty($id))) {
-    if (Session::roleId() == '1') {
-        $mysqli->query("DELETE FROM `" . DB::QUOTATION_ITEMS . "` WHERE quotation_id=$id");
-        $mysqli->query("DELETE FROM `$tbl_name` WHERE id=$id ");
-    } else {
-        $mysqli->query("DELETE FROM `" . DB::QUOTATION_ITEMS . "` WHERE quotation_id=$id");
-        $mysqli->query("DELETE FROM `$tbl_name` WHERE id=$id AND created_by='" . Session::userId() . "'");
+    if (!granted('delete', $module_id)) {
+        flash_error("You do not have permission to delete this $module_caption.");
+        header("Location:listing_$module.php?page=$page");
+        exit;
     }
 
-    if ($mysqli->affected_rows > 0) {
-        $success_message = "$module_caption Deleted Successfully.";
-        flash_success($success_message);
+    if (!validate_csrf_token($_POST['csrf_token'] ?? '')) {
+        flash_error('Invalid security token.');
         header("Location:listing_$module.php?page=$page");
-    } else {
-        $error_message = "Sorry! $module Could Not Be Deleted. Only Super Administrator can delete this record.";
+        exit;
     }
+
+    try {
+        $container->get(\App\Service\JobService::class)->deleteJob((int)$id, (int)$activeOrganizationId);
+        flash_success("$module_caption Deleted Successfully.");
+    } catch (\Throwable $e) {
+        log_error($e->getMessage(), 'ERROR', $e->getFile(), $e->getLine(), ['module' => $module, 'action' => 'delete', 'id' => (int)$id]);
+        flash_error("Sorry! $module_caption Could Not Be Deleted.");
+    }
+
+    header("Location:listing_$module.php?page=$page");
+    exit;
 }
 
 $listingConfig = [

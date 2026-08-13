@@ -66,6 +66,10 @@ class JobRepository
      */
     public function findByField(string $field, string $value, int $orgId, int $excludeId = 0): ?Job
     {
+        if (!in_array($field, ['job_ref_no', 'job_no'], true)) {
+            throw new \InvalidArgumentException('Invalid field');
+        }
+
         $sql = "SELECT id, organization_id, job_date, job_status, warehouse_id, customer_id, quotation_id, job_ref_no, job_no, job_seq, sales_person, sales_person_from_lead, project_created, qrcode, currency, exchange_rate, transport_mode, shipment_type, job_owner, tags, services, cs_agent, incoterm, email, supplier_rate, estimated_net_profit, estimated_invoice_amount, etd, eta, carrier, vessel_name, vessel_departure_date, flight_no, flight_departure_date, job_completion_date, payment_terms, hawb, mawb, estimated_cost_amount, declaration_no, gross_weight, volume_weight, cbm, chargeable_weight, no_of_pieces, commodity_type, no_of_containers, insurance_needed, container_type, temperature_control_required, container_number, special_comments, landing_country, landing_port, loading_place, billing_city, billing_state, billing_code, billing_country, destination_country, destination_port, fdp, shipping_city, shipping_state, shipping_code, shipping_country, subject, terms_and_conditions, grand_subtotal, grand_discount_type, grand_discount_type_value, grand_discount_amount, grand_after_discount, customer_notes, grand_tax, grand_total, happy_customer, unhappy_reason, shipment_on_time, referral, notes, books_customer_id, quote_id, project_id, modified_by, customer_type, approved_time, approved_time_resubmission, publish, is_active, created_at, updated_at, updated_by, created_by, pdf FROM `{DB::JOBS}` WHERE $field = :value AND organization_id = :org_id";
         $params = ['value' => $value, 'org_id' => $orgId];
         if ($excludeId > 0) {
@@ -293,6 +297,11 @@ class JobRepository
      */
     public function delete(int $id, int $orgId): bool
     {
+        $this->db->execute(
+            "DELETE FROM `{DB::JOB_ITEMS}` WHERE job_id = :id AND organization_id = :org_id",
+            ['id' => $id, 'org_id' => $orgId]
+        );
+
         $sql = "DELETE FROM `{DB::JOBS}` WHERE id = :id AND organization_id = :org_id";
         $stmt = $this->db->execute($sql, ['id' => $id, 'org_id' => $orgId]);
         return $stmt->rowCount() > 0;
@@ -324,7 +333,7 @@ class JobRepository
             quotationId: isset($row['quotation_id']) ? (int)$row['quotation_id'] : null,
             jobReferenceNo: (string)($row['job_ref_no'] ?? ''),
             jobNo: (string)($row['job_no'] ?? ''),
-            jobSeq: (int)($row['job_seq'] ?? 0),
+            jobSeq: $row['job_seq'] !== null ? (string)$row['job_seq'] : null,
             salesPerson: (int)($row['sales_person'] ?? 0),
             salesPersonFromLead: (int)($row['sales_person_from_lead'] ?? 0),
             currency: (string)($row['currency'] ?? ''),

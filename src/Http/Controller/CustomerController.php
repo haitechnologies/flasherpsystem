@@ -383,15 +383,6 @@ class CustomerController extends BaseController
                 log_error('customers form dropdown load failed: ' . $e->getMessage(), 'WARNING', __FILE__, __LINE__, function_exists('backend_runtime_log_context') ? backend_runtime_log_context(['module' => 'customers', 'module_slug' => 'customers', 'error_code' => (string)$e->getCode()]) : ['module' => 'customers', 'module_slug' => 'customers', 'error_code' => (string)$e->getCode()]);
             }
         }
-        try {
-            $arAccountsList = $this->db->fetchAll("SELECT id, account_name, account_code FROM `" . DB::ACCOUNTS . "` WHERE is_active=1 AND account_type='Assets' ORDER BY account_name");
-        } catch (\Throwable $e) {
-            $arAccountsList = [];
-            if (function_exists('log_error')) {
-                log_error('customers form dropdown load failed: ' . $e->getMessage(), 'WARNING', __FILE__, __LINE__, function_exists('backend_runtime_log_context') ? backend_runtime_log_context(['module' => 'customers', 'module_slug' => 'customers', 'error_code' => (string)$e->getCode()]) : ['module' => 'customers', 'module_slug' => 'customers', 'error_code' => (string)$e->getCode()]);
-            }
-        }
-
         return Response::html($this->view->render('customers/form.php', [
             'id' => $id,
             'module' => $module,
@@ -430,7 +421,6 @@ class CustomerController extends BaseController
             'license_expiry' => $license_expiry,
             'opening_balance' => $opening_balance,
             'receivable_account_id' => $receivable_account_id,
-            'arAccountsList' => $arAccountsList,
             'currencyList' => $currencyList,
             'currency' => $currency,
             'exchange_rate' => $exchange_rate,

@@ -35,7 +35,6 @@ declare(strict_types=1);
  * @var string $license_expiry
  * @var string $opening_balance
  * @var string $receivable_account_id
- * @var array $arAccountsList
  * @var array $currencyList
  * @var string $currency
  * @var string $exchange_rate
@@ -272,11 +271,7 @@ include 'admin_elements/admin_header.php';
                                     <div class="col-lg-8">
                                         <select class="form-select" name="receivable_account_id" id="receivable_account_id">
                                             <option value=""></option>
-                                            <?php foreach ($arAccountsList as $acc): ?>
-                                                <option value="<?php echo htmlspecialchars((string)$acc['id']); ?>" <?php echo (string)$acc['id'] === $receivable_account_id ? 'selected' : ''; ?>>
-                                                    <?php echo htmlspecialchars($acc['account_code'] . ' - ' . $acc['account_name']); ?>
-                                                </option>
-                                            <?php endforeach; ?>
+                                            <?php echo fetchAccountsDropdown('Assets', '', (int)$receivable_account_id); ?>
                                         </select>
                                     </div>
                                 </div>

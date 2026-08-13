@@ -246,7 +246,6 @@ include 'admin_elements/admin_header.php';
         <div class="content">
             <?php include 'admin_elements/breadcrumb.php'; ?>
             <form class="steps-basic clearfix" method="post" id="frm<?php echo $module; ?>" name="frm<?php echo $module; ?>" action="<?php echo $module; ?>.php" enctype="multipart/form-data">
-                <input type="hidden" name="csrf_token" value="<?php echo csrf_token(); ?>">
                 <?php if ($id > 0): ?>
                     <input type="hidden" name="action" id="action" value="update_<?php echo $module; ?>" />
                     <input type="hidden" name="id" id="id" value="<?php echo $id; ?>" />
@@ -279,7 +278,7 @@ include 'admin_elements/admin_header.php';
                                 <div class="card-body">
                                     <?php $field = ['name'=>'currency', 'label'=>'Currency:', 'options_html'=>$currency_options_html, 'selected'=>$currency, 'empty_option'=>false]; include 'admin_elements/form_field_select.php'; ?>
 
-                                    <?php $field = ['name'=>'exchange_rate', 'label'=>'Exchange Rate:', 'value'=>$exchange_rate, 'type'=>'number']; include 'admin_elements/form_field_text.php'; ?>
+                                    <?php $field = ['name'=>'exchange_rate', 'label'=>'Exchange Rate:', 'value'=>$exchange_rate, 'type'=>'number', 'extra_attr'=>'step="any"']; include 'admin_elements/form_field_text.php'; ?>
 
                                     <?php $field = ['name'=>'transport_mode[]', 'label'=>'Transport Mode:', 'options_html'=>$transport_mode_options_html, 'extra_class'=>'form-control select select2-enable', 'multiple'=>true, 'empty_option'=>false]; include 'admin_elements/form_field_select.php'; ?>
 
@@ -341,9 +340,9 @@ include 'admin_elements/admin_header.php';
 
                                     <?php $field = ['name'=>'email', 'label'=>'Email:', 'value'=>$email, 'type'=>'email']; include 'admin_elements/form_field_text.php'; ?>
 
-                                    <?php $field = ['name'=>'supplier_rate', 'label'=>'Supplier Rates:', 'value'=>$supplier_rate, 'type'=>'number']; include 'admin_elements/form_field_text.php'; ?>
+                                    <?php $field = ['name'=>'supplier_rate', 'label'=>'Supplier Rates:', 'value'=>$supplier_rate, 'type'=>'number', 'extra_attr'=>'step="any"']; include 'admin_elements/form_field_text.php'; ?>
 
-                                    <?php $field = ['name'=>'estimated_net_profit', 'label'=>'Estimated Net Profit:', 'value'=>$estimated_net_profit, 'type'=>'number']; include 'admin_elements/form_field_text.php'; ?>
+                                    <?php $field = ['name'=>'estimated_net_profit', 'label'=>'Estimated Net Profit:', 'value'=>$estimated_net_profit, 'type'=>'number', 'extra_attr'=>'step="any"']; include 'admin_elements/form_field_text.php'; ?>
                                 </div>
                             </div>
                         </div>
@@ -353,7 +352,7 @@ include 'admin_elements/admin_header.php';
                                 <div class="card-body">
                                     <?php $field = ['name'=>'job_date', 'label'=>'Job Date:', 'value'=>$job_date]; include 'admin_elements/form_field_date.php'; ?>
 
-                                    <?php $field = ['name'=>'estimated_invoice_amount', 'label'=>'Estimated Invoice Amount:', 'value'=>$estimated_invoice_amount, 'type'=>'number']; include 'admin_elements/form_field_text.php'; ?>
+                                    <?php $field = ['name'=>'estimated_invoice_amount', 'label'=>'Estimated Invoice Amount:', 'value'=>$estimated_invoice_amount, 'type'=>'number', 'extra_attr'=>'step="any"']; include 'admin_elements/form_field_text.php'; ?>
 
                                     <?php $field = ['name'=>'etd', 'label'=>'ETD:', 'value'=>$etd]; include 'admin_elements/form_field_date.php'; ?>
 
@@ -400,7 +399,7 @@ include 'admin_elements/admin_header.php';
                                         </div>
                                     </div>
 
-                                    <?php $field = ['name'=>'estimated_cost_amount', 'label'=>'Estimated Cost Amount:', 'value'=>$estimated_cost_amount, 'type'=>'number']; include 'admin_elements/form_field_text.php'; ?>
+                                    <?php $field = ['name'=>'estimated_cost_amount', 'label'=>'Estimated Cost Amount:', 'value'=>$estimated_cost_amount, 'type'=>'number', 'extra_attr'=>'step="any"']; include 'admin_elements/form_field_text.php'; ?>
 
                                     <?php $field = ['name'=>'declaration_no', 'label'=>'Customs Declaration No:', 'required'=>true, 'value'=>$declaration_no]; include 'admin_elements/form_field_text.php'; ?>
                                 </div>
@@ -757,6 +756,7 @@ include 'admin_elements/admin_header.php';
                                         <label class="col-lg-3 col-form-label">Quote:</label>
                                         <div class="col-lg-9">
                                             <input type="text" class="form-control" value="<?php echo htmlspecialchars($quote_id); ?>" disabled>
+                                            <input type="hidden" name="quote_id" value="<?php echo htmlspecialchars((string)$quote_id); ?>">
                                         </div>
                                     </div>
                                 </div>
@@ -784,6 +784,7 @@ include 'admin_elements/admin_header.php';
                                         <label class="col-lg-3 col-form-label">Project ID:</label>
                                         <div class="col-lg-9">
                                             <input type="text" class="form-control" value="<?php echo htmlspecialchars($project_id); ?>" disabled>
+                                            <input type="hidden" name="project_id" value="<?php echo htmlspecialchars((string)$project_id); ?>">
                                         </div>
                                     </div>
 
@@ -1071,15 +1072,15 @@ function add_item_row() {
     new_row += '<input type="hidden" name="item_dim_id[]" id="item_dim_id' + total_rows + '">';
 
     new_row += '<div class="col-lg-2">';
-    new_row += '<input type="number" step="1" name="dim_length[]" id="dim_length' + total_rows + '" min="0" class="form-control text-center" onkeyup="calculateItemCBM(\'' + total_rows + '\');" onchange="calculateItemCBM(\'' + total_rows + '\');">';
+    new_row += '<input type="number" step="any" name="dim_length[]" id="dim_length' + total_rows + '" min="0" class="form-control text-center" onkeyup="calculateItemCBM(\'' + total_rows + '\');" onchange="calculateItemCBM(\'' + total_rows + '\');">';
     new_row += '</div>';
 
     new_row += '<div class="col-lg-2">';
-    new_row += '<input type="number" step="1" name="dim_width[]" id="dim_width' + total_rows + '" min="0" class="form-control text-center" onkeyup="calculateItemCBM(\'' + total_rows + '\');" onchange="calculateItemCBM(\'' + total_rows + '\');">';
+    new_row += '<input type="number" step="any" name="dim_width[]" id="dim_width' + total_rows + '" min="0" class="form-control text-center" onkeyup="calculateItemCBM(\'' + total_rows + '\');" onchange="calculateItemCBM(\'' + total_rows + '\');">';
     new_row += '</div>';
 
     new_row += '<div class="col-lg-2">';
-    new_row += '<input type="number" step="1" name="dim_height[]" id="dim_height' + total_rows + '" min="0" class="form-control text-center" onkeyup="calculateItemCBM(\'' + total_rows + '\');" onchange="calculateItemCBM(\'' + total_rows + '\');">';
+    new_row += '<input type="number" step="any" name="dim_height[]" id="dim_height' + total_rows + '" min="0" class="form-control text-center" onkeyup="calculateItemCBM(\'' + total_rows + '\');" onchange="calculateItemCBM(\'' + total_rows + '\');">';
     new_row += '</div>';
 
     new_row += '<div class="col-lg-1">';
@@ -1128,14 +1129,11 @@ function calculateItemCBM(row_no) {
         var dim_width_value = document.getElementById('dim_width' + row_no).value;
         var dim_height_value = document.getElementById('dim_height' + row_no).value;
 
-        var sum = parseFloat(dim_length_value) * parseFloat(dim_width_value) * parseFloat(dim_height_value);
-        var final_total = parseFloat(sum) * parseFloat(dim_pcs);
+        var cbm = (parseFloat(dim_length_value) / 100) * (parseFloat(dim_width_value) / 100) * (parseFloat(dim_height_value) / 100) * parseFloat(dim_pcs || 0);
+        cbm = cbm || 0;
 
-        var final_volume = parseFloat(final_total) / 1.66;
-        document.getElementById('dim_volume' + row_no).value = parseFloat(final_volume).toFixed(2);
-
-        var final_cbm = parseFloat(final_total).toFixed(2);
-        document.getElementById('dim_cbm' + row_no).value = parseFloat(final_cbm);
+        document.getElementById('dim_volume' + row_no).value = cbm.toFixed(4);
+        document.getElementById('dim_cbm' + row_no).value = cbm.toFixed(4);
     }
     calculateGrand();
 }

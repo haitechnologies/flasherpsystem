@@ -22,12 +22,14 @@ class JobService
     private JobRepository $jobRepo;
     private CustomerRepository $customerRepo;
     private Database $db;
+    private JobItemService $jobItemService;
 
-    public function __construct(JobRepository $jobRepo, CustomerRepository $customerRepo, Database $db)
+    public function __construct(JobRepository $jobRepo, CustomerRepository $customerRepo, Database $db, JobItemService $jobItemService)
     {
         $this->jobRepo = $jobRepo;
         $this->customerRepo = $customerRepo;
         $this->db = $db;
+        $this->jobItemService = $jobItemService;
     }
 
     /**
@@ -49,7 +51,7 @@ class JobService
      *
      * @throws ValidationException
      */
-    public function createJob(array $data, int $orgId, int $userId): Job
+    public function createJob(array $data, int $orgId, int $userId, array $jobItems = []): Job
     {
         $this->validateJobData($data, $orgId);
 
@@ -89,7 +91,7 @@ class JobService
                 quotationId: !empty($data['quotation_id']) ? (int)$data['quotation_id'] : null,
                 jobReferenceNo: !empty($data['job_ref_no']) ? trim((string)$data['job_ref_no']) : '',
                 jobNo: $jobNo,
-                jobSeq: !empty($data['job_seq']) ? (int)$data['job_seq'] : 0,
+                jobSeq: !empty($data['job_seq']) ? trim((string)$data['job_seq']) : null,
                 salesPerson: !empty($data['sales_person']) ? (int)$data['sales_person'] : 0,
                 salesPersonFromLead: !empty($data['sales_person_from_lead']) ? (int)$data['sales_person_from_lead'] : 0,
                 currency: !empty($data['currency']) ? trim((string)$data['currency']) : '0',
@@ -179,6 +181,10 @@ class JobService
 
             $savedJob = $this->jobRepo->save($job);
 
+            if (!empty($jobItems)) {
+                $this->jobItemService->replaceForJob((int)$savedJob->id, $orgId, $jobItems);
+            }
+
             $this->db->commit();
 
             return $savedJob;
@@ -194,7 +200,7 @@ class JobService
      * @throws NotFoundException
      * @throws ValidationException
      */
-    public function updateJob(int $id, array $data, int $orgId, int $userId): Job
+    public function updateJob(int $id, array $data, int $orgId, int $userId, array $jobItems = []): Job
     {
         $job = $this->getJob($id, $orgId);
         $this->validateJobData($data, $orgId);
@@ -222,7 +228,7 @@ class JobService
                 quotationId: isset($data['quotation_id']) ? (int)$data['quotation_id'] : $job->quotationId,
                 jobReferenceNo: isset($data['job_ref_no']) ? trim((string)$data['job_ref_no']) : $job->jobReferenceNo,
                 jobNo: isset($data['job_no']) ? trim((string)$data['job_no']) : $job->jobNo,
-                jobSeq: isset($data['job_seq']) ? (int)$data['job_seq'] : $job->jobSeq,
+                jobSeq: isset($data['job_seq']) ? (empty($data['job_seq']) ? null : trim((string)$data['job_seq'])) : $job->jobSeq,
                 salesPerson: isset($data['sales_person']) ? (int)$data['sales_person'] : $job->salesPerson,
                 salesPersonFromLead: isset($data['sales_person_from_lead']) ? (int)$data['sales_person_from_lead'] : $job->salesPersonFromLead,
                 currency: isset($data['currency']) ? trim((string)$data['currency']) : $job->currency,
@@ -311,6 +317,10 @@ class JobService
             );
 
             $savedJob = $this->jobRepo->save($updatedJob);
+
+            if (!empty($jobItems)) {
+                $this->jobItemService->replaceForJob((int)$savedJob->id, $orgId, $jobItems);
+            }
 
             $this->db->commit();
 

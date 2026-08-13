@@ -380,8 +380,8 @@ if ($total_rows == 0) $total_rows = 1;
     <div class="page-header page-header-light shadow carriers-page-header">
         <div class="page-header-content d-lg-flex border-top py-2 px-3 carriers-page-header-content align-items-center">
             <div class="my-1 d-flex align-items-center gap-2 flex-wrap">
-                <h5 class="mb-0">Job #<?php echo (int)$id; ?></h5>
-                <?php if (!empty($job_no)): ?><span class="text-muted small">(<?php echo htmlspecialchars((string)$job_no); ?>)</span><?php endif; ?>
+                <h5 class="mb-0">JOB# <?php echo htmlspecialchars((string)$job_no); ?></h5>
+                <?php if (!empty($job_ref_no)): ?><span class="text-muted small">(<?php echo htmlspecialchars((string)$job_ref_no); ?>)</span><?php endif; ?>
                 <label class="form-check-label text-muted small mb-0"><?php echo (!empty($job_status) ? strtoupper((string)getTableAttr("job_status", DB::JOB_STATUSES, $job_status)) : ''); ?></label>
             </div>
             <div class="my-1 ms-auto d-flex align-items-center gap-2 flex-wrap">

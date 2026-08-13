@@ -90,12 +90,8 @@ class JobController extends BaseController
         $jobData['id'] = $id;
 
         try {
-            $this->jobService->updateJob($id, $jobData, $this->orgId, $this->userId);
-
             $jobItems = $this->buildJobItemsData($request);
-            if (!empty($jobItems)) {
-                $this->jobItemService->replaceForJob($id, $this->orgId, $jobItems);
-            }
+            $this->jobService->updateJob($id, $jobData, $this->orgId, $this->userId, $jobItems);
 
             flash_success('The Job has been updated successfully.');
             return Response::redirect('listing_jobs.php');
@@ -122,13 +118,9 @@ class JobController extends BaseController
         $jobData = $this->buildJobData($request);
 
         try {
-            $newJob = $this->jobService->createJob($jobData, $this->orgId, $this->userId);
-            $id = $newJob->id;
-
             $jobItems = $this->buildJobItemsData($request);
-            if (!empty($jobItems)) {
-                $this->jobItemService->replaceForJob($id, $this->orgId, $jobItems);
-            }
+            $newJob = $this->jobService->createJob($jobData, $this->orgId, $this->userId, $jobItems);
+            $id = $newJob->id;
 
             flash_success('The Job has been saved successfully.');
             return Response::redirect('listing_jobs.php');
@@ -452,9 +444,9 @@ class JobController extends BaseController
         $no_of_pieces = '';
         $commodity_type = '0';
         $no_of_containers = '';
-        $insurance_needed = '0';
+        $insurance_needed = '';
         $container_type = '0';
-        $temperature_control_required = '0';
+        $temperature_control_required = '';
         $container_number = '';
         $special_comments = '';
         $landing_country = '0';
@@ -987,10 +979,10 @@ class JobController extends BaseController
         }
         try {
             $row = $this->db->fetchOne(
-                "SELECT email FROM `" . DB::USERS . "` WHERE id = :id",
+                "SELECT full_name FROM `" . DB::USERS . "` WHERE id = :id",
                 ['id' => $userId]
             );
-            return $row ? ($row['email'] ?? (string)$userId) : (string)$userId;
+            return $row ? ($row['full_name'] ?? (string)$userId) : (string)$userId;
         } catch (\Throwable $e) {
             return (string)$userId;
         }

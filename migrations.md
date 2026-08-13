@@ -28,6 +28,7 @@ mysql -u <user> -p <db_name> < migrations/2026_08_13_create_setup_banks.sql
 mysql -u <user> -p <db_name> < migrations/2026_08_13_alter_setup_banks_register_no_nullable.sql
 mysql -u <user> -p <db_name> < migrations/2026_08_13_simplify_setup_banks.sql
 mysql -u <user> -p <db_name> < migrations/2026_08_13_jobs_string_columns.sql
+mysql -u <user> -p <db_name> < migrations/2026_08_13_jobs_col_widen.sql
 ```
 
 **Method B — PHP (project bootstrap, single statement):**
@@ -38,6 +39,7 @@ $files = [
     'migrations/2026_08_13_alter_setup_banks_register_no_nullable.sql',
     'migrations/2026_08_13_simplify_setup_banks.sql',
     'migrations/2026_08_13_jobs_string_columns.sql',
+    'migrations/2026_08_13_jobs_col_widen.sql',
 ];
 foreach ($files as $f) {
     $sql = file_get_contents($f);
@@ -52,7 +54,8 @@ foreach ($files as $f) {
 
 > **Idempotency note:** `create_setup_banks.sql` is idempotent (`CREATE TABLE
 > IF NOT EXISTS` + `WHERE NOT EXISTS` guards). The `ALTER TABLE` migrations
-> (`alter_..._nullable` and `simplify_...`) are **not** idempotent — re-running
+> (`alter_..._nullable`, `simplify_...`, `jobs_string_columns`, and
+> `jobs_col_widen`) are **not** idempotent — re-running
 > them after the column is already dropped/nullable will error with
 > "Unknown column". Run each exactly once, in order.
 
@@ -84,6 +87,14 @@ foreach ($files as $f) {
 - Nulls out previously zeroed values (`SET x = NULL WHERE x = 0`) so empty
   values display blank instead of `0`.
 
+### 5. `2026_08_13_jobs_col_widen.sql`
+- Widens `erp_jobs` columns that truncated user input: `job_no`
+  `VARCHAR(10) → VARCHAR(50)` (the `FL-JBym-XXXX` auto-gen format is 14 chars)
+  and `transport_mode` / `shipment_type` `VARCHAR(20) → VARCHAR(100)` (comma-joined
+  multi-select values exceeded 20 chars).
+- Deactivates the duplicate `pending_approval` job status (`id = 7`) so status
+  lookups resolve to the canonical row (`id = 3`).
+
 ## Post-deploy verification
 
 ```sql
@@ -97,4 +108,10 @@ SELECT id, slug, module_name FROM erp_modules WHERE slug = 'setup_banks';
 SHOW COLUMNS FROM erp_jobs LIKE 'loading_place';
 SHOW COLUMNS FROM erp_jobs LIKE 'fdp';
 SHOW COLUMNS FROM erp_jobs LIKE 'container_number';
+
+-- jobs widened columns + deduped status
+SHOW COLUMNS FROM erp_jobs LIKE 'job_no';          -- varchar(50)
+SHOW COLUMNS FROM erp_jobs LIKE 'transport_mode';  -- varchar(100)
+SHOW COLUMNS FROM erp_jobs LIKE 'shipment_type';   -- varchar(100)
+SELECT id, job_status, is_active FROM erp_job_statuses WHERE LOWER(job_status) = 'pending_approval';
 ```

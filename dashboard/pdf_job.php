@@ -183,8 +183,8 @@ $d_volume_weight    = nz((string)($row['volume_weight'] ?? ''));
 $d_cbm              = nz((string)($row['cbm'] ?? ''));
 $d_chargeable_weight = nz((string)($row['chargeable_weight'] ?? ''));
 $d_no_pieces        = nz((string)($row['no_of_pieces'] ?? ''));
-$d_insurance        = ((string)($row['insurance_needed'] ?? '') === '1') ? 'Yes' : 'No';
-$d_temp_control     = ((string)($row['temperature_control_required'] ?? '') === '1') ? 'Yes' : 'No';
+$d_insurance        = ((string)($row['insurance_needed'] ?? '') === '') ? '' : (((string)($row['insurance_needed'] ?? '') === '1') ? 'Yes' : 'No');
+$d_temp_control     = ((string)($row['temperature_control_required'] ?? '') === '') ? '' : (((string)($row['temperature_control_required'] ?? '') === '1') ? 'Yes' : 'No');
 $d_special_comments = s__((string)($row['special_comments'] ?? ''));
 
 $d_subtotal         = number_format((float)($row['grand_subtotal'] ?? 0), 2);
@@ -205,9 +205,9 @@ $d_billing_city     = s__((string)($row['billing_city'] ?? ''));
 $d_billing_state    = s__((string)($row['billing_state'] ?? ''));
 $d_billing_code     = s__((string)($row['billing_code'] ?? ''));
 
-$d_happy            = ((string)($row['happy_customer'] ?? '') === 'yes') ? 'Yes' : 'No';
+$d_happy            = ((string)($row['happy_customer'] ?? '') === '') ? '' : (((string)($row['happy_customer'] ?? '') === 'yes') ? 'Yes' : 'No');
 $d_unhappy          = s__((string)($row['unhappy_reason'] ?? ''));
-$d_ontime           = ((string)($row['shipment_on_time'] ?? '') === 'yes') ? 'Yes' : 'No';
+$d_ontime           = ((string)($row['shipment_on_time'] ?? '') === '') ? '' : (((string)($row['shipment_on_time'] ?? '') === 'yes') ? 'Yes' : 'No');
 $d_referral         = s__((string)($row['referral'] ?? ''));
 
 $d_notes            = s__((string)($row['notes'] ?? ''));

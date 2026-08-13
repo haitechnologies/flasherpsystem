@@ -39,6 +39,12 @@ class BanksDataTable extends BaseDataTable
         $currency = (string)($row['currency_name'] ?? $row['currency'] ?? '');
         $code     = (string)($row['account_code'] ?? '');
         $bankName = (string)($row['bank_name'] ?? '');
+        $bankNameCell = $bankName !== ''
+            ? '<a href="banks.php?action=edit_banks&id=' . $id . '" class="text-body text-decoration-none" title="Open">'
+                . htmlspecialchars($bankName)
+                . ' <i class="ph-bank text-primary"></i>'
+                . '</a>'
+            : '';
         $branch   = (string)($row['branch'] ?? '');
         $iban     = (string)($row['iban'] ?? '');
         $routing  = (string)($row['routing_number'] ?? '');
@@ -48,7 +54,7 @@ class BanksDataTable extends BaseDataTable
             htmlspecialchars($name),
             htmlspecialchars($currency),
             htmlspecialchars($code),
-            htmlspecialchars($bankName),
+            $bankNameCell,
             htmlspecialchars($branch),
             htmlspecialchars($iban),
             htmlspecialchars($routing),
