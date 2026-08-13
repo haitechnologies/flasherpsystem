@@ -42,7 +42,6 @@ class BanksDataTable extends BaseDataTable
         $bankNameCell = $bankName !== ''
             ? '<a href="banks.php?action=edit_banks&id=' . $id . '" class="text-body text-decoration-none" title="Open">'
                 . htmlspecialchars($bankName)
-                . ' <i class="ph-bank text-primary"></i>'
                 . '</a>'
             : '';
         $branch   = (string)($row['branch'] ?? '');
