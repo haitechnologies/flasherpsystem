@@ -379,11 +379,10 @@ if ($total_rows == 0) $total_rows = 1;
     <!-- Page header -->
     <div class="page-header page-header-light shadow carriers-page-header">
         <div class="page-header-content d-lg-flex border-top py-2 px-3 carriers-page-header-content align-items-center">
-            <div class="my-1">
-                <h5 class="ms-2"><?php echo (!empty($job_no) ? htmlspecialchars((string)$job_no) : ('Job #: ' . (int)$id)); ?></h5>
-                <div class="p-3 rounded mt-1">
-                    <label class="form-check-label text-muted small"><?php echo (!empty($job_status) ? strtoupper((string)getTableAttr("job_status", DB::JOB_STATUSES, $job_status)) : ''); ?></label>
-                </div>
+            <div class="my-1 d-flex align-items-center gap-2 flex-wrap">
+                <h5 class="mb-0">Job #<?php echo (int)$id; ?></h5>
+                <?php if (!empty($job_no)): ?><span class="text-muted small">(<?php echo htmlspecialchars((string)$job_no); ?>)</span><?php endif; ?>
+                <label class="form-check-label text-muted small mb-0"><?php echo (!empty($job_status) ? strtoupper((string)getTableAttr("job_status", DB::JOB_STATUSES, $job_status)) : ''); ?></label>
             </div>
             <div class="my-1 ms-auto d-flex align-items-center gap-2 flex-wrap">
 
@@ -453,12 +452,6 @@ if ($total_rows == 0) $total_rows = 1;
                     <div class="row">
                         <div class="col-lg-6">
                             <div class="card">
-
-                                <div class="card-header d-flex align-items-center">
-                                    <h6 class="mb-0">
-                                        <?php echo $module_caption; ?># <?php echo $id; ?>
-                                    </h6>
-                                </div>
 
                                 <div class="card-body">
 

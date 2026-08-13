@@ -270,7 +270,11 @@ class JobController extends BaseController
             $volume = trim((string)($dimVolumes[$idx] ?? ''));
             $cbm = trim((string)($dimCbms[$idx] ?? ''));
 
-            if ($length === '' && $width === '' && $height === '') {
+            $lengthEmpty = ($length === '' || (is_numeric($length) && (float)$length == 0.0));
+            $widthEmpty = ($width === '' || (is_numeric($width) && (float)$width == 0.0));
+            $heightEmpty = ($height === '' || (is_numeric($height) && (float)$height == 0.0));
+
+            if ($lengthEmpty && $widthEmpty && $heightEmpty) {
                 continue;
             }
 

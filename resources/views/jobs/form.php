@@ -570,13 +570,13 @@ include 'admin_elements/admin_header.php';
                                     <h6 class="mb-0">Commodity Details</h6>
                                 </div>
                                 <div class="card-body">
-                                    <?php $field = ['name'=>'gross_weight', 'label'=>'Gross Weight:', 'value'=>$gross_weight, 'type'=>'number']; include 'admin_elements/form_field_text.php'; ?>
+                                    <?php $field = ['name'=>'gross_weight', 'label'=>'Gross Weight:', 'value'=>$gross_weight, 'type'=>'number', 'extra_attr'=>'step="any"']; include 'admin_elements/form_field_text.php'; ?>
 
-                                    <?php $field = ['name'=>'volume_weight', 'label'=>'Volume Weight:', 'value'=>$volume_weight, 'type'=>'number']; include 'admin_elements/form_field_text.php'; ?>
+                                    <?php $field = ['name'=>'volume_weight', 'label'=>'Volume Weight:', 'value'=>$volume_weight, 'type'=>'number', 'extra_attr'=>'step="any"']; include 'admin_elements/form_field_text.php'; ?>
 
-                                    <?php $field = ['name'=>'cbm', 'label'=>'CBM:', 'value'=>$cbm, 'type'=>'number', 'step'=>'0.0001']; include 'admin_elements/form_field_text.php'; ?>
+                                    <?php $field = ['name'=>'cbm', 'label'=>'CBM:', 'value'=>$cbm, 'type'=>'number', 'extra_attr'=>'step="any"']; include 'admin_elements/form_field_text.php'; ?>
 
-                                    <?php $field = ['name'=>'chargeable_weight', 'label'=>'Chargeable Weight:', 'value'=>$chargeable_weight, 'type'=>'number']; include 'admin_elements/form_field_text.php'; ?>
+                                    <?php $field = ['name'=>'chargeable_weight', 'label'=>'Chargeable Weight:', 'value'=>$chargeable_weight, 'type'=>'number', 'extra_attr'=>'step="any"']; include 'admin_elements/form_field_text.php'; ?>
 
                                     <?php $field = ['name'=>'no_of_pieces', 'label'=>'No. of Pieces:', 'value'=>$no_of_pieces, 'type'=>'number']; include 'admin_elements/form_field_text.php'; ?>
 

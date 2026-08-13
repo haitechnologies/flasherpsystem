@@ -142,9 +142,9 @@ $d_tags             = s__((string)($row['tags'] ?? ''));
 $d_services         = $services_display;
 $d_warehouse        = s__(getTableAttr('warehouse_name', DB::ORGANIZATIONS, $warehouse_id));
 $d_email            = s__((string)($row['email'] ?? ''));
-$d_incoterm         = s__((string)($row['incoterm'] ?? ''));
+$d_incoterm         = getTableAttr('incoterm', DB::INCOTERMS, (int)($row['incoterm'] ?? 0));
 $d_subject          = s__((string)($row['subject'] ?? ''));
-$d_job_owner        = s__((string)($row['job_owner'] ?? ''));
+$d_job_owner        = getTableAttr('full_name', DB::USERS, (int)($row['job_owner'] ?? 0));
 $d_quotation_id     = nz((string)($row['quotation_id'] ?? ''));
 
 $d_loading_country  = s__($landing_country);
