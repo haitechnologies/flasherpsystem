@@ -53,7 +53,7 @@ foreach ($customersList as $c) {
                         value="1"
                         form="frm<?php echo $module; ?>"
                         <?php if ($billable) echo 'checked'; ?>
-                        <?php if (empty($customer_id) || (int)$customer_id === 0) echo 'disabled'; ?>>
+                        <?php if (!$billable && (empty($customer_id) || (int)$customer_id === 0)) echo 'disabled'; ?>>
                     <label class="form-check-label" for="billable">Billable</label>
                 </div>
             </div>
@@ -73,6 +73,12 @@ foreach ($customersList as $c) {
     <div class="content-inner">
         <div class="content">
             <?php include('admin_elements/breadcrumb.php'); ?>
+            <?php if (!empty($error_message)): ?>
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="ph-warning-circle me-2"></i><?php echo e_s__($error_message); ?>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            <?php endif; ?>
             <div class="alert alert-info alert-dismissible fade show" role="alert">
                 <i class="ph-info me-2"></i>
                 <strong>How this works:</strong> Expenses record costs you've incurred. They reduce your profit. Paid expenses affect your bank/cash balance. Affects: Profit &amp; Loss, General Ledger.
@@ -157,7 +163,7 @@ foreach ($customersList as $c) {
                                                             <textarea name="description[]" id="description<?php echo $expense_item; ?>" rows="2" class="form-control" placeholder="Add a description to your expense"><?php echo $description_val; ?></textarea>
                                                         </div>
                                                         <div class="col-lg-1">
-                                                            <input type="number" name="total[]" id="total<?php echo $expense_item; ?>" min="0" class="form-control text-end" placeholder="0" value="<?php echo $total_val; ?>" onchange="calculateGrand();" onkeyup="calculateGrand();">
+                                                            <input type="number" name="total[]" id="total<?php echo $expense_item; ?>" min="0" step="any" class="form-control text-end" placeholder="0" value="<?php echo $total_val; ?>" onchange="calculateGrand();" onkeyup="calculateGrand();">
                                                         </div>
                                                         <div class="col-lg-2 mt-1">
                                                             <?php if ($expense_item > 1): ?>
@@ -226,23 +232,24 @@ function add_item_row() {
     new_row += "<input type=\"hidden\" name=\"item_id[]\" id=\"item_id" + total_rows + "\">";
     new_row += "<div class=\"col-lg-2\">";
     new_row += "<select class=\"form-select\" name=\"expense_account[]\" id=\"expense_account" + total_rows + "\">";
-    new_row += "<option value=\"0\">Please select</option>";
+    new_row += "<option value=\"0\" class=\"fw-semibold text-black\" disabled>Expense</option>";
+    new_row += expenseAccountOptionsHtml;
     new_row += "</select>";
     new_row += "</div>";
     new_row += "<div class=\"col-lg-4\">";
     new_row += "<textarea name=\"description[]\" id=\"description" + total_rows + "\" rows=\"2\" placeholder=\"Add a description to your expense\" class=\"form-control\"></textarea>";
     new_row += "</div>";
     new_row += "<div class=\"col-lg-1\">";
-    new_row += "<input type=\"number\" name=\"total[]\" id=\"total" + total_rows + "\" min=\"0\" class=\"form-control text-end\" placeholder=\"0\" onchange=\"calculateGrand();\" onkeyup=\"calculateGrand();\">";
+    new_row += "<input type=\"number\" name=\"total[]\" id=\"total" + total_rows + "\" min=\"0\" step=\"any\" class=\"form-control text-end\" placeholder=\"0\" onchange=\"calculateGrand();\" onkeyup=\"calculateGrand();\">";
     new_row += "</div>";
     new_row += "<div class=\"col-lg-1 mt-1\"><span id=\"span_remove_item_row" + total_rows + "\"> <a href=\"#\" onclick=\"clear_row(" + total_rows + ")\"><span class=\"badge bg-warning\"> <i class=\"ph-x\"></i> </span></a></span></div>";
     new_row += "</div>";
 
     document.getElementById('add_row_here').insertAdjacentHTML("beforebegin", new_row);
     document.getElementById('total_rows').value = total_rows;
-
-    ajax_populate_expense_coa();
 }
+
+var expenseAccountOptionsHtml = <?php echo json_encode(fetchAccountsDropdown(array(5), '', '')); ?>;
 
 function clear_row(row_no) {
     calculateGrand();

@@ -125,6 +125,17 @@ class CustomerAddressController extends BaseController
             }
         }
 
+        try {
+            $countriesList = $this->db->fetchAll("SELECT id, country FROM `" . DB::GEO_COUNTRIES . "` WHERE is_active=1 ORDER BY country");
+        } catch (\Throwable $e) {
+            $countriesList = [];
+            log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
+                'module' => $this->moduleSlug,
+                'module_slug' => $this->moduleSlug,
+                'error_code' => (string)$e->getCode(),
+            ]));
+        }
+
         $attention = '';
         $country = '0';
         $address_line1 = '';
@@ -183,6 +194,7 @@ class CustomerAddressController extends BaseController
             'phone' => $phone,
             'fax' => $fax,
             'addressType' => $this->addressType,
+            'countriesList' => $countriesList,
             'canEdit' => $this->canEdit(),
         ]));
     }

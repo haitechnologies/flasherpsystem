@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use App\Core\DB;
 use App\Core\Session;
+use App\Core\Container;
+use App\Service\ExpenseService;
 
 include('admin_elements/admin_header.php');
 
@@ -12,12 +14,6 @@ $module_caption = 'Expense';
 $tbl_name = DB::EXPENSES;
 $error_message = '';
 $success_message = '';
-
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\SMTP;
-use PHPMailer\PHPMailer\Exception;
-
-require '../vendor/autoload.php';
 
 include('admin_elements/permissions.php');
 
@@ -36,34 +32,20 @@ if (!empty($action) && $action == "delete_$module") {
 
 if (($action == "delete_$module" && !empty($id)) && granted('delete', $module_id)) {
     $expenseId = (int)$id;
-    $uid = (int)Session::userId();
-    if (is_SystemAdmin() || is_SuperAdmin()) {
-        $mysqli->query("DELETE FROM `" . tbl_expense_items . "` WHERE expense_id=$expenseId AND organization_id=$activeOrganizationId");
-        $mysqli->query("DELETE FROM `" . tbl_expense_attachments . "` WHERE expense_id=$expenseId AND organization_id=$activeOrganizationId");
-        $mysqli->query("DELETE FROM `$tbl_name` WHERE id=$expenseId AND organization_id=$activeOrganizationId");
-
-        $journal_id = getTableAttrV('id', DB::JOURNALS, " reference_type='expense' AND reference_id=$expenseId AND organization_id=$activeOrganizationId ");
-        if (!empty($journal_id)) {
-            $mysqli->query("DELETE FROM `" . DB::JOURNAL_ITEMS . "` WHERE journal_id=$journal_id ");
-            $mysqli->query("DELETE FROM `" . DB::JOURNALS . "` WHERE reference_type='expense' AND reference_id=$expenseId AND organization_id=$activeOrganizationId ");
-        }
-    } else {
-        $mysqli->query("DELETE FROM `" . tbl_expense_items . "` WHERE expense_id=$expenseId AND organization_id=$activeOrganizationId AND created_by ='$uid'");
-        $mysqli->query("DELETE FROM `" . tbl_expense_attachments . "` WHERE expense_id=$expenseId AND organization_id=$activeOrganizationId AND created_by ='$uid'");
-        $mysqli->query("DELETE FROM `$tbl_name` WHERE id=$expenseId AND organization_id=$activeOrganizationId AND created_by ='$uid'");
-
-        $journal_id = getTableAttrV('id', DB::JOURNALS, " reference_type='expense' AND reference_id=$expenseId AND organization_id=$activeOrganizationId ");
-        if (!empty($journal_id)) {
-            $mysqli->query("DELETE FROM `" . DB::JOURNAL_ITEMS . "` WHERE journal_id=$journal_id ");
-            $mysqli->query("DELETE FROM `" . DB::JOURNALS . "` WHERE reference_type='expense' AND reference_id=$expenseId AND organization_id=$activeOrganizationId AND created_by='$uid' ");
-        }
-    }
-
-    if ($mysqli->affected_rows > 0) {
+    $orgId = (int)$activeOrganizationId;
+    try {
+        $expenseService = Container::getInstance()->get(ExpenseService::class);
+        $expenseService->deleteExpense($expenseId, $orgId);
         $success_message = "Item deleted successfully.";
         flash_success($success_message);
         header("Location:listing_$module.php");
-    } else {
+        exit;
+    } catch (\Throwable $e) {
+        log_error($e->getMessage(), 'ERROR', $e->getFile(), $e->getLine(), backend_runtime_log_context([
+            'module' => 'expenses',
+            'module_slug' => 'expenses',
+            'expense_id' => $expenseId,
+        ]));
         $error_message = "Action denied. You are not authorized to delete this record.";
     }
 }

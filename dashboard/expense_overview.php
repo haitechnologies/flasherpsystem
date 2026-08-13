@@ -28,6 +28,18 @@ $activeOrganizationId = dashboardRequireActiveOrganization();
 */
 include('admin_elements/permissions.php');
 
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && !empty($action)) {
+    if (!validate_csrf_token($_POST['csrf_token'] ?? '')) {
+        log_error('Invalid CSRF token on expense overview POST', 'SECURITY', __FILE__, __LINE__, backend_runtime_log_context([
+            'module' => $module,
+            'module_slug' => $module,
+        ]));
+        flash_error('Invalid CSRF token.');
+        header("Location:expense_overview.php?expense_id=" . e_s__($_REQUEST['expense_id'] ?? ''));
+        exit;
+    }
+}
+
 
 /*
 |--------------------------------------------------------------------------
@@ -124,7 +136,7 @@ if (isset($_POST['attachment_id']))           $attachment_id     = e_s__($_POST[
 |--------------------------------------------------------------------------
 |
 */
-if (($action == "delete_$module" && !empty($expense_id)) && granted('delete', $module_id)) {
+if (($action == "delete_expense_attachments" && !empty($attachment_id)) && granted('delete', $module_id)) {
 
     if (is_SystemAdmin() || is_SuperAdmin()) {
 
@@ -213,7 +225,7 @@ if ($action == "add_$module" && granted('create', $module_id)) {
 |--------------------------------------------------------------------------
 |
 */
-if (($action == "clone_$module" && !empty($expense_id))) {
+if (($action == "clone_$module" && !empty($expense_id)) && granted('create', $module_id)) {
 
     // 1. Clone the Parent Expense
     $result = $mysqli->query("INSERT INTO `" . tbl_expenses . "` (expense_date, paid_through, vendor_id, reference_no, customer_id, grand_total, expense_status, is_active, organization_id, created_at, updated_at, created_by)
@@ -245,7 +257,7 @@ if (($action == "clone_$module" && !empty($expense_id))) {
 |--------------------------------------------------------------------------
 |
 */
-if (($action == "convert_to_invoice" && !empty($expense_id))) {
+if (($action == "convert_to_invoice" && !empty($expense_id)) && granted('create', $module_id)) {
 
     // Get expense details
     $expense_result = $mysqli->query("SELECT * FROM `" . tbl_expenses . "` WHERE id=$expense_id");
@@ -552,6 +564,7 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
 
 
                                     <form method="post" id="frm<?php echo $module; ?>" name="frm<?php echo $module; ?>" action="expense_overview.php" autocomplete="off" enctype="multipart/form-data">
+                                        <input type="hidden" name="csrf_token" value="<?php echo csrf_token(); ?>">
                                         <input type="hidden" name="expense_id" id="expense_id" value="<?php echo $expense_id; ?>" />
 
                                         <?php if (($action == "edit_$module" || $action == "update_$module") && !empty($expense_id)) { ?>

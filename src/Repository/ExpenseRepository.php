@@ -20,7 +20,10 @@ class ExpenseRepository
 
     public function find(int $id, int $orgId): ?Expense
     {
-        $sql = "SELECT * FROM `{DB::EXPENSES}` WHERE id = :id AND organization_id = :org_id";
+        $sql = "SELECT id, organization_id, expense_date, paid_through, vendor_id, reference_no,
+                       customer_id, billable, grand_total, expense_status, publish, is_active,
+                       created_at, updated_at, created_by, updated_by
+                FROM `{DB::EXPENSES}` WHERE id = :id AND organization_id = :org_id";
         $row = $this->db->fetchOne($sql, ['id' => $id, 'org_id' => $orgId]);
         if ($row === null) {
             return null;
@@ -30,7 +33,9 @@ class ExpenseRepository
 
     public function findItemsByExpense(int $expenseId, int $orgId): array
     {
-        $sql = "SELECT * FROM `{DB::EXPENSE_ITEMS}` WHERE expense_id = :expense_id AND organization_id = :org_id ORDER BY id ASC";
+        $sql = "SELECT id, organization_id, expense_id, expense_account, description, total,
+                       created_at, updated_at, created_by
+                FROM `{DB::EXPENSE_ITEMS}` WHERE expense_id = :expense_id AND organization_id = :org_id ORDER BY id ASC";
         $rows = $this->db->fetchAll($sql, ['expense_id' => $expenseId, 'org_id' => $orgId]);
         $items = [];
         foreach ($rows as $row) {
@@ -153,7 +158,9 @@ class ExpenseRepository
 
     public function findItem(int $id, int $orgId): ?ExpenseItem
     {
-        $sql = "SELECT * FROM `{DB::EXPENSE_ITEMS}` WHERE id = :id AND organization_id = :org_id";
+        $sql = "SELECT id, organization_id, expense_id, expense_account, description, total,
+                       created_at, updated_at, created_by
+                FROM `{DB::EXPENSE_ITEMS}` WHERE id = :id AND organization_id = :org_id";
         $row = $this->db->fetchOne($sql, ['id' => $id, 'org_id' => $orgId]);
         if ($row === null) {
             return null;

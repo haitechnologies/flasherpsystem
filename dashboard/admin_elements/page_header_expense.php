@@ -34,7 +34,12 @@ if (empty($display_no)) $display_no = getTableAttr('id', DB::EXPENSES, $expense_
                     <div class="dropdown-divider"></div>
                     <a href="#journal" class="dropdown-item"><i class="ph-stack me-2"></i> View Journal</a>
                     <div class="dropdown-divider"></div>
-                    <a href="listing_<?php echo $module; ?>.php?action=delete_<?php echo $module; ?>&id=<?php echo $expense_id; ?>" class="dropdown-item"><i class="ph-trash me-2"></i> Delete</a>
+                    <form method="post" action="listing_<?php echo $module; ?>.php" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this expense?');">
+                        <input type="hidden" name="action" value="delete_<?php echo $module; ?>">
+                        <input type="hidden" name="id" value="<?php echo $expense_id; ?>">
+                        <input type="hidden" name="csrf_token" value="<?php echo csrf_token(); ?>">
+                        <button type="submit" class="dropdown-item"><i class="ph-trash me-2"></i> Delete</button>
+                    </form>
                 </div>
             </div>
         </div>

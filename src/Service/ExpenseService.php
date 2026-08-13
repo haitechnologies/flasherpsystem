@@ -89,7 +89,7 @@ class ExpenseService
                 $this->expenseRepo->saveItem($item);
             }
 
-            $this->createJournalEntry($expenseId, $expenseDate, (int)($data['paid_through'] ?? 0), (int)($data['vendor_id'] ?? 0), !empty($data['billable']), (float)($data['grand_total'] ?? 0.0));
+            $this->createJournalEntry($expenseId, $expenseDate, (int)($data['paid_through'] ?? 0), (int)($data['vendor_id'] ?? 0), !empty($data['billable']));
 
             $this->db->commit();
 
@@ -106,6 +106,10 @@ class ExpenseService
     {
         $expense = $this->getExpense($id, $orgId);
         $this->validateExpenseData($data);
+
+        if (empty($itemsData)) {
+            throw new ValidationException(['items' => "No items added. Please add at least one item."]);
+        }
 
         $this->db->beginTransaction();
         try {
@@ -166,8 +170,8 @@ class ExpenseService
                 $this->expenseRepo->deleteItemsByIds($deletedIds, $id, $orgId);
             }
 
-            $this->deleteJournalEntry($id);
-            $this->createJournalEntry($id, $expenseDate, (int)($data['paid_through'] ?? $expense->paidThrough), (int)($data['vendor_id'] ?? $expense->vendorId), $updatedExpense->billable, (float)($data['grand_total'] ?? $expense->grandTotal));
+        $this->deleteJournalEntry($id, $orgId);
+        $this->createJournalEntry($id, $expenseDate, (int)($data['paid_through'] ?? $expense->paidThrough), (int)($data['vendor_id'] ?? $expense->vendorId), $updatedExpense->billable);
 
             $this->db->commit();
 
@@ -186,7 +190,8 @@ class ExpenseService
 
         $this->db->beginTransaction();
         try {
-            $this->deleteJournalEntry($id);
+            $this->deleteJournalEntry($id, $orgId);
+            $this->deleteAttachments($id, $orgId);
             $result = $this->expenseRepo->delete($id, $orgId);
             $this->db->commit();
             return $result;
@@ -196,11 +201,11 @@ class ExpenseService
         }
     }
 
-    private function deleteJournalEntry(int $expenseId): void
+    private function deleteJournalEntry(int $expenseId, int $orgId): void
     {
         $journalId = $this->db->fetchOne(
-            "SELECT id FROM `{DB::JOURNALS}` WHERE reference_type = 'expense' AND reference_id = :ref_id LIMIT 1",
-            ['ref_id' => $expenseId]
+            "SELECT id FROM `{DB::JOURNALS}` WHERE reference_type = 'expense' AND reference_id = :ref_id AND organization_id = :org_id LIMIT 1",
+            ['ref_id' => $expenseId, 'org_id' => $orgId]
         );
 
         if ($journalId !== null) {
@@ -210,7 +215,29 @@ class ExpenseService
         }
     }
 
-    private function createJournalEntry(int $expenseId, string $expenseDate, int $paidThrough, int $vendorId, bool $billable, float $grandTotal): void
+    private function deleteAttachments(int $expenseId, int $orgId): void
+    {
+        $rows = $this->db->fetchAll(
+            "SELECT id, filename FROM `{DB::EXPENSE_ATTACHMENTS}` WHERE expense_id = :expense_id AND organization_id = :org_id",
+            ['expense_id' => $expenseId, 'org_id' => $orgId]
+        );
+
+        foreach ($rows as $row) {
+            $filename = (string)($row['filename'] ?? '');
+            if ($filename !== '') {
+                $path = dirname(__DIR__, 2) . '/uploads/expense_attachments/' . $filename;
+                if (is_file($path)) {
+                    unlink($path);
+                }
+            }
+            $this->db->execute(
+                "DELETE FROM `{DB::EXPENSE_ATTACHMENTS}` WHERE id = :id",
+                ['id' => (int)$row['id']]
+            );
+        }
+    }
+
+    private function createJournalEntry(int $expenseId, string $expenseDate, int $paidThrough, int $vendorId, bool $billable): void
     {
         $orgId = (int)($this->db->fetchOne(
             "SELECT organization_id FROM `{DB::EXPENSES}` WHERE id = :id",
@@ -246,10 +273,11 @@ class ExpenseService
         }
 
         if ($paidThrough > 0) {
+            $totalDebits = array_sum(array_map(fn($entry) => (float)$entry['debit'], $journalItems));
             $journalItems[] = [
                 'account' => $paidThrough,
                 'debit' => 0.0,
-                'credit' => $grandTotal,
+                'credit' => $totalDebits,
                 'description' => 'Payment for expense',
             ];
         }

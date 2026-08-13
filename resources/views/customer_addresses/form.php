@@ -20,6 +20,7 @@ declare(strict_types=1);
  * @var string $phone
  * @var string $fax
  * @var string $addressType
+ * @var array  $countriesList
  * @var bool   $canEdit
  */
 include 'admin_elements/admin_header.php';
@@ -63,9 +64,11 @@ include 'admin_elements/admin_header.php';
                                                 <div class="row mb-2">
                                                     <label class="col-lg-3 col-form-label">Country:<span class="text-danger">*</span></label>
                                                     <div class="col-lg-9">
-                                                        <select required class="form-select" name="country" id="country" aria-required="true">
+                                                        <select required class="form-select select2-enable" name="country" id="country" aria-required="true">
                                                             <option value="0">Please select</option>
-                                                            <?php echo getUAECountryDropdown($country); ?>
+                                                            <?php foreach (($countriesList ?? []) as $countryRow): ?>
+                                                                <option value="<?php echo $countryRow['id']; ?>" <?php echo (string)$countryRow['id'] === $country ? 'selected' : ''; ?>><?php echo htmlspecialchars($countryRow['country']); ?></option>
+                                                            <?php endforeach; ?>
                                                         </select>
                                                         <div class="invalid-feedback">Please select a country</div>
                                                     </div>
