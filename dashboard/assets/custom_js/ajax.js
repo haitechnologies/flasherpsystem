@@ -409,21 +409,16 @@
 
                     dropdown.value = country_id;
 
-                    dropdown.disabled = true;
+                    dropdown.disabled = false;
 
-                    dropdown.style.pointerEvents = "none";
+                    dropdown.style.pointerEvents = "";
 
-                    dropdown.classList.add("bg-light");
+                    dropdown.classList.remove("bg-light");
 
                     let hidden = document.getElementById(""+port_type+"_country_hidden");
-                    if (!hidden) {
-                        hidden = document.createElement("input");
-                        hidden.type = "hidden";
-                        hidden.id = ""+port_type+"_country_hidden";
-                        hidden.name = dropdown.name;
-                        dropdown.parentNode.appendChild(hidden);
+                    if (hidden) {
+                        hidden.remove();
                     }
-                    hidden.value = country_id;
 
                 } else {
                     console.error("Dropdown not found or no country data");

@@ -321,7 +321,7 @@ include 'admin_elements/admin_header.php';
                                                 <option value="0">Please select</option>
                                                 <?php foreach ($portsList as $row): ?>
                                                     <option value="<?php echo $row['id']; ?>" <?php echo (string)$row['id'] === $origin ? 'selected' : ''; ?>>
-                                                        <?php echo htmlspecialchars($row['port_name']); ?> <?php echo !empty($row['port_code']) ? '(' . htmlspecialchars($row['port_code']) . ')' : ''; ?>
+                                                        <?php echo !empty($row['port_code']) ? htmlspecialchars($row['port_code']) . ' - ' : ''; ?><?php echo htmlspecialchars($row['port_name']); ?>
                                                     </option>
                                                 <?php endforeach; ?>
                                             </select>
@@ -346,7 +346,7 @@ include 'admin_elements/admin_header.php';
                                                 <option value="0">Please select</option>
                                                 <?php foreach ($portsList as $row): ?>
                                                     <option value="<?php echo $row['id']; ?>" <?php echo (string)$row['id'] === $destination ? 'selected' : ''; ?>>
-                                                        <?php echo htmlspecialchars($row['port_name']); ?> <?php echo !empty($row['port_code']) ? '(' . htmlspecialchars($row['port_code']) . ')' : ''; ?>
+                                                        <?php echo !empty($row['port_code']) ? htmlspecialchars($row['port_code']) . ' - ' : ''; ?><?php echo htmlspecialchars($row['port_name']); ?>
                                                     </option>
                                                 <?php endforeach; ?>
                                             </select>
