@@ -348,7 +348,7 @@ if ($action == 'send_email' && !empty($id)) {
                 $historyUserId = (int)\App\Core\Session::userId();
                 $historyCompany = (int)$activeOrganizationId;
                 $histStmt->bind_param(
-                    'isiissssssiss',
+                    'isiissssssisss',
                     $historyUserId,
                     $send_to,
                     $historyCompany,
