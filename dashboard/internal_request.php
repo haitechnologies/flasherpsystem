@@ -472,18 +472,24 @@ switch ($ajax_action) {
 			$params[] = $countryId;
 		}
 
+		$orderBy = ' ORDER BY port_name ASC';
 		if ($searchTerm !== '') {
-			$like    = addcslashes($searchTerm, '%_\\') . '%';
+			$exact   = addcslashes($searchTerm, '%_\\');
+			$like    = $exact . '%';
 			$where  .= " AND (port_name LIKE ? OR port_code LIKE ?)";
 			$types  .= 'ss';
 			$params[] = $like;
+			$params[] = $like;
+			$orderBy = ' ORDER BY CASE WHEN port_code = ? THEN 0 WHEN port_code LIKE ? THEN 1 ELSE 2 END, port_name ASC';
+			$types  .= 'ss';
+			$params[] = $exact;
 			$params[] = $like;
 		}
 
 		$query = "SELECT id, port_name, port_code
 		          FROM `" . tbl_ports . "`
 		          " . $where . "
-		          ORDER BY port_name ASC
+		          " . $orderBy . "
 		          LIMIT 50";
 
 		$stmt = $mysqli->prepare($query);
