@@ -409,6 +409,7 @@ if (!empty($id)) {
 
     $row_no = 1;
     $item_row = '';
+    $tax_breakdown = [];
 
     // ------------------ TOTAL ITEMS ------------------
     $invoice_items = $invoiceService->getInvoiceItemsPublic($id);
@@ -427,6 +428,13 @@ if (!empty($id)) {
             $tax_amount     = $item->taxAmount;
             $total          = $item->total;
 
+            $tax_pct = (float)$item->tax;
+            if (!isset($tax_breakdown[$tax_pct])) {
+                $tax_breakdown[$tax_pct] = ['taxable' => 0.0, 'tax' => 0.0];
+            }
+            $tax_breakdown[$tax_pct]['taxable'] += (float)$item->subTotal;
+            $tax_breakdown[$tax_pct]['tax'] += (float)$item->taxAmount;
+
             $qty            = (($qty == 1)  ? '1.00': $qty);
             $rate           = (($rate == 0)  ? '1.00': $rate);
             $tax            = (($tax == 0)  ? '0': $tax);
@@ -444,6 +452,56 @@ if (!empty($id)) {
             </tr>';
         }
     }
+
+    // ---- Totals breakdown (computed from line items) ----
+    $balance_due       = $invoice->balanceDue ?? $grand_total;
+    $grand_after_discount = ($grand_after_discount !== null) ? $grand_after_discount : ((float)$grand_subtotal - (float)$grand_discount_amount);
+    $fmt_subtotal      = number_format((float)$grand_subtotal, 2);
+    $fmt_discount      = number_format((float)$grand_discount_amount, 2);
+    $fmt_after_disc    = number_format((float)$grand_after_discount, 2);
+    $fmt_tax           = number_format((float)$grand_tax, 2);
+    $fmt_total         = number_format((float)$grand_total, 2);
+    $fmt_balance       = number_format((float)$balance_due, 2);
+    $fmt_std_taxable   = number_format((float)($tax_breakdown[5]['taxable'] ?? 0.0), 2);
+    $fmt_zero_taxable  = number_format((float)($tax_breakdown[0]['taxable'] ?? 0.0), 2);
+
+    $discount_rows = '';
+    if ((float)$grand_discount_amount > 0) {
+        $discount_rows = '
+<tr>
+<td colspan="3"></td>
+<td colspan="3" align="right"> Discount (' . s__($grand_discount_type) . ' ' . number_format((float)$grand_discount_type_value, 2) . ') </td>
+<td align="right"> - ' . $fmt_discount . ' </td>
+</tr>
+
+<tr>
+<td colspan="3"></td>
+<td colspan="3" align="right"> After Discount </td>
+<td align="right"> ' . $fmt_after_disc . ' </td>
+</tr>';
+    }
+
+    ksort($tax_breakdown);
+    $tax_summary_rows = '';
+    foreach ($tax_breakdown as $rate => $band) {
+        $rate_label = ((float)$rate == 0.0)
+            ? 'Zero Rate (0%)'
+            : 'Standard Rate (' . rtrim(rtrim(number_format((float)$rate, 2), '0'), '.') . '%)';
+        $tax_summary_rows .= '
+<tr>
+    <td style="border:1px solid #f1f1f1;"> <span style="color: #555;"> ' . $rate_label . ' </span> </td>
+    <td style="border:1px solid #f1f1f1;" align="right"> <span style="color: #555;"> ' . number_format((float)$band['taxable'], 2) . ' </span> </td>
+    <td style="border:1px solid #f1f1f1;" align="right"> <span style="color: #555;"> ' . number_format((float)$band['tax'], 2) . ' </span> </td>
+</tr>';
+    }
+    $total_taxable = 0.0;
+    $total_tax     = 0.0;
+    foreach ($tax_breakdown as $band) {
+        $total_taxable += (float)$band['taxable'];
+        $total_tax     += (float)$band['tax'];
+    }
+    $fmt_total_taxable = number_format($total_taxable, 2);
+    $fmt_total_tax     = number_format($total_tax, 2);
 }
 
 
@@ -679,35 +737,43 @@ $item_row
 <tr>
 <td colspan="3"></td>
 <td colspan="3" style=" " align="right"> Sub Total </td>
-<td align="right"> $grand_subtotal  </td>
+<td align="right"> $fmt_subtotal  </td>
 </tr>
+
+$discount_rows
 
 <tr>
 <td colspan="3"></td>
 <td colspan="3" align="right"> Standard Rate (5%) </td>
-<td align="right"> $grand_subtotal  </td>
+<td align="right"> $fmt_std_taxable  </td>
 </tr>
 
 <tr>
 <td colspan="3"></td>
 <td colspan="3" align="right"> Zero Rate (0%) </td>
-<td align="right"> $grand_subtotal  </td>
+<td align="right"> $fmt_zero_taxable  </td>
+</tr>
+
+<tr>
+<td colspan="3"></td>
+<td colspan="3" align="right"> Total Tax </td>
+<td align="right"> $fmt_tax  </td>
 </tr>
 
 <tr>
 <td colspan="3"></td>
 <td colspan="3" style=" border-top:1px solid silver; border-bottom:1px solid silver" align="right"> <strong> TOTAL </strong> </td>
-<td style=" border-top:1px solid silver; border-bottom:1px solid silver" align="right"> <strong> $base_currency_code$grand_total </strong>  </td>
+<td style=" border-top:1px solid silver; border-bottom:1px solid silver" align="right"> <strong> $base_currency_code$fmt_total </strong>  </td>
 </tr>
 
 <tr>
 <td colspan="3"></td>
 <td colspan="3" style=" border-bottom:1px solid silver; " align="right"> <strong> BALANCE DUE </strong> </td>
-<td style=" border-bottom:1px solid silver; " align="right"> <strong> $base_currency_code$grand_total </strong> </td>
+<td style=" border-bottom:1px solid silver; " align="right"> <strong> $base_currency_code$fmt_balance </strong> </td>
 </tr>
 
 <tr>
-<td colspan="7" align="right"> Total in Words: <strong> UAE Dirham  $grand_total_in_words </strong> </td>
+<td colspan="7" align="right"> Total in Words: <strong> $base_currency_code  $grand_total_in_words </strong> </td>
 </tr>
 
 </table>
@@ -729,22 +795,12 @@ $tbl = <<<EOD
     <td width="150" style="background-color: #e8f7f4; border:1px solid #f1f1f1;" align="right"> <span style="color: #555;"> Tax Amount ($base_currency_code) </span> </td>
 </tr>
 
-<tr>
-    <td style="border:1px solid #f1f1f1;"> <span style="color: #555;"> Zero Rate (0%) </span> </td>
-    <td style="border:1px solid #f1f1f1;" align="right"> <span style="color: #555;"> 365.00 </span> </td>
-    <td style="border:1px solid #f1f1f1;" align="right"> <span style="color: #555;"> 0.00 </span> </td>
-</tr>
-
-<tr>
-    <td style="border:1px solid #f1f1f1;"> <span style="color: #555;"> Standard Rate (5%) </span> </td>
-    <td style="border:1px solid #f1f1f1;" align="right"> <span style="color: #555;"> 375.00 </span> </td>
-    <td style="border:1px solid #f1f1f1;" align="right"> <span style="color: #555;"> 18.75 </span> </td>
-</tr>
+$tax_summary_rows
 
 <tr>
     <td style="border:1px solid #f1f1f1;"> <span style="color: #000;"> Total </span> </td>
-    <td style="border:1px solid #f1f1f1;" align="right"> <span style="color: #000;"> $base_currency_code 740.00 </span> </td>
-    <td style="border:1px solid #f1f1f1;" align="right"> <span style="color: #000;"> $base_currency_code 18.75 </span> </td>
+    <td style="border:1px solid #f1f1f1;" align="right"> <span style="color: #000;"> $base_currency_code $fmt_total_taxable </span> </td>
+    <td style="border:1px solid #f1f1f1;" align="right"> <span style="color: #000;"> $base_currency_code $fmt_total_tax </span> </td>
 </tr>
 
 </table>
