@@ -510,7 +510,8 @@ $company_name        = s__(getTableAttrv('setting_value', DB::SYSTEM_SETTINGS, '
 $tbl = <<<EOD
 <table cellpadding="0" cellspacing="2" border="0">
 <tr>
-    <td width="392" style="background-color: #fff;" align="center"> <br /><br /><br />
+    <td width="392" style="background-color: #fff;">
+        <img src="../images/images.jfif" height="55" alt="Logo" /><br />
         <span style="font-size: 18px; color:#102B44"> $company_name </span>
     </td>
 
@@ -602,9 +603,8 @@ $tbl = <<<EOD
     <td width="90" style="background-color: #e8f7f4; border:1px solid #f1f1f1;"><span style="color: #555;">Invoice Date </span> </td>
     <td width="80" style="background-color: #e8f7f4; border:1px solid #f1f1f1;"><span style="color: #555;">Terms </span> </td>
     <td width="90" style="background-color: #e8f7f4; border:1px solid #f1f1f1;"><span style="color: #555;">Due Date </span> </td>
-    <td width="80" style="background-color: #e8f7f4; border:1px solid #f1f1f1;"><span style="color: #555;">Job No </span> </td>
+    <td width="100" style="background-color: #e8f7f4; border:1px solid #f1f1f1;"><span style="color: #555;">Job No </span> </td>
     <td width="105" style="background-color: #e8f7f4; border:1px solid #f1f1f1"><span style="color: #555;">Master AWB / HWB </span> </td>
-    <td width="100" style="background-color: #e8f7f4; border:1px solid #f1f1f1"><span style="color: #555;">Ref No </span> </td>
     <td width="123" style="background-color: #e8f7f4; border:1px solid #f1f1f1"><span style="color: #555;">Shipper </span> </td>
 </tr>
 
@@ -612,9 +612,8 @@ $tbl = <<<EOD
     <td style="border:1px solid #f1f1f1;"><span style="color: #555;">$invoice_date </span> </td>
     <td style="border:1px solid #f1f1f1;"><span style="color: #555;">$payment_term </span> </td>
     <td style="border:1px solid #f1f1f1;"><span style="color: #555;">$expiry_date </span> </td>
-    <td style="border:1px solid #f1f1f1;"><span style="color: #555;">$job_reference_no </span> </td>
-    <td style="border:1px solid #f1f1f1;"><span style="color: #555;">$master_awb_display </span> </td>
     <td style="border:1px solid #f1f1f1;"><span style="color: #555;">$reference_no </span> </td>
+    <td style="border:1px solid #f1f1f1;"><span style="color: #555;">$master_awb_display </span> </td>
     <td style="border:1px solid #f1f1f1;"><span style="color: #555;">$shipper_text </span> </td>
 </tr>
 

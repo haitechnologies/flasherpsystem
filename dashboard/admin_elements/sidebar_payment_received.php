@@ -14,7 +14,7 @@ $current_id = (int)($_GET["payment_received_id"] ?? 0);
             <select class="form-select border-0 fw-bold" name="payments_received_ordering" id="payments_received_ordering" onchange="window.location.href='payment_received_overview.php?payment_received_id=<?php echo $current_id; ?>&payments_received_ordering='+this.value;">
                 <option value="all" <?php if ($payments_received_ordering === "all") echo "selected"; ?>>All</option>
 <?php
-$statusLabels = ['draft' => 'Draft', 'paid' => 'Paid', 'void' => 'Void', 'refund' => 'Refund'];
+$statusLabels = ['draft' => 'Draft', 'partial' => 'Partial', 'paid' => 'Paid', 'void' => 'Void', 'refund' => 'Refund'];
 foreach ($statusLabels as $val => $lbl) {
     $sel = $payments_received_ordering === $val ? "selected" : "";
     echo "<option value=\"{$val}\" {$sel}>{$lbl}</option>";
@@ -44,6 +44,7 @@ while ($row = $r->fetch_array()) {
     $amt = number_format($row["total_amount_received"], 2);
     $status_class = match($row["payment_status"]) {
         'paid' => 'text-success',
+        'partial' => 'text-warning',
         'void', 'refund' => 'text-danger',
         'draft' => 'text-secondary',
         default => 'text-info'

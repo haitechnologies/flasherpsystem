@@ -2,6 +2,7 @@
 
 
 use App\Core\DB;
+use App\Core\Session;
 use App\Security\Roles;
 use App\Security\InputValidator;
 use App\Service\JournalService;
@@ -387,6 +388,9 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
                 $payment_term           = getTableAttr('payment_term', DB::CUSTOMERS, $customer_id);
 
                 $shipment_type          = $invoice->shipmentType;
+                $shipment_type_display  = $shipment_type !== '' && $shipment_type !== null
+                    ? implode(', ', array_map('ucfirst', array_map('trim', explode(',', $shipment_type))))
+                    : '';
                 $sales_person           = $invoice->salesPerson;
                 $job_reference_no       = $invoice->jobReferenceNo;
                 $master_awb_no          = $invoice->masterAwbNo;
@@ -655,20 +659,19 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
                                     <div class="row">
                                         <label class="col-lg-5 col-form-label">Delivery Method:</label>
                                         <div class="col-lg-7 mt-2">
-                                            <?php echo $shipment_type; ?>
+                                            <?php echo e_s__($shipment_type_display); ?>
                                         </div>
                                     </div>
                                     <div class="row">
                                         <label class="col-lg-5 col-form-label">Job Reference No:</label>
                                         <div class="col-lg-7 mt-2">
-                                            <?php echo $job_reference_no; ?>
+                                            <?php echo $reference_no; ?>
                                         </div>
                                     </div>
                                     <div class="row">
                                         <label class="col-lg-5 col-form-label">Shipper:</label>
                                         <div class="col-lg-7 mt-2">
-                                            <!-- COMMENTED: DB::SHIPPERS table has been deleted -->
-                                            <?php echo ''; /* getTableAttr('shipper_name', DB::SHIPPERS, $shipper); */ ?>
+                                            <?php echo $shipper ? getTableAttr('shipper_name', DB::SHIPPERS, $shipper) : ''; ?>
                                         </div>
                                     </div>
                                     <div class="row">
@@ -677,25 +680,29 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
                                             <?php echo $origin ? getTableAttr('port_name', DB::PORTS, $origin) : ''; ?><?php echo ($origin && $origin_country) ? ' - ' : ''; ?><?php echo $origin_country ? getTableAttr('country', DB::GEO_COUNTRIES, $origin_country) : ''; ?>
                                         </div>
                                     </div>
+                                    <?php if (!empty($no_of_packs)): ?>
                                     <div class="row">
                                         <label class="col-lg-5 col-form-label">No of Packs:</label>
                                         <div class="col-lg-7 mt-2">
                                             <?php echo $no_of_packs; ?>
                                         </div>
                                     </div>
+                                    <?php endif; ?>
+                                    <?php if (!empty($chargeable_weight)): ?>
                                     <div class="row">
                                         <label class="col-lg-5 col-form-label">Chargeable Weight:</label>
                                         <div class="col-lg-7 mt-2">
                                             <?php echo $chargeable_weight; ?>
                                         </div>
                                     </div>
+                                    <?php endif; ?>
                                 </div>
 
                                 <div class="col-sm-6">
                                     <div class="row">
                                         <label class="col-lg-5 col-form-label">Payment Terms:</label>
                                         <div class="col-lg-7 mt-2">
-                                            <?php echo ''; ?>
+                                            <?php echo $invoice->paymentTerm ? getTableAttr('payment_term', DB::PAYMENT_TERMS, $invoice->paymentTerm) : ''; ?>
                                         </div>
                                     </div>
                                     <div class="row">
@@ -725,8 +732,7 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
                                     <div class="row">
                                         <label class="col-lg-5 col-form-label">Consignee:</label>
                                         <div class="col-lg-7 mt-2">
-                                            <!-- COMMENTED: DB::CONSIGNEES table has been deleted -->
-                                            <?php echo ''; /* getTableAttr('consignee_name', DB::CONSIGNEES, $consignee); */ ?>
+                                            <?php echo $consignee ? getTableAttr('consignee_name', DB::CONSIGNEES, $consignee) : ''; ?>
                                         </div>
                                     </div>
                                     <div class="row">
@@ -735,18 +741,22 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
                                             <?php echo $destination ? getTableAttr('port_name', DB::PORTS, $destination) : ''; ?><?php echo ($destination && $destination_country) ? ' - ' : ''; ?><?php echo $destination_country ? getTableAttr('country', DB::GEO_COUNTRIES, $destination_country) : ''; ?>
                                         </div>
                                     </div>
+                                    <?php if (!empty($gross_weight)): ?>
                                     <div class="row">
                                         <label class="col-lg-5 col-form-label">Gross Weight:</label>
                                         <div class="col-lg-7 mt-2">
                                             <?php echo $gross_weight; ?>
                                         </div>
                                     </div>
+                                    <?php endif; ?>
+                                    <?php if (!empty($volume)): ?>
                                     <div class="row">
                                         <label class="col-lg-5 col-form-label">Volume (CBM):</label>
                                         <div class="col-lg-7 mt-2">
                                             <?php echo $volume; ?>
                                         </div>
                                     </div>
+                                    <?php endif; ?>
                                 </div>
 
                             </div>
@@ -805,7 +815,15 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
                                     for ($invoice_item = 1; $invoice_item <= $total_rows; $invoice_item++) {
                                         $index = $invoice_item;
                                         $index = $index - 1;
-                                        if (!isset($invoice_item_id_arr[$index])) continue;
+                                        if (!array_key_exists($index, $invoice_item_id_arr)
+                                            || !array_key_exists($index, $service_arr)
+                                            || !array_key_exists($index, $description_arr)
+                                            || !array_key_exists($index, $qty_arr)
+                                            || !array_key_exists($index, $rate_arr)
+                                            || !array_key_exists($index, $sub_total_arr)
+                                            || !array_key_exists($index, $tax_arr)
+                                            || !array_key_exists($index, $tax_amount_arr)
+                                            || !array_key_exists($index, $total_arr)) continue;
 
                                         // $fee_included = '';
                                         // if (isset($fee_included_arr[$index]) && !empty($fee_included_arr[$index])) {
@@ -838,12 +856,10 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
                                                     // Seprate Line Number on base of Space new line
                                                     // ----------------------------------------------
                                                     $desc = explode("\r", (string)($description_arr[$index] ?? ''));
-                                                    // print_r($desc);
-                                                    $d_counter = 1;
                                                     if (count($desc) > 0) {
                                                         foreach ($desc as $d) {
                                                             if (!empty($d)) {
-                                                                echo $d_counter++ . '. ' . $d;
+                                                                echo $d;
                                                                 echo '<br />';
                                                             }
                                                         }
@@ -875,12 +891,18 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
                         <div class="card-body border-top">
                             <div class="d-lg-flex flex-lg-wrap">
 
+<?php if (!empty($customer_notes) || !empty($final_terms_and_conditions)): ?>
                                 <div class="pt-2 mb-3">
                                     <ul class="list-unstyled text-muted">
-                                        <li class="mb-3">Customer Notes: <br /><?php echo $customer_notes; ?></li>
-                                        <li class="mb-3"><span class="fw-semibold">Terms and Conditions: </span> <br /><?php echo $final_terms_and_conditions; ?></li>
+                                        <?php if (!empty($customer_notes)): ?>
+                                            <li class="mb-3">Customer Notes: <br /><?php echo $customer_notes; ?></li>
+                                        <?php endif; ?>
+                                        <?php if (!empty($final_terms_and_conditions)): ?>
+                                            <li class="mb-3"><span class="fw-semibold">Terms and Conditions: </span> <br /><?php echo $final_terms_and_conditions; ?></li>
+                                        <?php endif; ?>
                                     </ul>
                                 </div>
+                                <?php endif; ?>
 
                                 <div class="pt-2 mb-3 wmin-lg-400 ms-auto">
                                     <!-- <h6 class="mb-3">Total due</h6> -->
@@ -1002,6 +1024,7 @@ if (isset($_POST['total_rows']) && !empty($_POST['total_rows'])) {
                                     while ($row_journal_items = $result_journal_items->fetch_array()) {
 
                                         $account    = $row_journal_items['account'];
+                                        $account    = getTableAttr('account_name', DB::ACCOUNTS, $account);
                                         $debit      = $row_journal_items['debit'];
                                         $credit     = $row_journal_items['credit'];
 

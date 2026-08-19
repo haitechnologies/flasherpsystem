@@ -20,16 +20,8 @@ $invoices_ordering = $_SESSION['invoices_ordering'];
 // Build search query with array mapping
 $status_map = [
     'draft'           => "i.invoice_status='draft'",
-    'locked'          => "i.invoice_status='locked'",
-    'pending'         => "i.invoice_status='pending'",
-    'approved'        => "i.invoice_status='approved'",
     'sent'            => "i.invoice_status='sent'",
-    'accepted'        => "i.invoice_status='accepted'",
-    'invoiced'        => "i.invoice_status='invoiced'",
-    'declined'        => "i.invoice_status='declined'",
-    'expired'         => "i.invoice_status='expired'",
     'void'            => "i.invoice_status='void'",
-    'debit_note'      => "i.invoice_status='debit_note'",
     'write_off'       => "(i.invoice_status='writeoff' OR i.invoice_status='write_off')"
 ];
 
@@ -56,25 +48,17 @@ $payment_term_cache = [];
 
             <select class="form-select border-0 fw-bold" name="invoices_ordering" id="invoices_ordering" onchange="window.location.href='invoice_overview.php?invoice_id=<?php echo $invoice_id; ?>&invoices_ordering=' + this.value;">
                 <?php
-                $ordering_options = [
-                    'all'             => 'All Invoices',
-                    'draft'           => 'Draft',
-                    'locked'          => 'Locked',
-                    'pending'         => 'Pending Approval',
-                    'approved'        => 'Approved',
-                    'sent'            => 'Sent',
-                    'accepted'        => 'Accepted',
-                    'invoiced'        => 'Invoiced',
-                    'declined'        => 'Declined',
-                    'expired'         => 'Expired',
-                    'partially_paid'  => 'Partially Paid',
-                    'unpaid'          => 'UnPaid',
-                    'overdue'         => 'Overdue',
-                    'paid'            => 'Paid',
-                    'void'            => 'Void',
-                    'debit_note'      => 'Debit Note',
-                    'write_off'       => 'Write Off'
-                ];
+$ordering_options = [
+    'all'             => 'All Invoices',
+    'draft'           => 'Draft',
+    'sent'            => 'Sent',
+    'partially_paid'  => 'Partially Paid',
+    'unpaid'          => 'UnPaid',
+    'overdue'         => 'Overdue',
+    'paid'            => 'Paid',
+    'void'            => 'Void',
+    'write_off'       => 'Write Off'
+];
                 
                 foreach ($ordering_options as $value => $label) {
                     $selected = ($invoices_ordering === $value) ? 'selected' : '';
@@ -123,7 +107,7 @@ $payment_term_cache = [];
                     $group_by = " GROUP BY i.id";
 
                     $result_side = $mysqli->query(
-                        $base_select . $where_status . $group_by . $having_status . " ORDER BY i.id DESC LIMIT 25"
+                        $base_select . $where_status . $group_by . $having_status . " ORDER BY i.invoice_date DESC, i.id DESC LIMIT 25"
                     );
 
                     // Get total count

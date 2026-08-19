@@ -142,6 +142,7 @@ $html = '
 <table cellpadding="4" cellspacing="0" border="0" width="100%">
     <tr>
         <td width="50%">
+            <img src="../images/images.jfif" height="55" alt="Logo" /><br />
             <span style="font-size: 18px; font-weight: bold; color: #102B44;">' . $company_name . '</span><br />
             <span style="font-size: 14px; font-weight: bold; color: #007B8B;">SHIPPING ADVICE</span>
         </td>

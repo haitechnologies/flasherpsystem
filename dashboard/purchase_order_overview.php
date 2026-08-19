@@ -2,6 +2,8 @@
 
 use App\Core\DB;
 use App\Core\Session;
+use App\Core\Container;
+use App\Service\PurchaseOrderService;
 include('admin_elements/admin_header.php');
 
 $module = 'purchase_orders';
@@ -81,181 +83,69 @@ if (isset($_REQUEST['purchase_order_item_id']) && !empty($_REQUEST['purchase_ord
 |
 */
 
-if (($action == "convert_$module" && !empty($purchase_order_id))) {
+if (($action == "convert_$module" && !empty($purchase_order_id)) && ($_SERVER['REQUEST_METHOD'] === 'POST') && validate_csrf_token($_POST['csrf_token'] ?? '') && granted('create', $module_id)) {
+    $purchaseOrderId = (int)$purchase_order_id;
+    try {
+        $purchaseOrderService = Container::getInstance()->get(PurchaseOrderService::class);
+        $purchase = $purchaseOrderService->convertToPurchase($purchaseOrderId, (int)$activeOrganizationId, (int)Session::userId());
 
-    // Guard against double conversion: a PO already converted to a purchase
-    // must not be converted again (would create orphan duplicate purchases).
-    $rs_po_status = $mysqli->query("SELECT purchase_order_status, purchase_id FROM `" . tbl_purchase_orders . "` WHERE id='" . (int)$purchase_order_id . "' AND organization_id='" . (int)$activeOrganizationId . "'");
-    $po_status_row = $rs_po_status ? $rs_po_status->fetch_assoc() : null;
-    if ($po_status_row && ($po_status_row['purchase_order_status'] === 'purchased' || !empty($po_status_row['purchase_id']))) {
-        flash_error('This Purchase Order has already been converted to a Purchase.');
-        header("Location:purchase_order_overview.php?purchase_order_id=" . (int)$purchase_order_id);
-        exit;
-    }
-
-    // ======================================================
-    // PURCHASE NO Auto Generation System
-    // ======================================================
-
-    // Build the prefix for this month
-    $prefix = 'FL-PR' . date('ym');
-
-    // Get the last purchase number for this month
-    $sql = "SELECT purchase_no  FROM `" . tbl_purchases . "`  WHERE purchase_no LIKE '{$prefix}-%'ORDER BY purchase_no DESC LIMIT 1";
-    $result = $mysqli->query($sql);
-
-    if ($row = $result->fetch_assoc()) {
-        // Extract the serial part after the dash
-        $last_serial = (int) substr($row['purchase_no'], -4);
-        $new_serial = $last_serial + 1;
-    } else {
-        // First purchase of the month
-        $new_serial = 1;
-    }
-
-    // Build new purchase number with zero padding
-    $purchase_no = $prefix . '-' . str_pad($new_serial, 4, '0', STR_PAD_LEFT);
-
-
-    // -- purchase
-    $result = $mysqli->query("INSERT INTO `" . DB::PURCHASES . "` (vendor_id, warehouse_id, subject, reference_no, purchase_date, expiry_date, grand_subtotal, grand_discount_type, grand_discount_type_value, grand_discount_amount, grand_after_discount, grand_tax, grand_total, vendor_notes, terms_and_conditions, purchase_status, is_active, organization_id, created_at, updated_at)
-     SELECT vendor_id, warehouse_id, subject, reference_no, NOW(), NOW(), grand_subtotal, grand_discount_type, grand_discount_type_value, grand_discount_amount, grand_after_discount, grand_tax, grand_total, vendor_notes, terms_and_conditions, 'draft', is_active, organization_id, NOW(), NOW() FROM `" . DB::PURCHASE_ORDERS . "` WHERE id = $purchase_order_id;");
-
-    $new_purchase_id = $mysqli->insert_id;
-    fp__($tbl_name, $new_purchase_id);
-
-    // Update purchase no
-    $mysqli->query("UPDATE `" . DB::PURCHASES . "` SET purchase_no = '" . $purchase_no . "', purchase_order_id = $purchase_order_id WHERE id=$new_purchase_id");
-
-    // -- purchase Items
-    $result = $mysqli->query("INSERT INTO `" . DB::PURCHASE_ITEMS . "` ( purchase_id, service, description, qty, rate, discount_type, discount_type_value, discount_amount, tax, tax_amount, sub_total, total, created_at, updated_at, created_by) 
-    SELECT $new_purchase_id, service, description, qty, rate, discount_type, discount_type_value, discount_amount, tax, tax_amount, sub_total, total, NOW(), NOW(), '" . Session::userId() . "' FROM `" . DB::PURCHASE_ORDER_ITEMS . "` WHERE purchase_order_id = $purchase_order_id");
-
-    fp__(DB::PURCHASE_ITEMS, $mysqli->insert_id);
-
-
-    $success_message = 'This Purchase Order has been Converted to Purchase Successfully. Please click here to view. <a href="purchase_overview.php?purchase_id=' . $new_purchase_id . '"> ' . $purchase_no . '</a>';
-
-    // CHANGE STATUS OF QUOATION TO PURCHASED
-    $mysqli->query("UPDATE `" . tbl_purchase_orders . "` SET purchase_id = $new_purchase_id,  purchase_order_status = 'purchased' WHERE id=$purchase_order_id");
-
-
-
-    /*
-|--------------------------------------------------------------------------
-| CLONE PURCHAES ORDER
-|--------------------------------------------------------------------------
-|
-*/
-} else if (($action == "clone_$module" && !empty($purchase_order_id))) {
-
-    // ======================================================
-    // PURCHASE NO Auto Generation System
-    // ======================================================
-
-    // Build the prefix for this month
-    $prefix = 'FL-PO' . date('ym');
-
-    // Get the last purchase number for this month
-    $sql = "SELECT purchase_order_no  FROM `" . tbl_purchase_orders . "`  WHERE purchase_order_no LIKE '{$prefix}-%'ORDER BY purchase_order_no DESC LIMIT 1";
-    $result = $mysqli->query($sql);
-
-    if ($row = $result->fetch_assoc()) {
-        // Extract the serial part after the dash
-        $last_serial = (int) substr($row['purchase_order_no'], -4);
-        $new_serial = $last_serial + 1;
-    } else {
-        // First purchase of the month
-        $new_serial = 1;
-    }
-
-    // Build new purchase number with zero padding
-    $purchase_order_no = $prefix . '-' . str_pad($new_serial, 4, '0', STR_PAD_LEFT);
-
-
-    // -- Purchase order
-    $result = $mysqli->query("INSERT INTO `" . tbl_purchase_orders . "` (vendor_id, warehouse_id, purchase_order_no, subject, reference_no, purchase_order_date, expiry_date, grand_subtotal, grand_discount_type, grand_discount_type_value, grand_discount_amount, grand_after_discount, grand_tax, grand_total, vendor_notes, terms_and_conditions, purchase_order_status, is_active, organization_id, created_at, updated_at)
-    SELECT vendor_id, warehouse_id, '" . $purchase_order_no . "', subject, reference_no, NOW(), NOW(), grand_subtotal, grand_discount_type, grand_discount_type_value, grand_discount_amount, grand_after_discount, grand_tax, grand_total, vendor_notes, terms_and_conditions, 'draft', is_active, organization_id, NOW(), NOW() FROM `" . tbl_purchase_orders . "` WHERE id = $purchase_order_id;");
-
-    $new_cloned_id = $mysqli->insert_id;
-    fp__($tbl_name, $new_cloned_id);
-
-    // -- Purchase order Items
-    $result = $mysqli->query("INSERT INTO `" . tbl_purchase_order_items . "` ( purchase_order_id, service, description, qty, rate, discount_type, discount_type_value, discount_amount, tax, tax_amount, sub_total, total, created_at, updated_at, created_by) 
-    SELECT $new_cloned_id, service, description, qty, rate, discount_type, discount_type_value, discount_amount, tax, tax_amount, sub_total, total, NOW(), NOW(), '" . Session::userId() . "' FROM `" . tbl_purchase_order_items . "` WHERE purchase_order_id = $purchase_order_id");
-
-    fp__(tbl_purchase_order_items, $mysqli->insert_id);
-
-
-    $success_message = 'Purchase order has been cloned Successfully. Please click here to view. <a href="purchase_order_overview.php?purchase_order_id=' . $new_cloned_id . '"> ' . $purchase_order_no . '</a>';
-
-
-
-
-
-    /*
-|--------------------------------------------------------------------------
-| UPDATE PURCHASE ORDER STATUS
-|--------------------------------------------------------------------------
-|
-*/
-} else if (($action == "update_$module" && !empty($purchase_order_id) && !empty($purchase_order_status))) {
-
-    $result = $mysqli->query("UPDATE `$tbl_name` SET purchase_order_status = '" . $purchase_order_status . "' WHERE id=$purchase_order_id");
-
-    if ($result) {
-        $success_message = "The $module_caption status has been updated successfully.";
-
-
-        // ------------ Purchase order Log -------------
-        // if (isset($_POST['purchase_order_log_comments']) && !empty($_POST['purchase_order_log_comments'])) {
-        //     $purchase_order_log_comments     = e_s__($_POST['purchase_order_log_comments']);
-
-        //     $mysqli->query("INSERT INTO `" . tbl_purchase_order_logs . "` (purchase_order_id, purchase_order_status, comments) VALUES ('" . $purchase_order_id . "', '" . $purchase_order_status . "', '" . $purchase_order_log_comments . "'); ");
-        //     fp__(tbl_purchase_order_logs, $mysqli->insert_id);
-        // }
-
-
-        if ($purchase_order_status == 'not_confirmed') {
-
-
-            // Delete PDF - Next Time System will Generate New with Confirmed Status 
-            $pdf        = getTableAttr('pdf', tbl_purchase_orders, $purchase_order_id);
-            if (!empty($pdf) && is_file("../pdfs_purchase_orders/" . $pdf . ".pdf")) {
-                unlink("../pdfs_purchase_orders/" . $pdf . ".pdf");
-            }
-            $mysqli->query("UPDATE " . tbl_purchase_orders . "  SET pdf = '' WHERE id=$purchase_order_id");
-        } else if ($purchase_order_status == 'confirmed') {
-
-
-            // Delete PDF - Next Time System will Generate New with Confirmed Status 
-            // $pdf        = getTableAttr('pdf', tbl_purchase_orders, $purchase_order_id);
-            // unlink("../pdfs_purchase_orders/" . $pdf . ".pdf");
-            // $mysqli->query("UPDATE " . tbl_purchase_orders . "  SET pdf = '' WHERE id=$purchase_order_id");
-
-
-            // -----------------------------------------------------------------------------------------------------------------------------------------------
-            // DELETE TRIPS - IF Purchase order STATUS IS CANCELLED
-            // -----------------------------------------------------------------------------------------------------------------------------------------------
-        } else if ($purchase_order_status == 'cancelled' || $purchase_order_status == 'on_hold') {
-
-            // Delete PDF - Next Time System will Generate New 
-            // $pdf        = getTableAttr('pdf', tbl_purchase_orders, $purchase_order_id);
-            // unlink("../pdfs_purchase_orders/" . $pdf . ".pdf");
-            // $mysqli->query("UPDATE " . tbl_purchase_orders . "  SET pdf = '' WHERE id=$purchase_order_id");
-
-
-            /* ---------------------- NOTIFICATIONS QUERY ---------------------- */
-        }
-
-
-        // --------------------------------------------------------------------------------
+        $success_message = 'This Purchase Order has been Converted to Purchase Successfully. Please click here to view. <a href="purchase_overview.php?purchase_id=' . $purchase->id . '"> ' . s__($purchase->purchaseNo) . '</a>';
         flash_success($success_message);
-        header("Location:purchase_order_overview.php?purchase_order_id=$purchase_order_id");
+        header("Location:purchase_order_overview.php?purchase_order_id=$purchaseOrderId");
         exit;
-        // $error_message = "Sorry! $module Status Could Not Be Updated.";
-    } else {
-        $error_message = "Sorry! $module Status Could Not Be Updated.";
+    } catch (\Throwable $e) {
+        log_error($e->getMessage(), 'ERROR', $e->getFile(), $e->getLine(), backend_runtime_log_context([
+            'module' => 'purchase_orders',
+            'module_slug' => 'purchase_orders',
+            'purchase_order_id' => $purchaseOrderId,
+            'action' => 'convert_purchase_orders',
+        ]));
+        flash_error($e->getMessage());
+        header("Location:purchase_order_overview.php?purchase_order_id=$purchaseOrderId");
+        exit;
+    }
+} else if (($action == "clone_$module" && !empty($purchase_order_id)) && ($_SERVER['REQUEST_METHOD'] === 'POST') && validate_csrf_token($_POST['csrf_token'] ?? '') && granted('create', $module_id)) {
+    $purchaseOrderId = (int)$purchase_order_id;
+    try {
+        $purchaseOrderService = Container::getInstance()->get(PurchaseOrderService::class);
+        $clone = $purchaseOrderService->clonePurchaseOrder($purchaseOrderId, (int)$activeOrganizationId, (int)Session::userId());
+
+        $success_message = 'Purchase order has been cloned Successfully. Please click here to view. <a href="purchase_order_overview.php?purchase_order_id=' . $clone->id . '"> ' . s__($clone->purchaseOrderNo) . '</a>';
+        flash_success($success_message);
+        header("Location:purchase_order_overview.php?purchase_order_id=" . $clone->id);
+        exit;
+    } catch (\Throwable $e) {
+        log_error($e->getMessage(), 'ERROR', $e->getFile(), $e->getLine(), backend_runtime_log_context([
+            'module' => 'purchase_orders',
+            'module_slug' => 'purchase_orders',
+            'purchase_order_id' => $purchaseOrderId,
+            'action' => 'clone_purchase_orders',
+        ]));
+        flash_error($e->getMessage());
+        header("Location:purchase_order_overview.php?purchase_order_id=$purchaseOrderId");
+        exit;
+    }
+} else if (($action == "update_$module" && !empty($purchase_order_id) && !empty($purchase_order_status)) && ($_SERVER['REQUEST_METHOD'] === 'POST') && validate_csrf_token($_POST['csrf_token'] ?? '') && granted('edit', $module_id)) {
+    $purchaseOrderId = (int)$purchase_order_id;
+    try {
+        $purchaseOrderService = Container::getInstance()->get(PurchaseOrderService::class);
+        $purchaseOrderService->updateStatus($purchaseOrderId, (string)$purchase_order_status, (int)$activeOrganizationId);
+
+        $success_message = "The $module_caption status has been updated successfully.";
+        flash_success($success_message);
+        header("Location:purchase_order_overview.php?purchase_order_id=$purchaseOrderId");
+        exit;
+    } catch (\Throwable $e) {
+        log_error($e->getMessage(), 'ERROR', $e->getFile(), $e->getLine(), backend_runtime_log_context([
+            'module' => 'purchase_orders',
+            'module_slug' => 'purchase_orders',
+            'purchase_order_id' => $purchaseOrderId,
+            'action' => 'update_purchase_orders',
+            'purchase_order_status' => $purchase_order_status,
+        ]));
+        flash_error("Sorry! $module Status Could Not Be Updated.");
+        header("Location:purchase_order_overview.php?purchase_order_id=$purchaseOrderId");
+        exit;
     }
 }
 

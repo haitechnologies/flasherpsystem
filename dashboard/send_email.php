@@ -137,6 +137,10 @@ $description_default = '';
 if (empty($action)) {
     $doc_query = $mysqli->query("SELECT * FROM `$tbl_name` WHERE id=$id AND organization_id=$activeOrganizationId");
     if ($doc_row = $doc_query->fetch_assoc()) {
+        $doc_date       = s__($doc_row[$pfx . '_date'] ?? '');
+        $grand_total    = s__($doc_row['grand_total'] ?? '');
+        $doc_date_display = !empty($doc_date) ? dd_($doc_date) : '';
+
         $content = [];
         if (!empty($doc_row['subject'] ?? '')) {
             $content[] = $doc_row['subject'];
@@ -146,7 +150,22 @@ if (empty($action)) {
         } elseif (!empty($doc_row['notes'] ?? '')) {
             $content[] = $doc_row['notes'];
         }
+
         $description_default = implode("\n\n", $content);
+
+        // Pre-fill the description with the actual email body so the sender
+        // can see/edit exactly what will be sent.
+        $body_lines = [];
+        if ($description_default !== '') {
+            $body_lines[] = $description_default;
+            $body_lines[] = '';
+        }
+        $body_lines[] = strtoupper($module_caption) . ' AMOUNT: ' . BASE_CURRENCY['code'] . ' ' . $grand_total;
+        $body_lines[] = $module_caption . ' No: ' . $doc_no;
+        if (!empty($doc_date_display)) {
+            $body_lines[] = $module_caption . ' Date: ' . $doc_date_display;
+        }
+        $description_default = implode("\n", $body_lines);
     }
 }
 
@@ -212,24 +231,39 @@ if ($action == 'send_email' && !empty($id)) {
     $email_body = "
                     Dear " . $display_name . ",<br /><br />
 
-                    Thank you for contacting us. Your " . strtolower($module_caption) . " can be viewed, printed and downloaded as PDF from the link below.<br /><br />
-					
-                    " . strtoupper($module_caption) . " AMOUNT<br />
-                    '". BASE_CURRENCY['code']."' $grand_total<br />
-                    ".$module_caption." No $doc_no<br /><br />
+                    Thank you for contacting us. Your " . strtolower($module_caption) . " details are provided below.<br /><br />";
 
-                    " . $module_caption . " Date <br />
-                    $doc_date_display<br /><br />
+    // Normalize literal \r\n / \n / \r escape sequences (as stored text) into real
+    // line breaks so the recipient sees proper newlines instead of "\r\n" text.
+    $description_norm = preg_replace('/\\\\r\\\\n|\\\\n|\\\\r/', "\n", (string)$description);
 
-                    VIEW " . strtoupper($module_caption) . "<br /><br />";
-
-    if (!empty($description)) {
+    if (!empty($description_norm)) {
         $email_body .= "
-                    " . nl2br(htmlspecialchars($description)) . "<br /><br />";
+                    " . nl2br(htmlspecialchars($description_norm)) . "<br /><br />";
+    }
+
+    // Organisation signature block.
+    $org_sig_name = 'Flash Logistics FZCO';
+    $org_sig_lines = [];
+    $org_row = $mysqli->query("SELECT * FROM `" . DB::ORGANIZATIONS . "` WHERE id = " . (int)$activeOrganizationId . " LIMIT 1");
+    if ($org_row && ($org_data = $org_row->fetch_assoc())) {
+        if (!empty($org_data['warehouse_name'])) {
+            $org_sig_name = $org_data['warehouse_name'];
+        }
+        $org_addr = [];
+        if (!empty($org_data['street1']))  $org_addr[] = $org_data['street1'];
+        if (!empty($org_data['street2']))  $org_addr[] = $org_data['street2'];
+        if (!empty($org_data['country']))  $org_addr[] = getTableAttr('country', DB::GEO_COUNTRIES, $org_data['country']);
+        if (!empty($org_data['zipcode']))  $org_addr[] = $org_data['zipcode'];
+        if (!empty($org_data['phone']))    $org_sig_lines[] = $org_data['phone'];
+        if (!empty($org_data['email']))    $org_sig_lines[] = $org_data['email'];
+        if (!empty($org_data['trn']))      $org_sig_lines[] = 'TRN: ' . $org_data['trn'];
+        if (!empty($org_addr))             $org_sig_lines[] = implode(', ', $org_addr);
     }
 
     $email_body .= "
                     Regards,<br />
+                    " . nl2br(htmlspecialchars($org_sig_name)) . (empty($org_sig_lines) ? '' : "<br />" . nl2br(htmlspecialchars(implode("\n", $org_sig_lines)))) . "<br />
                     <br />
                     ";
 
@@ -244,7 +278,8 @@ if ($action == 'send_email' && !empty($id)) {
     } else {
         $provider_id = (int)$provider->id;
         $from = trim((string)$provider->email);
-        $sender_name = trim((string)$provider->providerName);
+        // System branding for the From name (not the provider account name).
+        $sender_name = 'Flash ERP System';
     }
 
     // Ensure the document PDF is saved to disk so it can be attached.
@@ -272,14 +307,6 @@ if ($action == 'send_email' && !empty($id)) {
         }
     }
 
-    $email_body = str_replace(
-        'VIEW ' . strtoupper($module_caption),
-        '<a href="' . htmlspecialchars($pdf_link, ENT_QUOTES, 'UTF-8') . '">VIEW ' . strtoupper($module_caption) . '</a>',
-        $email_body
-    );
-
-
-
     // Send using centralized SMTPMailer.
     if (!empty($provider) && empty($error_message)) {
         $mailer = new SMTPMailer();
@@ -291,6 +318,7 @@ if ($action == 'send_email' && !empty($id)) {
             'CC' => $cc,
             'BCC' => $bcc,
             'attachments' => $attachments,
+            'skip_history_log' => true,
         ];
 
         $sendSuccess = $mailer->send(
@@ -301,7 +329,48 @@ if ($action == 'send_email' && !empty($id)) {
         );
 
         if ($sendSuccess) {
-            $success_message .= '<br /> Email Sent Successfully to ' . $send_to . '.';
+            // Record the full email history row (module, subject, to, cc, bcc,
+            // description/body, attachment) so it can be viewed in email_history.php.
+            $attachment_name = $attachments[0]['name'] ?? null;
+            $historyStatus = 'sent';
+            $historyProvider = $provider_id;
+            $historyBody = str_replace(["\r\n", "\r"], "\n", (string)$description);
+            $historyModule = $current_module;
+            $historyReferenceId = (int)$id;
+
+            $histStmt = $mysqli->prepare(
+                "INSERT INTO `" . DB::EMAIL_HISTORY . "`
+                 (user_id, recipient_email, company_id, provider_id, status, sent_at, subject, body,
+                  from_name, from_email, module, reference_id, cc, bcc, attachment)
+                 VALUES (?, ?, ?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            );
+            if ($histStmt) {
+                $historyUserId = (int)\App\Core\Session::userId();
+                $historyCompany = (int)$activeOrganizationId;
+                $histStmt->bind_param(
+                    'isiissssssiss',
+                    $historyUserId,
+                    $send_to,
+                    $historyCompany,
+                    $historyProvider,
+                    $historyStatus,
+                    $subject,
+                    $historyBody,
+                    $sender_name,
+                    $from,
+                    $historyModule,
+                    $historyReferenceId,
+                    $cc,
+                    $bcc,
+                    $attachment_name
+                );
+                $histStmt->execute();
+                $histStmt->close();
+            }
+
+            flash_success('Email Sent Successfully to ' . $send_to . '.');
+            header("Location: email_history.php");
+            exit;
         } else {
             $mailerError = $mailer->getLastError();
             log_error('Document send_email failed', 'ERROR', __FILE__, __LINE__, [

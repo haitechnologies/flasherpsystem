@@ -58,6 +58,9 @@ class InvoiceController extends BaseController
     private function handleUpdate(Request $request, int $id): Response
     {
         $invoiceData = $this->buildInvoiceData($request);
+        if ($request->get('save_and_send') == 1) {
+            $invoiceData['invoice_status'] = 'sent';
+        }
         $itemsData = $this->buildItemsData($request);
 
         try {
@@ -80,6 +83,7 @@ class InvoiceController extends BaseController
         } catch (ValidationException $e) {
             $error = current($e->getErrors());
             flash_error($error);
+            $_SESSION['__invoices_old_input'] = $_POST;
             return Response::redirect("invoices.php?id=$id&action=edit_invoices");
         } catch (\Throwable $e) {
             log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
@@ -89,6 +93,7 @@ class InvoiceController extends BaseController
                 'error_code' => (string)$e->getCode(),
             ]));
             flash_error($e->getMessage());
+            $_SESSION['__invoices_old_input'] = $_POST;
             return Response::redirect("invoices.php?id=$id&action=edit_invoices");
         }
     }
@@ -96,6 +101,9 @@ class InvoiceController extends BaseController
     private function handleCreate(Request $request): Response
     {
         $invoiceData = $this->buildInvoiceData($request);
+        if ($request->get('save_and_send') == 1) {
+            $invoiceData['invoice_status'] = 'sent';
+        }
         $itemsData = $this->buildItemsData($request);
 
         try {
@@ -112,6 +120,7 @@ class InvoiceController extends BaseController
         } catch (ValidationException $e) {
             $error = current($e->getErrors());
             flash_error($error);
+            $_SESSION['__invoices_old_input'] = $_POST;
             return Response::redirect("invoices.php");
         } catch (\Throwable $e) {
             log_error($e->getMessage(), 'ERROR', __FILE__, __LINE__, backend_runtime_log_context([
@@ -121,6 +130,7 @@ class InvoiceController extends BaseController
                 'error_code' => (string)$e->getCode(),
             ]));
             flash_error($e->getMessage());
+            $_SESSION['__invoices_old_input'] = $_POST;
             return Response::redirect("invoices.php");
         }
     }
@@ -135,7 +145,7 @@ class InvoiceController extends BaseController
             'warehouse_id' => $request->getString('warehouse_id'),
             'expected_shipment_date' => $request->getString('expected_shipment_date'),
             'payment_term' => $request->getString('payment_term'),
-            'shipment_type' => $request->getString('shipment_type'),
+            'shipment_type' => $this->processArrayField($request->post('shipment_type', [])),
             'sales_person' => $request->getString('sales_person'),
             'job_reference_no' => $request->getString('job_reference_no'),
             'master_awb_no' => $request->getString('master_awb_no'),
@@ -218,13 +228,14 @@ class InvoiceController extends BaseController
         $customer_id = '0';
         $invoice_no = '';
         $invoice_status = 'draft';
-        $invoice_date = date('Y-m-d');
+        $invoice_date = DateHelper::toInputDate(date('Y-m-d'));
         $expiry_date = '';
         $reference_no = '';
         $warehouse_id = '0';
         $expected_shipment_date = '';
         $payment_term = '0';
         $shipment_type = '';
+        $shipment_type_arr = [];
         $sales_person = '0';
         $job_reference_no = '';
         $master_awb_no = '';
@@ -266,6 +277,14 @@ class InvoiceController extends BaseController
         $discount_amount_arr = [];
         $total_rows = 1;
 
+        $dim_pcs_arr = [];
+        $dim_units_arr = [];
+        $dim_length_arr = [];
+        $dim_width_arr = [];
+        $dim_height_arr = [];
+        $dim_formula_arr = [];
+        $dim_restored = false;
+
         if ($id > 0) {
             $created_by = 0;
             try {
@@ -291,6 +310,7 @@ class InvoiceController extends BaseController
                     $expected_shipment_date = (string)$invoice->expectedShipmentDate;
                     $payment_term = (string)$invoice->paymentTerm;
                     $shipment_type = (string)$invoice->shipmentType;
+                    $shipment_type_arr = $shipment_type !== '' ? explode(', ', $shipment_type) : [];
                     $sales_person = (string)$invoice->salesPerson;
                     $job_reference_no = (string)$invoice->jobReferenceNo;
                     $master_awb_no = (string)$invoice->masterAwbNo;
@@ -318,7 +338,7 @@ class InvoiceController extends BaseController
                     $grand_total = (string)$invoice->grandTotal;
                     $is_active = $invoice->isActive ? 1 : 0;
 
-                    $invoice_date = DateHelper::toDisplayDate($invoice_date);
+                    $invoice_date = DateHelper::toInputDate($invoice_date);
                     $expiry_date = ($expiry_date === '1970-01-01') ? '' : DateHelper::toDisplayDate($expiry_date);
                     $expected_shipment_date = ($expected_shipment_date === '1970-01-01') ? '' : DateHelper::toDisplayDate($expected_shipment_date);
 
@@ -353,6 +373,56 @@ class InvoiceController extends BaseController
 
         if ($total_rows == 0) {
             $total_rows = 1;
+        }
+
+        // Restore old form input after failed save
+        if (isset($_SESSION['__invoices_old_input'])) {
+            $old = $_SESSION['__invoices_old_input'];
+            unset($_SESSION['__invoices_old_input']);
+
+            foreach ([
+                'customer_id', 'invoice_date', 'expiry_date', 'reference_no', 'warehouse_id',
+                'expected_shipment_date', 'payment_term',
+                'sales_person', 'job_reference_no', 'master_awb_no', 'hwb_hbol', 'lead_id',
+                'shipper', 'consignee', 'origin', 'origin_country',
+                'destination', 'destination_country', 'no_of_packs', 'gross_weight',
+                'volume', 'chargeable_weight', 'cbm', 'terms_and_conditions',
+                'grand_subtotal', 'grand_discount_type', 'grand_discount_type_value',
+                'grand_discount_amount', 'grand_after_discount', 'customer_notes',
+                'grand_tax', 'grand_total', 'invoice_status',
+            ] as $key) {
+                if (isset($old[$key])) {
+                    $$key = (string)$old[$key];
+                }
+            }
+
+            if (isset($old['shipment_type'])) {
+                $shipment_type = is_array($old['shipment_type']) ? implode(', ', $old['shipment_type']) : $old['shipment_type'];
+                $shipment_type_arr = is_array($old['shipment_type']) ? $old['shipment_type'] : explode(', ', (string)$shipment_type);
+            }
+
+            if (isset($old['service']) && is_array($old['service'])) {
+                $item_id_arr = $old['item_id'] ?? [];
+                $service_arr = $old['service'];
+                $description_arr = $old['description'] ?? [];
+                $qty_arr = $old['qty'] ?? [];
+                $rate_arr = $old['rate'] ?? [];
+                $sub_total_arr = $old['sub_total'] ?? [];
+                $tax_arr = $old['tax'] ?? [];
+                $tax_amount_arr = $old['tax_amount'] ?? [];
+                $total_arr = $old['total'] ?? [];
+                $total_rows = max(1, count($service_arr));
+            }
+
+            if (isset($old['dim_pcs']) && is_array($old['dim_pcs'])) {
+                $dim_pcs_arr = $old['dim_pcs'];
+                $dim_units_arr = $old['dim_units'] ?? [];
+                $dim_length_arr = $old['dim_length'] ?? [];
+                $dim_width_arr = $old['dim_width'] ?? [];
+                $dim_height_arr = $old['dim_height'] ?? [];
+                $dim_formula_arr = $old['dim_formula'] ?? [];
+                $dim_restored = true;
+            }
         }
 
         // Fetch dropdown data
@@ -465,6 +535,7 @@ class InvoiceController extends BaseController
             'payment_term' => $payment_term,
             'expected_shipment_date' => $expected_shipment_date,
             'shipment_type' => $shipment_type,
+            'shipment_type_arr' => $shipment_type_arr,
             'sales_person' => $sales_person,
             'job_reference_no' => $job_reference_no,
             'master_awb_no' => $master_awb_no,
@@ -504,6 +575,13 @@ class InvoiceController extends BaseController
             'discount_type_arr' => $discount_type_arr,
             'discount_type_value_arr' => $discount_type_value_arr,
             'discount_amount_arr' => $discount_amount_arr,
+            'dim_pcs_arr' => $dim_pcs_arr,
+            'dim_units_arr' => $dim_units_arr,
+            'dim_length_arr' => $dim_length_arr,
+            'dim_width_arr' => $dim_width_arr,
+            'dim_height_arr' => $dim_height_arr,
+            'dim_formula_arr' => $dim_formula_arr,
+            'dim_restored' => $dim_restored,
             'customersList' => $customersList,
             'orgList' => $orgList,
             'shippersList' => $shippersList,
@@ -516,5 +594,21 @@ class InvoiceController extends BaseController
             'canCreate' => $this->canCreate(),
             'canEdit' => $this->canEdit(),
         ]));
+    }
+
+    private function processArrayField(mixed $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_array($value)) {
+            $trimmed = array_map(static fn($v) => trim((string)$v), $value);
+            $trimmed = array_filter($trimmed, static fn($v) => $v !== '');
+            return $trimmed === [] ? null : implode(', ', $trimmed);
+        }
+
+        $v = trim((string)$value);
+        return $v === '' ? null : $v;
     }
 }

@@ -269,7 +269,7 @@ switch ($ajax_action) {
 		if (checkDuplicateRow(tbl_shippers, 'shipper_name', $shipper_name) && $shipper_name != getTableAttr('shipper_name', tbl_shippers, $id)) {
 			$response['error_message'] = 'Duplicate Shipper name. Please enter different.';
 		
-		} else if (!empty($shipper_name) && !empty($shipper_address_line1)) {
+		} else if (!empty($shipper_name)) {
 
 				$shipper_country	= (($shipper_country == '') ? 0 : $shipper_country);
 
@@ -279,6 +279,9 @@ switch ($ajax_action) {
 
 					$response['shipper_id']   = $id;
 					$response['shipper_name'] = $shipper_name;
+
+		} else {
+			$response['error_message'] = 'Shipper Name is required.';
 		}
 
 		echo json_encode($response);
@@ -352,7 +355,7 @@ switch ($ajax_action) {
 		if (checkDuplicateRow(tbl_consignees, 'consignee_name', $consignee_name) && $consignee_name != getTableAttr('consignee_name', tbl_consignees, $id)) {
 			$response['error_message'] = 'Duplicate consignee name. Please enter different.';
 		
-		} else if (!empty($consignee_name) && !empty($consignee_address_line1)) {
+		} else if (!empty($consignee_name)) {
 
 				$consignee_country	= (($consignee_country == '') ? 0 : $consignee_country);
 
@@ -362,6 +365,9 @@ switch ($ajax_action) {
 
 					$response['consignee_id']   = $id;
 					$response['consignee_name'] = $consignee_name;
+
+		} else {
+			$response['error_message'] = 'Consignee Name is required.';
 		}
 
 		echo json_encode($response);
@@ -451,8 +457,8 @@ switch ($ajax_action) {
 	*/
 	case 'select2_ports':
 
-		$searchTerm = isset($_POST['q']) ? s__((string)$_POST['q']) : '';
-		$countryId  = isset($_POST['country_id']) ? (int)s__((string)$_POST['country_id']) : 0;
+		$searchTerm = isset($_REQUEST['q']) ? s__((string)$_REQUEST['q']) : '';
+		$countryId  = isset($_REQUEST['country_id']) ? (int)s__((string)$_REQUEST['country_id']) : 0;
 
 		$results = [];
 
@@ -467,7 +473,7 @@ switch ($ajax_action) {
 		}
 
 		if ($searchTerm !== '') {
-			$like    = '%' . addcslashes($searchTerm, '%_\\') . '%';
+			$like    = addcslashes($searchTerm, '%_\\') . '%';
 			$where  .= " AND (port_name LIKE ? OR port_code LIKE ?)";
 			$types  .= 'ss';
 			$params[] = $like;
@@ -491,10 +497,8 @@ switch ($ajax_action) {
 
 			if ($result && $result->num_rows > 0) {
 				while ($row = $result->fetch_assoc()) {
-					$label = s__($row['port_name']);
-					if (!empty($row['port_code'])) {
-						$label .= ' (' . s__($row['port_code']) . ')';
-					}
+					$code = !empty($row['port_code']) ? s__($row['port_code']) : '';
+					$label = $code !== '' ? $code . ' - ' . s__($row['port_name']) : s__($row['port_name']);
 					$results[] = [
 						'id'   => s__($row['id']),
 						'text' => $label

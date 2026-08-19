@@ -5,6 +5,7 @@ declare(strict_types=1);
  * @var int $id
  * @var string $module
  * @var string $moduleCaption
+ * @var string $error_message
  * @var string $customer_id
  * @var string $invoice_no
  * @var string $invoice_status
@@ -14,7 +15,7 @@ declare(strict_types=1);
  * @var string $warehouse_id
  * @var string $expected_shipment_date
  * @var string $payment_term
- * @var string $shipment_type
+ * @var array $shipment_type_arr
  * @var string $sales_person
  * @var string $job_reference_no
  * @var string $master_awb_no
@@ -54,6 +55,13 @@ declare(strict_types=1);
  * @var array $discount_type_arr
  * @var array $discount_type_value_arr
  * @var array $discount_amount_arr
+ * @var array $dim_pcs_arr
+ * @var array $dim_units_arr
+ * @var array $dim_length_arr
+ * @var array $dim_width_arr
+ * @var array $dim_height_arr
+ * @var array $dim_formula_arr
+ * @var bool $dim_restored
  * @var array $customersList
  * @var array $orgList
  * @var array $shippersList
@@ -66,12 +74,20 @@ declare(strict_types=1);
  * @var bool $canCreate
  * @var bool $canEdit
  */
+
+$deliveryMethodOptions = ['air' => 'Air', 'sea' => 'Sea', 'land' => 'Land'];
+$delivery_method_options_html = '';
+foreach ($deliveryMethodOptions as $val => $lbl) {
+    $sel = (in_array($val, $shipment_type_arr, true)) ? 'selected' : '';
+    $delivery_method_options_html .= '<option value="' . $val . '" ' . $sel . '>' . htmlspecialchars($lbl) . '</option>';
+}
+
 include 'admin_elements/admin_header.php';
 ?>
 
 <div class="content-wrapper">
 
-    <form class="steps-basic clearfix" method="post" id="frm<?php echo $module; ?>" name="frm<?php echo $module; ?>" action="<?php echo $module; ?>.php" enctype="multipart/form-data">
+    <form class="steps-basic clearfix" method="post" id="frm<?php echo $module; ?>" name="frm<?php echo $module; ?>" action="<?php echo $module; ?>.php" enctype="multipart/form-data" autocomplete="off">
         <?php echo csrf_field(); ?>
         <input type="hidden" name="invoice_status" id="invoice_status" value="<?php echo $invoice_status; ?>" />
         <input type="hidden" name="save_and_send" id="save_and_send" value="" />
@@ -117,6 +133,13 @@ include 'admin_elements/admin_header.php';
             <div class="content">
 
                 <?php include('admin_elements/breadcrumb.php'); ?>
+
+                <?php if (!empty($error_message)): ?>
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i class="ph-warning-circle me-2"></i><?php echo e_s__($error_message); ?>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                <?php endif; ?>
 
                 <div class="alert alert-info alert-dismissible fade show" role="alert">
                     <i class="ph-info me-2"></i>
@@ -171,13 +194,13 @@ include 'admin_elements/admin_header.php';
                                     </div>
 
                                     <div class="row mb-2">
-                                        <label class="col-lg-3 col-form-label">Reference no:</label>
+                                        <label class="col-lg-3 col-form-label"><span class="text-danger">Job Reference no:*</span></label>
                                         <div class="col-lg-9">
-                                            <input type="text" class="form-control" name="reference_no" id="reference_no" value="<?php echo $reference_no; ?>">
+                                            <input type="text" class="form-control" name="reference_no" id="reference_no" value="<?php echo $reference_no; ?>" required>
                                         </div>
                                     </div>
 
-                                    <div class="row mb-2">
+                                    <div class="row mb-2 d-none">
                                         <label class="col-lg-3 col-form-label">Expiry Date:</label>
                                         <div class="col-lg-9">
                                             <div class="form-control-feedback form-control-feedback-start">
@@ -206,7 +229,7 @@ include 'admin_elements/admin_header.php';
                                         <label class="col-lg-3 col-form-label">Expected Shipment Date:</label>
                                         <div class="col-lg-9">
                                             <div class="form-control-feedback form-control-feedback-start">
-                                                <input type="text" class="form-control" placeholder="Expected Shipment Date" name="expected_shipment_date" id="expected_shipment_date" value="<?php echo $expected_shipment_date; ?>">
+                                                <input type="text" class="form-control" placeholder="" name="expected_shipment_date" id="expected_shipment_date" value="<?php echo $expected_shipment_date; ?>">
                                                 <div class="form-control-feedback-icon">
                                                     <i class="ph-calendar"></i>
                                                 </div>
@@ -228,17 +251,7 @@ include 'admin_elements/admin_header.php';
                                         </div>
                                     </div>
 
-                                    <div class="row mb-2">
-                                        <label class="col-lg-3 col-form-label">Delivery Method:</label>
-                                        <div class="col-lg-9">
-                                            <select class="form-select" name="shipment_type" id="shipment_type">
-                                                <option value='0'>Please select</option>
-                                                <option value="export" <?php echo $shipment_type === 'export' ? 'selected' : ''; ?>>Export</option>
-                                                <option value="import" <?php echo $shipment_type === 'import' ? 'selected' : ''; ?>>Import</option>
-                                                <option value="transit" <?php echo $shipment_type === 'transit' ? 'selected' : ''; ?>>Transit</option>
-                                            </select>
-                                        </div>
-                                    </div>
+                                    <?php $field = ['name'=>'shipment_type[]', 'label'=>'Delivery Method:', 'options_html'=>$delivery_method_options_html, 'extra_class'=>'form-control select select2-enable', 'multiple'=>true, 'empty_option'=>false]; include 'admin_elements/form_field_select.php'; ?>
 
                                     <div class="row mb-2">
                                         <label class="col-lg-3 col-form-label">Sales Person:</label>
@@ -263,27 +276,20 @@ include 'admin_elements/admin_header.php';
                                 <div class="card-body">
 
                                     <div class="row mb-2">
-                                        <label class="col-lg-3 col-form-label">Job Reference no:</label>
-                                        <div class="col-lg-9">
-                                            <input type="text" class="form-control" name="job_reference_no" id="job_reference_no" value="<?php echo $job_reference_no; ?>">
-                                        </div>
-                                    </div>
-
-                                    <div class="row mb-2">
                                         <label class="col-lg-3 col-form-label">MAWB/BOL:</label>
                                         <div class="col-lg-3">
                                             <input type="text" class="form-control" name="master_awb_no" id="master_awb_no" value="<?php echo htmlspecialchars($master_awb_no); ?>">
                                         </div>
-                                        <label class="col-lg-1 col-form-label text-end">HWB/HBOL:</label>
-                                        <div class="col-lg-5">
+                                        <label class="col-lg-2 col-form-label text-end">HWB/HBOL:</label>
+                                        <div class="col-lg-4">
                                             <input type="text" class="form-control" name="hwb_hbol" id="hwb_hbol" value="<?php echo htmlspecialchars($hwb_hbol); ?>">
                                         </div>
                                     </div>
 
                                     <div class="row mb-2">
-                                        <label class="col-lg-3 col-form-label">Shipper:</label>
-                                        <div class="col-lg-7">
-                                            <select name="shipper" id="shipper" class="form-select">
+                                        <label class="col-lg-3 col-form-label">Shipper: <i class="ph-plus-circle" data-bs-toggle="modal" data-bs-target="#shipperModal" style="cursor:pointer;"></i></label>
+                                        <div class="col-lg-9">
+                                            <select name="shipper" id="shipper_id" class="form-select">
                                                 <option value='0'>Please select</option>
                                                 <?php foreach ($shippersList as $row): ?>
                                                     <option value="<?php echo $row['id']; ?>" <?php echo (string)$row['id'] === $shipper ? 'selected' : ''; ?>>
@@ -292,17 +298,12 @@ include 'admin_elements/admin_header.php';
                                                 <?php endforeach; ?>
                                             </select>
                                         </div>
-                                        <div class="col-lg-2">
-                                            <a href="#" class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#shipperModal">
-                                                <i class="ph-plus"></i>
-                                            </a>
-                                        </div>
                                     </div>
 
                                     <div class="row mb-2">
-                                        <label class="col-lg-3 col-form-label">Consignee:</label>
-                                        <div class="col-lg-7">
-                                            <select name="consignee" id="consignee" class="form-select">
+                                        <label class="col-lg-3 col-form-label">Consignee: <i class="ph-plus-circle" data-bs-toggle="modal" data-bs-target="#consigneeModal" style="cursor:pointer;"></i></label>
+                                        <div class="col-lg-9">
+                                            <select name="consignee" id="consignee_id" class="form-select">
                                                 <option value='0'>Please select</option>
                                                 <?php foreach ($consigneesList as $row): ?>
                                                     <option value="<?php echo $row['id']; ?>" <?php echo (string)$row['id'] === $consignee ? 'selected' : ''; ?>>
@@ -311,17 +312,12 @@ include 'admin_elements/admin_header.php';
                                                 <?php endforeach; ?>
                                             </select>
                                         </div>
-                                        <div class="col-lg-2">
-                                            <a href="#" class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#consigneeModal">
-                                                <i class="ph-plus"></i>
-                                            </a>
-                                        </div>
                                     </div>
 
                                     <div class="row mb-2">
                                         <label class="col-lg-3 col-form-label">Origin Port:</label>
                                         <div class="col-lg-3">
-                                            <select name="origin" id="origin" class="form-select select2-port-ajax">
+                                            <select name="origin" id="origin" class="form-select select2-port-ajax" onchange="ajax_select_port_country('origin', this.value);">
                                                 <option value="0">Please select</option>
                                                 <?php foreach ($portsList as $row): ?>
                                                     <option value="<?php echo $row['id']; ?>" <?php echo (string)$row['id'] === $origin ? 'selected' : ''; ?>>
@@ -346,7 +342,7 @@ include 'admin_elements/admin_header.php';
                                     <div class="row mb-2">
                                         <label class="col-lg-3 col-form-label">Destination Port:</label>
                                         <div class="col-lg-3">
-                                            <select name="destination" id="destination" class="form-select select2-port-ajax">
+                                            <select name="destination" id="destination" class="form-select select2-port-ajax" onchange="ajax_select_port_country('destination', this.value);">
                                                 <option value="0">Please select</option>
                                                 <?php foreach ($portsList as $row): ?>
                                                     <option value="<?php echo $row['id']; ?>" <?php echo (string)$row['id'] === $destination ? 'selected' : ''; ?>>
@@ -395,16 +391,40 @@ include 'admin_elements/admin_header.php';
                                         <div class="col-lg-3">
                                             <input readonly type="number" step="any" class="form-control bg-light bg-opacity-75" name="chargeable_weight" id="chargeable_weight" value="<?php echo $chargeable_weight; ?>">
                                         </div>
-                                        <label class="col-lg-1 col-form-label text-end">CBM:</label>
-                                        <div class="col-lg-5">
+                                        <label class="col-lg-2 col-form-label text-end">CBM:</label>
+                                        <div class="col-lg-4">
                                             <input readonly type="number" step="any" class="form-control bg-light bg-opacity-75" name="cbm" id="cbm" value="<?php echo $cbm; ?>">
                                         </div>
+                                    </div>
+
+                                    <?php
+                                    $dimCount = !empty($dim_pcs_arr) ? count($dim_pcs_arr) : 1;
+                                    ?>
+                                    <div id="dimension_hidden_fields">
+                                        <?php for ($di = 0; $di < $dimCount; $di++): $dimRow = $di + 1; ?>
+                                            <input type="hidden" name="dim_pcs[]" id="dim_pcs_hidden_<?php echo $dimRow; ?>" value="<?php echo isset($dim_pcs_arr[$di]) ? $dim_pcs_arr[$di] : '1'; ?>">
+                                            <input type="hidden" name="dim_units[]" id="dim_units_hidden_<?php echo $dimRow; ?>" value="<?php echo isset($dim_units_arr[$di]) ? $dim_units_arr[$di] : 'cm'; ?>">
+                                            <input type="hidden" name="dim_length[]" id="dim_length_hidden_<?php echo $dimRow; ?>" value="<?php echo isset($dim_length_arr[$di]) ? $dim_length_arr[$di] : '0'; ?>">
+                                            <input type="hidden" name="dim_width[]" id="dim_width_hidden_<?php echo $dimRow; ?>" value="<?php echo isset($dim_width_arr[$di]) ? $dim_width_arr[$di] : '0'; ?>">
+                                            <input type="hidden" name="dim_height[]" id="dim_height_hidden_<?php echo $dimRow; ?>" value="<?php echo isset($dim_height_arr[$di]) ? $dim_height_arr[$di] : '0'; ?>">
+                                            <input type="hidden" name="dim_formula[]" id="dim_formula_hidden_<?php echo $dimRow; ?>" value="<?php echo isset($dim_formula_arr[$di]) ? $dim_formula_arr[$di] : '6000'; ?>">
+                                        <?php endfor; ?>
                                     </div>
 
                                     <div class="row mb-2">
                                         <label class="col-lg-3 col-form-label">No of Packs:</label>
                                         <div class="col-lg-9">
                                             <input type="number" step="1" min="0" class="form-control" name="no_of_packs" id="no_of_packs" value="<?php echo $no_of_packs; ?>">
+                                            <div class="form-text">
+                                                <span class="fw-semibold">Dimensions formula:</span> Open the
+                                                <span class="badge bg-primary bg-opacity-10 text-primary"><i class="ph-cube me-1"></i>Dimensions</span>
+                                                block to add dimension rows. Each row calculates:
+                                                <ul class="mb-1 mt-1">
+                                                    <li><span class="fw-semibold">CBM</span> = (Length &times; Width &times; Height) &divide; 1,000,000 &times; PCS</li>
+                                                    <li><span class="fw-semibold">Volume (kg)</span> = (Length &times; Width &times; Height) &divide; Formula &times; PCS</li>
+                                                </ul>
+                                                Length/Width/Height are entered in cm (select <em>inch</em> to auto-convert to cm by &times; 2.54). Pick the <em>Formula</em> divider (6000 or 5000) used by your carrier. Click <span class="fw-semibold">Save Dimensions</span> to copy the totals into the CBM and Volume fields; the chargeable weight is then set to the higher of <span class="fw-semibold">Volume</span> or <span class="fw-semibold">Gross Weight</span>.
+                                            </div>
                                         </div>
                                     </div>
 
@@ -451,15 +471,15 @@ include 'admin_elements/admin_header.php';
                                     </div>
 
                                     <div class="col-lg-1">
-                                        <input type="number" step="1" name="qty[]" id="qty<?php echo $itemRow; ?>" min="1" class="form-control text-center" onkeyup="calculateItemAmount('<?php echo $itemRow; ?>');" onchange="calculateItemAmount('<?php echo $itemRow; ?>');" value="<?php echo !empty($qty_arr[$index]) ? $qty_arr[$index] : '1'; ?>">
+                                        <input type="number" step="1" name="qty[]" id="qty<?php echo $itemRow; ?>" min="1" class="form-control text-center" onkeyup="calculateItemAmount('<?php echo $itemRow; ?>');" onchange="calculateItemAmount('<?php echo $itemRow; ?>');" value="<?php echo !empty($qty_arr[$index]) ? $qty_arr[$index] : '1'; ?>" autocomplete="off">
                                     </div>
 
                                     <div class="col-lg-1">
-                                        <input type="number" step="any" name="rate[]" id="rate<?php echo $itemRow; ?>" min="0" class="form-control text-center" value="<?php echo !empty($rate_arr[$index]) ? $rate_arr[$index] : '0'; ?>">
+                                        <input type="number" step="any" name="rate[]" id="rate<?php echo $itemRow; ?>" min="0" class="form-control text-center" onkeyup="calculateItemAmount('<?php echo $itemRow; ?>');" onchange="calculateItemAmount('<?php echo $itemRow; ?>');" value="<?php echo !empty($rate_arr[$index]) ? $rate_arr[$index] : '0'; ?>" autocomplete="off">
                                     </div>
 
                                     <div class="col-lg-1">
-                                        <input readonly type="number" name="sub_total[]" id="sub_total<?php echo $itemRow; ?>" min="0" class="form-control bg-light bg-opacity-75 text-end" value="<?php echo !empty($sub_total_arr[$index]) ? $sub_total_arr[$index] : '0'; ?>">
+                                        <input readonly type="number" name="sub_total[]" id="sub_total<?php echo $itemRow; ?>" min="0" class="form-control bg-light bg-opacity-75 text-end" value="<?php echo !empty($sub_total_arr[$index]) ? $sub_total_arr[$index] : '0'; ?>" autocomplete="off">
                                     </div>
 
                                     <div class="col-lg-1">
@@ -476,7 +496,7 @@ include 'admin_elements/admin_header.php';
                                     </div>
 
                                     <div class="col-lg-1">
-                                        <input readonly type="number" name="total[]" id="total<?php echo $itemRow; ?>" min="0" class="form-control bg-light bg-opacity-75 text-end" value="<?php echo !empty($total_arr[$index]) ? $total_arr[$index] : ''; ?>">
+                                        <input readonly type="number" name="total[]" id="total<?php echo $itemRow; ?>" min="0" class="form-control bg-light bg-opacity-75 text-end" value="<?php echo !empty($total_arr[$index]) ? $total_arr[$index] : ''; ?>" autocomplete="off">
                                     </div>
 
                                     <div class="col-lg-2 mt-1">
@@ -613,7 +633,7 @@ include 'admin_elements/admin_header.php';
             <div class="modal-body">
                 <div id="ajax_shipper_error_message" class="alert alert-danger" style="display:none;"></div>
                 <div class="row mb-2">
-                    <label class="col-lg-3 col-form-label">Shipper Name: <span class="text-danger">*</span></label>
+                                <label class="col-lg-3 col-form-label text-danger">Shipper Name: <span class="text-danger">*</span></label>
                     <div class="col-lg-9"><input type="text" class="form-control" id="shipper_name" /></div>
                 </div>
                 <div class="row mb-2">
@@ -683,7 +703,7 @@ include 'admin_elements/admin_header.php';
             <div class="modal-body">
                 <div id="ajax_consignee_error_message" class="alert alert-danger" style="display:none;"></div>
                 <div class="row mb-2">
-                    <label class="col-lg-3 col-form-label">Consignee Name: <span class="text-danger">*</span></label>
+                                <label class="col-lg-3 col-form-label text-danger">Consignee Name: <span class="text-danger">*</span></label>
                     <div class="col-lg-9"><input type="text" class="form-control" id="consignee_name" /></div>
                 </div>
                 <div class="row mb-2">
@@ -755,39 +775,49 @@ include 'admin_elements/admin_header.php';
                     <table class="table" id="dim_table">
                         <thead>
                             <tr>
-                                <th width="80">PCS</th>
-                                <th width="80">Units</th>
-                                <th width="80">Length (cm)</th>
-                                <th width="80">Width (cm)</th>
-                                <th width="80">Height (cm)</th>
-                                <th width="80">Formula</th>
-                                <th width="80">CBM</th>
-                                <th width="80">Volume (kg)</th>
+                                <th width="160">PCS</th>
+                                <th width="160">Units</th>
+                                <th width="160">Length (cm)</th>
+                                <th width="160">Width (cm)</th>
+                                <th width="160">Height (cm)</th>
+                                <th width="160">Formula</th>
+                                <th width="160">CBM</th>
+                                <th width="160">Volume (kg)</th>
                                 <th></th>
                             </tr>
                         </thead>
                         <tbody id="dimension_table_body">
-                            <tr id="dim_row_1">
-                                <td><input type="number" class="form-control form-control-sm text-center dim-calc" id="dim_pcs_1" value="1" min="1" onchange="calculateDim(1)" onkeyup="calculateDim(1)"></td>
+                            <?php for ($di = 0; $di < $dimCount; $di++): $dimRow = $di + 1; ?>
+                                <?php
+                                $dimPcs = isset($dim_pcs_arr[$di]) ? $dim_pcs_arr[$di] : '1';
+                                $dimUnits = isset($dim_units_arr[$di]) ? $dim_units_arr[$di] : 'cm';
+                                $dimLength = isset($dim_length_arr[$di]) ? $dim_length_arr[$di] : '0';
+                                $dimWidth = isset($dim_width_arr[$di]) ? $dim_width_arr[$di] : '0';
+                                $dimHeight = isset($dim_height_arr[$di]) ? $dim_height_arr[$di] : '0';
+                                $dimFormula = isset($dim_formula_arr[$di]) ? $dim_formula_arr[$di] : '6000';
+                                ?>
+                            <tr id="dim_row_<?php echo $dimRow; ?>">
+                                <td><input type="number" class="form-control form-control-sm text-center dim-calc" id="dim_pcs_<?php echo $dimRow; ?>" value="<?php echo $dimPcs; ?>" min="1" onchange="calculateDim(<?php echo $dimRow; ?>)" onkeyup="calculateDim(<?php echo $dimRow; ?>)"></td>
                                 <td>
-                                    <select class="form-select form-select-sm dim-calc" id="dim_units_1" onchange="calculateDim(1)">
-                                        <option value="cm">cm</option>
-                                        <option value="inch">inch</option>
+                                    <select class="form-select form-select-sm dim-calc" id="dim_units_<?php echo $dimRow; ?>" onchange="calculateDim(<?php echo $dimRow; ?>)">
+                                        <option value="cm" <?php echo $dimUnits === 'cm' ? 'selected' : ''; ?>>cm</option>
+                                        <option value="inch" <?php echo $dimUnits === 'inch' ? 'selected' : ''; ?>>inch</option>
                                     </select>
                                 </td>
-                                <td><input type="number" class="form-control form-control-sm dim-calc" id="dim_length_1" value="0" step="any" onchange="calculateDim(1)" onkeyup="calculateDim(1)"></td>
-                                <td><input type="number" class="form-control form-control-sm dim-calc" id="dim_width_1" value="0" step="any" onchange="calculateDim(1)" onkeyup="calculateDim(1)"></td>
-                                <td><input type="number" class="form-control form-control-sm dim-calc" id="dim_height_1" value="0" step="any" onchange="calculateDim(1)" onkeyup="calculateDim(1)"></td>
+                                <td><input type="number" class="form-control form-control-sm dim-calc" id="dim_length_<?php echo $dimRow; ?>" value="<?php echo $dimLength; ?>" step="any" onchange="calculateDim(<?php echo $dimRow; ?>)" onkeyup="calculateDim(<?php echo $dimRow; ?>)"></td>
+                                <td><input type="number" class="form-control form-control-sm dim-calc" id="dim_width_<?php echo $dimRow; ?>" value="<?php echo $dimWidth; ?>" step="any" onchange="calculateDim(<?php echo $dimRow; ?>)" onkeyup="calculateDim(<?php echo $dimRow; ?>)"></td>
+                                <td><input type="number" class="form-control form-control-sm dim-calc" id="dim_height_<?php echo $dimRow; ?>" value="<?php echo $dimHeight; ?>" step="any" onchange="calculateDim(<?php echo $dimRow; ?>)" onkeyup="calculateDim(<?php echo $dimRow; ?>)"></td>
                                 <td>
-                                    <select class="form-select form-select-sm dim-calc" id="dim_formula_1" onchange="calculateDim(1)">
-                                        <option value="6000">6000</option>
-                                        <option value="5000">5000</option>
+                                    <select class="form-select form-select-sm dim-calc" id="dim_formula_<?php echo $dimRow; ?>" onchange="calculateDim(<?php echo $dimRow; ?>)">
+                                        <option value="6000" <?php echo $dimFormula === '6000' ? 'selected' : ''; ?>>6000</option>
+                                        <option value="5000" <?php echo $dimFormula === '5000' ? 'selected' : ''; ?>>5000</option>
                                     </select>
                                 </td>
-                                <td><input readonly type="text" class="form-control form-control-sm bg-light text-end" id="dim_cbm_1" value="0"></td>
-                                <td><input readonly type="text" class="form-control form-control-sm bg-light text-end" id="dim_volume_1" value="0"></td>
-                                <td><a href="#" onclick="clear_dim_row(1); return false;"><span class="badge bg-warning"><i class="ph-x"></i></span></a></td>
+                                <td><input readonly type="text" class="form-control form-control-sm bg-light text-end" id="dim_cbm_<?php echo $dimRow; ?>" value="0"></td>
+                                <td><input readonly type="text" class="form-control form-control-sm bg-light text-end" id="dim_volume_<?php echo $dimRow; ?>" value="0"></td>
+                                <td><a href="#" onclick="clear_dim_row(<?php echo $dimRow; ?>); return false;"><span class="badge bg-warning"><i class="ph-x"></i></span></a></td>
                             </tr>
+                            <?php endfor; ?>
                         </tbody>
                         <tfoot>
                             <tr>
@@ -799,7 +829,7 @@ include 'admin_elements/admin_header.php';
                         </tfoot>
                     </table>
                 </div>
-                <input type="hidden" id="dim_total_rows" value="1">
+                <input type="hidden" id="dim_total_rows" value="<?php echo $dimCount; ?>">
                 <div>
                     <a href="#" onclick="add_dim_item_row(); return false;"><span class="badge bg-primary">Add New Dimension</span></a>
                 </div>
@@ -834,7 +864,17 @@ include 'admin_elements/admin_header.php';
         document.getElementById('chargeable_weight').value = Math.max(volume, gross_weight);
     }
 
+    function syncDimHidden(row_no) {
+        var ids = ['dim_pcs', 'dim_units', 'dim_length', 'dim_width', 'dim_height', 'dim_formula'];
+        for (var i = 0; i < ids.length; i++) {
+            var visible = document.getElementById(ids[i] + '_' + row_no);
+            var hidden = document.getElementById(ids[i] + '_hidden_' + row_no);
+            if (visible && hidden) hidden.value = visible.value;
+        }
+    }
+
     function calculateDim(row_no) {
+        syncDimHidden(row_no);
         var pcs = parseFloat(document.getElementById('dim_pcs_' + row_no).value) || 0;
         var length = parseFloat(document.getElementById('dim_length_' + row_no).value) || 0;
         var width = parseFloat(document.getElementById('dim_width_' + row_no).value) || 0;
@@ -887,11 +927,25 @@ include 'admin_elements/admin_header.php';
         new_row += '</tr>';
 
         document.getElementById('dimension_table_body').insertAdjacentHTML('beforeend', new_row);
+
+        var hidden_html = '';
+        hidden_html += '<input type="hidden" name="dim_pcs[]" id="dim_pcs_hidden_' + total_rows + '" value="1">';
+        hidden_html += '<input type="hidden" name="dim_units[]" id="dim_units_hidden_' + total_rows + '" value="cm">';
+        hidden_html += '<input type="hidden" name="dim_length[]" id="dim_length_hidden_' + total_rows + '" value="0">';
+        hidden_html += '<input type="hidden" name="dim_width[]" id="dim_width_hidden_' + total_rows + '" value="0">';
+        hidden_html += '<input type="hidden" name="dim_height[]" id="dim_height_hidden_' + total_rows + '" value="0">';
+        hidden_html += '<input type="hidden" name="dim_formula[]" id="dim_formula_hidden_' + total_rows + '" value="6000">';
+        document.getElementById('dimension_hidden_fields').insertAdjacentHTML('beforeend', hidden_html);
     }
 
     function clear_dim_row(row_no) {
         var row = document.getElementById('dim_row_' + row_no);
         if (row) row.style.display = 'none';
+        var ids = ['dim_pcs', 'dim_units', 'dim_length', 'dim_width', 'dim_height', 'dim_formula'];
+        for (var i = 0; i < ids.length; i++) {
+            var hidden = document.getElementById(ids[i] + '_hidden_' + row_no);
+            if (hidden) hidden.value = '';
+        }
         calculateDimGrand();
     }
 
@@ -904,11 +958,21 @@ include 'admin_elements/admin_header.php';
         document.getElementById('cbm').value = parseFloat(grand_cbm.toFixed(4));
         calculateChargeableWeight();
 
-        $('#dimensionModal').modal('hide');
+        hideModalRobust('dimensionModal');
     }
 
     function create_shipper() {
-        var shipper_name = document.getElementById('shipper_name').value;
+        var shipper_name = document.getElementById('shipper_name').value.trim();
+        var shipper_error = document.getElementById('ajax_shipper_error_message');
+
+        if (shipper_name === '') {
+            shipper_error.style.display = 'block';
+            shipper_error.textContent = 'Shipper Name is required.';
+            document.getElementById('shipper_name').focus();
+            return;
+        }
+        shipper_error.style.display = 'none';
+
         var shipper_address_line1 = document.getElementById('shipper_address_line1').value;
         var shipper_address_line2 = document.getElementById('shipper_address_line2').value;
         var shipper_city = document.getElementById('shipper_city').value;
@@ -926,7 +990,17 @@ include 'admin_elements/admin_header.php';
     }
 
     function create_consignee() {
-        var consignee_name = document.getElementById('consignee_name').value;
+        var consignee_name = document.getElementById('consignee_name').value.trim();
+        var consignee_error = document.getElementById('ajax_consignee_error_message');
+
+        if (consignee_name === '') {
+            consignee_error.style.display = 'block';
+            consignee_error.textContent = 'Consignee Name is required.';
+            document.getElementById('consignee_name').focus();
+            return;
+        }
+        consignee_error.style.display = 'none';
+
         var consignee_address_line1 = document.getElementById('consignee_address_line1').value;
         var consignee_address_line2 = document.getElementById('consignee_address_line2').value;
         var consignee_city = document.getElementById('consignee_city').value;
@@ -1017,13 +1091,13 @@ include 'admin_elements/admin_header.php';
         new_row += '<input type="hidden" name="item_id[]" id="item_id' + total_rows + '">';
         new_row += '<div class="col-lg-2"><select class="form-select" name="service[]" id="service' + total_rows + '" onchange="ajax_populate_item_rate(this.value, ' + total_rows + ');"><option value="0">Please select</option></select></div>';
         new_row += '<div class="col-lg-3"><textarea name="description[]" id="description' + total_rows + '" rows="2" class="form-control" placeholder="Add a description to your item"></textarea></div>';
-        new_row += '<div class="col-lg-1"><input type="number" step="1" name="qty[]" id="qty' + total_rows + '" min="1" class="form-control text-center" onkeyup="calculateItemAmount(\'' + total_rows + '\');" onchange="calculateItemAmount(\'' + total_rows + '\');" placeholder="1"></div>';
-        new_row += '<div class="col-lg-1"><input type="number" step="any" name="rate[]" id="rate' + total_rows + '" min="0" class="form-control text-center" placeholder="0"></div>';
-        new_row += '<div class="col-lg-1"><input readonly type="number" name="sub_total[]" id="sub_total' + total_rows + '" min="0" class="form-control bg-light bg-opacity-75 text-end" value="0"></div>';
+        new_row += '<div class="col-lg-1"><input type="number" step="1" name="qty[]" id="qty' + total_rows + '" min="1" class="form-control text-center" onkeyup="calculateItemAmount(\'' + total_rows + '\');" onchange="calculateItemAmount(\'' + total_rows + '\');" placeholder="1" autocomplete="off"></div>';
+        new_row += '<div class="col-lg-1"><input type="number" step="any" name="rate[]" id="rate' + total_rows + '" min="0" class="form-control text-center" onkeyup="calculateItemAmount(\'' + total_rows + '\');" onchange="calculateItemAmount(\'' + total_rows + '\');" placeholder="0" autocomplete="off"></div>';
+        new_row += '<div class="col-lg-1"><input readonly type="number" name="sub_total[]" id="sub_total' + total_rows + '" min="0" class="form-control bg-light bg-opacity-75 text-end" value="0" autocomplete="off"></div>';
         new_row += '<div class="col-lg-1"><select name="tax[]" id="tax' + total_rows + '" class="form-select" onchange="calculateItemAmount(' + total_rows + ', this.value);">';
         for (var t = 0; t <= 100; t++) { new_row += '<option value="' + t + '">' + t + '%</option>'; }
         new_row += '</select><div class="text-center mt-1"><span class="badge bg-light text-black" style="font-weight:normal;" id="div_tax_amount' + total_rows + '"></span></div><input type="hidden" name="tax_amount[]" id="tax_amount' + total_rows + '" value="0"></div>';
-        new_row += '<div class="col-lg-1"><input readonly type="number" name="total[]" id="total' + total_rows + '" min="0" class="form-control bg-light bg-opacity-75 text-end" value=""></div>';
+        new_row += '<div class="col-lg-1"><input readonly type="number" name="total[]" id="total' + total_rows + '" min="0" class="form-control bg-light bg-opacity-75 text-end" value="" autocomplete="off"></div>';
         new_row += '<div class="col-lg-2 mt-1"><a href="#" onclick="clear_row(' + total_rows + ')"><span class="badge bg-warning"><i class="ph-x"></i></span></a></div>';
         new_row += '</div>';
         document.getElementById('add_row_here').insertAdjacentHTML('beforebegin', new_row);
@@ -1109,6 +1183,10 @@ include 'admin_elements/admin_header.php';
 
         initPortSelect2('origin', 'origin_country');
         initPortSelect2('destination', 'destination_country');
+        <?php if ($dim_restored): ?>
+            for (var di = 1; di <= <?php echo $dimCount; ?>; di++) { calculateDim(di); }
+            calculateChargeableWeight();
+        <?php endif; ?>
         $(document).on('change', '#grand_discount_type', function () {
             clearGrandDiscountTypeValue();
             calculateGrand();

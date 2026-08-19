@@ -17,6 +17,9 @@ declare(strict_types=1);
  *     'hard_delete'         (bool) default false — use DELETE FROM instead of soft-delete
  *     'ownership_check'     (bool) default false — enforce created_by = Session::userId() for non-superadmins
  *     'redirect_on_success' (bool) default false — redirect on success instead of inline message
+ *     'cascade_delete'      (array) default [] — list of SQL UPDATE statements using :id param,
+ *                             executed before the delete to null out referencing rows, e.g.
+ *                             "UPDATE `tbl` SET fk = 0 WHERE fk = :id"
  */
 
 use App\Core\DB;
@@ -30,6 +33,7 @@ $handler_config = $handler_config ?? [];
 $hard_delete = (bool)($handler_config['hard_delete'] ?? false);
 $ownership_check = (bool)($handler_config['ownership_check'] ?? false);
 $redirect_on_success = (bool)($handler_config['redirect_on_success'] ?? false);
+$cascade_delete = $handler_config['cascade_delete'] ?? [];
 
 $db = DB::pdo();
 
@@ -57,6 +61,9 @@ if ($action === "publish_{$module}" && !empty($id) && granted('edit', $module_id
         }
 
         if (empty($error_message)) {
+            foreach ((array)$cascade_delete as $cascadeSql) {
+                $db->execute($cascadeSql, ['id' => $id]);
+            }
             if ($hard_delete) {
                 $db->execute("DELETE FROM `{$tbl_name}` WHERE id = :id", ['id' => $id]);
             } else {

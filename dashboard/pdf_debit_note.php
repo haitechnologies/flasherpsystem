@@ -258,7 +258,8 @@ if ($rs_warehouse && $rs_warehouse->num_rows > 0) {
 $tbl = <<<EOD
 <table cellpadding="0" cellspacing="2" border="0">
 <tr>
-    <td width="392" style="background-color: #fff;" align="center"> <br /><br /><br />
+    <td width="392" style="background-color: #fff;">
+        <img src="../images/images.jfif" height="55" alt="Logo" /><br />
         <span style="font-size: 18px; color:#102B44"> $company_name </span>
     </td>
 

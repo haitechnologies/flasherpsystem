@@ -160,8 +160,14 @@ foreach ($jobStatusesList as $row) {
     if (empty($id) && (string)$row['id'] === (string)$draftJobStatusId) {
         $sel = 'selected';
     }
-    $job_status_options_html .= '<option value="' . $row['id'] . '" ' . $sel . '>' . htmlspecialchars($row['job_status']) . '</option>';
+    $job_status_options_html .= '<option value="' . $row['id'] . '" ' . $sel . '>' . htmlspecialchars(ucwords(str_replace('_', ' ', $row['job_status']))) . '</option>';
 }
+
+$job_status_name_by_id = [];
+foreach ($jobStatusesList as $row) {
+    $job_status_name_by_id[(string)$row['id']] = $row['job_status'];
+}
+$badge_status = !empty($job_status) ? ucwords(str_replace('_', ' ', (string)($job_status_name_by_id[(string)$job_status] ?? ''))) : '';
 
 $incoterm_options_html = '';
 foreach ($incotermsList as $row) {
@@ -229,8 +235,8 @@ include 'admin_elements/admin_header.php';
                 <?php if ($id > 0): ?>
                     <span class="badge bg-success bg-opacity-10 text-success ms-2">Job #: <?php echo htmlspecialchars($job_no); ?></span>
                 <?php endif; ?>
-                <?php if (!empty($job_status)): ?>
-                    <span class="badge bg-primary bg-opacity-10 text-primary ms-2"><?php echo ucwords($job_status); ?></span>
+                <?php if ($badge_status !== ''): ?>
+                    <span class="badge bg-primary bg-opacity-10 text-primary ms-2"><?php echo $badge_status; ?></span>
                 <?php endif; ?>
             </div>
             <div class="my-1 ms-auto d-flex align-items-center gap-2">
@@ -307,8 +313,8 @@ include 'admin_elements/admin_header.php';
                                         <?php echo $job_status_options_html; ?>
                                     </select>
                                 </div>
-                                <?php if ($id > 0 && !empty($draftStatusId) && $job_status == $draftStatusId): ?>
-                                <div class="col-lg-4">
+                                <?php if ($id > 0 && !empty($draftStatusId)): ?>
+                                <div class="col-lg-4" id="send_for_approval_wrap" <?php echo ((string)$job_status === (string)$draftStatusId) ? '' : 'style="display:none;"'; ?>>
                                     <button type="button" class="btn btn-warning btn-sm" onclick="if(confirm('Are you sure you want to send this job for approval? Accounts department will review it and the job will be locked for editing.')){ document.getElementById('action').value='send_for_approval'; document.getElementById('frmjobs').submit(); }">
                                         <i class="ph-paper-plane-tilt me-1"></i> Send for Approval
                                     </button>
@@ -354,34 +360,29 @@ include 'admin_elements/admin_header.php';
 
                                     <?php $field = ['name'=>'estimated_invoice_amount', 'label'=>'Estimated Invoice Amount:', 'value'=>$estimated_invoice_amount, 'type'=>'number', 'extra_attr'=>'step="any"']; include 'admin_elements/form_field_text.php'; ?>
 
-                                    <?php $field = ['name'=>'etd', 'label'=>'ETD:', 'value'=>$etd]; include 'admin_elements/form_field_date.php'; ?>
+                                    <?php $field = ['name'=>'etd', 'label'=>'ETD:', 'value'=>$etd, 'placeholder'=>'']; include 'admin_elements/form_field_date.php'; ?>
 
-                                    <?php $field = ['name'=>'eta', 'label'=>'ETA:', 'value'=>$eta]; include 'admin_elements/form_field_date.php'; ?>
+                                    <?php $field = ['name'=>'eta', 'label'=>'ETA:', 'value'=>$eta, 'placeholder'=>'']; include 'admin_elements/form_field_date.php'; ?>
 
                                     <div class="row mb-2">
-                                        <label class="col-lg-3 col-form-label" for="carrier">Carrier Name:</label>
+                                        <label class="col-lg-3 col-form-label" for="carrier">Carrier Name: <i class="ph-plus-circle" onclick="showAddCarrierModal();" style="cursor:pointer;"></i></label>
                                         <div class="col-lg-9">
-                                            <div class="input-group">
-                                                <select class="form-control select select2-enable" name="carrier" id="carrier">
-                                                    <option value="">Please select</option>
-                                                    <?php echo $carrier_options_html; ?>
-                                                </select>
-                                                <button type="button" class="btn btn-outline-primary" onclick="showAddCarrierModal();" title="Add New Carrier">
-                                                    <i class="ph-plus"></i>
-                                                </button>
-                                            </div>
+                                            <select class="form-control select select2-enable" name="carrier" id="carrier">
+                                                <option value="">Please select</option>
+                                                <?php echo $carrier_options_html; ?>
+                                            </select>
                                         </div>
                                     </div>
 
                                     <?php $field = ['name'=>'vessel_name', 'label'=>'Vessel Name:', 'value'=>$vessel_name]; include 'admin_elements/form_field_text.php'; ?>
 
-                                    <?php $field = ['name'=>'vessel_departure_date', 'label'=>'Vessel Departure Date:', 'value'=>$vessel_departure_date]; include 'admin_elements/form_field_date.php'; ?>
+                                    <?php $field = ['name'=>'vessel_departure_date', 'label'=>'Vessel Departure Date:', 'value'=>$vessel_departure_date, 'placeholder'=>'']; include 'admin_elements/form_field_date.php'; ?>
 
                                     <?php $field = ['name'=>'flight_no', 'label'=>'Flight No:', 'value'=>$flight_no]; include 'admin_elements/form_field_text.php'; ?>
 
-                                    <?php $field = ['name'=>'flight_departure_date', 'label'=>'Flight Departure Date:', 'value'=>$flight_departure_date]; include 'admin_elements/form_field_date.php'; ?>
+                                    <?php $field = ['name'=>'flight_departure_date', 'label'=>'Flight Departure Date:', 'value'=>$flight_departure_date, 'placeholder'=>'']; include 'admin_elements/form_field_date.php'; ?>
 
-                                    <?php $field = ['name'=>'job_completion_date', 'label'=>'Job Completed Date:', 'value'=>$job_completion_date]; include 'admin_elements/form_field_date.php'; ?>
+                                    <?php $field = ['name'=>'job_completion_date', 'label'=>'Job Completed Date:', 'value'=>$job_completion_date, 'placeholder'=>'']; include 'admin_elements/form_field_date.php'; ?>
 
                                     <?php $field = ['name'=>'payment_terms', 'label'=>'Payment Terms:', 'value'=>$payment_terms]; include 'admin_elements/form_field_text.php'; ?>
 
@@ -616,9 +617,8 @@ include 'admin_elements/admin_header.php';
                                     <?php $field = ['name'=>'landing_country', 'label'=>'Loading Country:', 'options'=>$countries_options, 'selected'=>$landing_country, 'extra_class'=>'form-select select2-enable', 'extra_attr'=>'onchange="ajax_populate_landing_ports(this.value);"']; include 'admin_elements/form_field_select.php'; ?>
 
                                     <div class="row mb-2">
-                                        <label class="col-lg-3 col-form-label" for="landing_port">Port of Loading (POL):</label>
+                                        <label class="col-lg-3 col-form-label" for="landing_port">Port of Loading (POL): <i class="ph-plus-circle" onclick="showAddPortModal('landing_port');" style="cursor:pointer;"></i></label>
                                         <div class="col-lg-9">
-                                            <div class="input-group">
                                             <select class="form-control" name="landing_port" id="landing_port">
                                                 <option value="0"></option>
                                                 <?php
@@ -633,8 +633,6 @@ include 'admin_elements/admin_header.php';
                                                 }
                                                 ?>
                                             </select>
-                                            <button type="button" class="btn btn-outline-primary" onclick="showAddPortModal('landing_port');" title="Add New Port"><i class="ph-plus"></i></button>
-                                            </div>
                                         </div>
                                     </div>
 
@@ -657,9 +655,8 @@ include 'admin_elements/admin_header.php';
                                     <?php $field = ['name'=>'destination_country', 'label'=>'Destination Country:', 'options'=>$countries_options, 'selected'=>$destination_country, 'extra_class'=>'form-select select2-enable', 'extra_attr'=>'onchange="ajax_populate_destination_ports(this.value);"']; include 'admin_elements/form_field_select.php'; ?>
 
                                     <div class="row mb-2">
-                                        <label class="col-lg-3 col-form-label" for="destination_port">Port of Destination (POD):</label>
+                                        <label class="col-lg-3 col-form-label" for="destination_port">Port of Destination (POD): <i class="ph-plus-circle" onclick="showAddPortModal('destination_port');" style="cursor:pointer;"></i></label>
                                         <div class="col-lg-9">
-                                            <div class="input-group">
                                             <select class="form-control" name="destination_port" id="destination_port">
                                                 <option value="0"></option>
                                                 <?php
@@ -674,8 +671,6 @@ include 'admin_elements/admin_header.php';
                                                 }
                                                 ?>
                                             </select>
-                                            <button type="button" class="btn btn-outline-primary" onclick="showAddPortModal('destination_port');" title="Add New Port"><i class="ph-plus"></i></button>
-                                            </div>
                                         </div>
                                     </div>
 
@@ -1000,6 +995,18 @@ function saveNewPort() {
 }
 
 $(document).ready(function() {
+    // Show "Send for Approval" only when the selected status is draft
+    var draftStatusId = '<?php echo (string)($draftStatusId ?? ''); ?>';
+    var $jobStatusSelect = $('select[name="job_status"]');
+    var $sendForApprovalWrap = $('#send_for_approval_wrap');
+    function toggleSendForApproval() {
+        if ($sendForApprovalWrap.length) {
+            $sendForApprovalWrap.toggle(draftStatusId !== '' && String($jobStatusSelect.val()) === String(draftStatusId));
+        }
+    }
+    $jobStatusSelect.on('change', toggleSendForApproval);
+    toggleSendForApproval();
+
     // Auto-grow textareas
     $('textarea.auto-grow').each(function() {
         var $this = $(this);

@@ -56,7 +56,7 @@ class JobsDataTable extends BaseDataTable
             htmlspecialchars((string)($row['job_no'] ?? '')),
             htmlspecialchars((string)($row['job_ref_no'] ?? '')),
             htmlspecialchars((string)($this->relatedDataCache['customers'][$customerId] ?? '')),
-            $statusLabel !== '' ? BadgeHelper::info(htmlspecialchars($statusLabel)) : '',
+            $statusLabel !== '' ? BadgeHelper::info(htmlspecialchars(ucwords(str_replace('_', ' ', $statusLabel)))) : '',
             htmlspecialchars(number_format((float)($row['estimated_invoice_amount'] ?? 0), 2)),
             htmlspecialchars((string)($this->relatedDataCache['projects'][$id] ?? '')),
             $this->getActionButtons($id, 'jobs'),

@@ -541,6 +541,9 @@ class InvoiceService
         if (empty($data['invoice_date'])) {
             throw new ValidationException(['invoice_date' => "Please select Invoice Date."]);
         }
+        if (empty($data['reference_no']) || trim((string)$data['reference_no']) === '') {
+            throw new ValidationException(['reference_no' => "Please enter Job Reference no."]);
+        }
 
         // Verify customer exists in organization
         $customerId = (int)$data['customer_id'];

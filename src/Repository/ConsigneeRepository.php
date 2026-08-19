@@ -20,7 +20,8 @@ class ConsigneeRepository
 
     public function find(int $id): ?Consignee
     {
-        $sql = "SELECT id, consignee_name, is_active, created_by, created_at
+        $sql = "SELECT id, consignee_name, address_line1, address_line2, city, zipcode,
+                       province, country, email, telephone, mobile, fax, is_active, created_by, created_at
                 FROM `{DB::CONSIGNEES}` WHERE id = :id";
         $row = $this->db->fetchOne($sql, ['id' => $id]);
         return $row === null ? null : $this->mapRowToDto($row);
@@ -28,7 +29,8 @@ class ConsigneeRepository
 
     public function findAll(): array
     {
-        $sql = "SELECT id, consignee_name, is_active, created_by, created_at
+        $sql = "SELECT id, consignee_name, address_line1, address_line2, city, zipcode,
+                       province, country, email, telephone, mobile, fax, is_active, created_by, created_at
                 FROM `{DB::CONSIGNEES}` ORDER BY consignee_name ASC";
         return array_map($this->mapRowToDto(...), $this->db->fetchAll($sql));
     }
@@ -44,10 +46,22 @@ class ConsigneeRepository
 
     public function insert(Consignee $item): int
     {
-        $sql = "INSERT INTO `{DB::CONSIGNEES}` (consignee_name, is_active, created_by)
-                VALUES (:consignee_name, :is_active, :created_by)";
+        $sql = "INSERT INTO `{DB::CONSIGNEES}` (consignee_name, address_line1, address_line2, city, zipcode,
+                        province, country, email, telephone, mobile, fax, is_active, created_by)
+                VALUES (:consignee_name, :address_line1, :address_line2, :city, :zipcode,
+                        :province, :country, :email, :telephone, :mobile, :fax, :is_active, :created_by)";
         return (int)$this->db->insert($sql, [
             'consignee_name' => $item->consigneeName,
+            'address_line1' => $item->addressLine1,
+            'address_line2' => $item->addressLine2,
+            'city' => $item->city,
+            'zipcode' => $item->zipcode,
+            'province' => $item->province,
+            'country' => $item->country,
+            'email' => $item->email,
+            'telephone' => $item->telephone,
+            'mobile' => $item->mobile,
+            'fax' => $item->fax,
             'is_active' => $item->isActive ? 1 : 0,
             'created_by' => $item->createdBy,
         ]);
@@ -84,7 +98,16 @@ class ConsigneeRepository
         return new Consignee(
             id: (int)$row['id'],
             consigneeName: (string)($row['consignee_name'] ?? ''),
-            description: '',
+            addressLine1: (string)($row['address_line1'] ?? ''),
+            addressLine2: (string)($row['address_line2'] ?? ''),
+            city: (string)($row['city'] ?? ''),
+            zipcode: (string)($row['zipcode'] ?? ''),
+            province: (string)($row['province'] ?? ''),
+            country: (int)($row['country'] ?? 0),
+            email: (string)($row['email'] ?? ''),
+            telephone: (string)($row['telephone'] ?? ''),
+            mobile: (string)($row['mobile'] ?? ''),
+            fax: (string)($row['fax'] ?? ''),
             isActive: (bool)($row['is_active'] ?? true),
             createdBy: (int)($row['created_by'] ?? 0),
             createdAt: (string)($row['created_at'] ?? ''),

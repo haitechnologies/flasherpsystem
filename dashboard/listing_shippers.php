@@ -40,7 +40,17 @@ include('admin_elements/permissions.php');
 
 $activeOrganizationId = dashboardRequireActiveOrganization();
 
-$handler_config = ['hard_delete' => true, 'ownership_check' => true, 'redirect_on_success' => true];
+$handler_config = [
+    'hard_delete' => true,
+    'redirect_on_success' => true,
+    'cascade_delete' => [
+        "UPDATE `" . DB::INVOICES . "` SET shipper = 0 WHERE shipper = :id",
+        "UPDATE `" . DB::CREDIT_NOTES . "` SET shipper = 0 WHERE shipper = :id",
+        "UPDATE `" . DB::DEBIT_NOTES . "` SET shipper = 0 WHERE shipper = :id",
+        "UPDATE `" . DB::QUOTATIONS . "` SET shipper_id = 0 WHERE shipper_id = :id",
+        "UPDATE `" . DB::SALE_ORDERS . "` SET shipper_id = 0 WHERE shipper_id = :id",
+    ],
+];
 include('admin_elements/listing_handler.php');
 
 $detailsModalHtml = '
@@ -84,6 +94,7 @@ $detailsModalHtml = '
 $listingConfig = [
     'module' => $module,
     'module_caption' => $module_caption,
+    'hide_add_button' => true,
     'thead' => '
         <th width="40">SR.</th>
         <th>SHIPPER NAME</th>
@@ -149,20 +160,8 @@ $listingConfig = [
                     detailsModal.hide();
                 }
             });
-        });
+});
 
-        $(document).on('click', 'a[data-action=\"delete_record\"]', function(e) {
-            e.preventDefault();
-            var id = $(this).data('id');
-            var module = $(this).data('module');
-            if (confirm('Are you sure you want to delete this shipper?')) {
-                var form = document.createElement('form');
-                form.method = 'POST';
-                form.innerHTML = '<input type=\"hidden\" name=\"action\" value=\"delete_' + module + '\"><input type=\"hidden\" name=\"id\" value=\"' + id + '\">';
-                document.body.appendChild(form);
-                form.submit();
-            }
-        });
     ",
 ];
 

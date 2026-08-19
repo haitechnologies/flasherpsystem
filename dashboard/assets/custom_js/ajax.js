@@ -8,6 +8,37 @@
       return csrfInput ? csrfInput.value : '';
   }
 
+  function showModalError(elId, message) {
+      var el = document.getElementById(elId);
+      if (el) {
+          el.style.display = 'block';
+          el.innerHTML = message;
+      }
+  }
+
+  function hideModalRobust(modalId) {
+      var el = document.getElementById(modalId);
+      if (!el) return;
+      try {
+          if (window.bootstrap && window.bootstrap.Modal) {
+              window.bootstrap.Modal.getOrCreateInstance(el).hide();
+              return;
+          }
+      } catch (e) {}
+      try {
+          if (window.jQuery && window.jQuery.fn && window.jQuery.fn.modal) {
+              window.jQuery('#' + modalId).modal('hide');
+              return;
+          }
+      } catch (e) {}
+      el.classList.remove('show');
+      el.setAttribute('aria-hidden', 'true');
+      el.style.display = 'none';
+      document.body.classList.remove('modal-open');
+      var backdrop = document.querySelector('.modal-backdrop');
+      if (backdrop) backdrop.remove();
+  }
+
   /*
   |--------------------------------------------------------------------------
   | 	Populate Service
@@ -170,7 +201,7 @@
       
       }
 
-      var data = "ajax_action=add_shipper&shipper_name="+shipper_name+"&shipper_address_line1="+shipper_address_line1+"&shipper_address_line2="+shipper_address_line2+"&shipper_city="+shipper_city+"&shipper_zipcode="+shipper_zipcode+"&shipper_province="+shipper_province+"&shipper_country="+shipper_country+"&shipper_email="+shipper_email+"&shipper_telephone="+shipper_telephone+"&shipper_mobile="+shipper_mobile+"&shipper_fax="+shipper_fax+"&csrf_token="+encodeURIComponent(getCsrfToken());
+      var data = "ajax_action=add_shipper&shipper_name="+encodeURIComponent(shipper_name)+"&shipper_address_line1="+encodeURIComponent(shipper_address_line1)+"&shipper_address_line2="+encodeURIComponent(shipper_address_line2)+"&shipper_city="+encodeURIComponent(shipper_city)+"&shipper_zipcode="+encodeURIComponent(shipper_zipcode)+"&shipper_province="+encodeURIComponent(shipper_province)+"&shipper_country="+encodeURIComponent(shipper_country)+"&shipper_email="+encodeURIComponent(shipper_email)+"&shipper_telephone="+encodeURIComponent(shipper_telephone)+"&shipper_mobile="+encodeURIComponent(shipper_mobile)+"&shipper_fax="+encodeURIComponent(shipper_fax)+"&csrf_token="+encodeURIComponent(getCsrfToken());
       xhr.open("POST", "internal_request.php", true);
       xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
       xhr.send(data);
@@ -181,15 +212,27 @@
       if (xhr.readyState == 4) {
         if (xhr.status == 200) {
           var response        = xhr.responseText;
-           
-           const data = JSON.parse(xhr.responseText);
 
-            let error_message = data.error_message;
-            let shipper_id    = data.shipper_id;
-            let shipper_name  = data.shipper_name;
+          var data;
+          try {
+            data = JSON.parse(response);
+          } catch (e) {
+            showModalError('ajax_shipper_error_message', 'Invalid server response. Please try again.');
+            console.error('JSON parse error', e, response);
+            return;
+          }
+
+          if (data.error !== undefined && data.error) {
+            showModalError('ajax_shipper_error_message', data.error);
+            return;
+          }
+
+          let error_message = data.error_message;
+          let shipper_id    = data.shipper_id;
+          let shipper_name  = data.shipper_name;
 
             if (error_message !== '') {
-                document.getElementById('ajax_shipper_error_message').innerHTML = error_message;
+                showModalError('ajax_shipper_error_message', error_message);
 
             } else {
                 let dropdown = document.getElementById("shipper_id");
@@ -202,17 +245,17 @@
                     dropdown.appendChild(option);
 
                     dropdown.value = shipper_id;
-                } else {
-                    console.error("Dropdown not found or no shipper data");
-                }
 
-                $("#shipperModal").modal("hide");
+                    hideModalRobust('shipperModal');
+                } else {
+                    showModalError('ajax_shipper_error_message', 'Could not add the shipper. Please check the details and try again.');
+                }
 
             }
 
 
         } else {
-          console.log('There was a problem with the request.');
+          showModalError('ajax_shipper_error_message', 'There was a problem with the request. (HTTP ' + xhr.status + ')');
 
         }
       }
@@ -243,7 +286,7 @@
       
       }
 
-      var data = "ajax_action=add_consignee&consignee_name="+consignee_name+"&consignee_address_line1="+consignee_address_line1+"&consignee_address_line2="+consignee_address_line2+"&consignee_city="+consignee_city+"&consignee_zipcode="+consignee_zipcode+"&consignee_province="+consignee_province+"&consignee_country="+consignee_country+"&consignee_email="+consignee_email+"&consignee_telephone="+consignee_telephone+"&consignee_mobile="+consignee_mobile+"&consignee_fax="+consignee_fax+"&csrf_token="+encodeURIComponent(getCsrfToken());
+      var data = "ajax_action=add_consignee&consignee_name="+encodeURIComponent(consignee_name)+"&consignee_address_line1="+encodeURIComponent(consignee_address_line1)+"&consignee_address_line2="+encodeURIComponent(consignee_address_line2)+"&consignee_city="+encodeURIComponent(consignee_city)+"&consignee_zipcode="+encodeURIComponent(consignee_zipcode)+"&consignee_province="+encodeURIComponent(consignee_province)+"&consignee_country="+encodeURIComponent(consignee_country)+"&consignee_email="+encodeURIComponent(consignee_email)+"&consignee_telephone="+encodeURIComponent(consignee_telephone)+"&consignee_mobile="+encodeURIComponent(consignee_mobile)+"&consignee_fax="+encodeURIComponent(consignee_fax)+"&csrf_token="+encodeURIComponent(getCsrfToken());
       xhr.open("POST", "internal_request.php", true);
       xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
       xhr.send(data);
@@ -254,15 +297,27 @@
       if (xhr.readyState == 4) {
         if (xhr.status == 200) {
           var response        = xhr.responseText;
-           
-           const data = JSON.parse(xhr.responseText);
 
-            let error_message = data.error_message;
-            let consignee_id    = data.consignee_id;
-            let consignee_name  = data.consignee_name;
+          var data;
+          try {
+            data = JSON.parse(response);
+          } catch (e) {
+            showModalError('ajax_consignee_error_message', 'Invalid server response. Please try again.');
+            console.error('JSON parse error', e, response);
+            return;
+          }
+
+          if (data.error !== undefined && data.error) {
+            showModalError('ajax_consignee_error_message', data.error);
+            return;
+          }
+
+          let error_message = data.error_message;
+          let consignee_id    = data.consignee_id;
+          let consignee_name  = data.consignee_name;
 
             if (error_message !== '') {
-                document.getElementById('ajax_consignee_error_message').innerHTML = error_message;
+                showModalError('ajax_consignee_error_message', error_message);
 
             } else {
                 let dropdown = document.getElementById("consignee_id");
@@ -275,17 +330,17 @@
                     dropdown.appendChild(option);
 
                     dropdown.value = consignee_id;
-                } else {
-                    console.error("Dropdown not found or no consignee data");
-                }
 
-                $("#consigneeModal").modal("hide");
+                    hideModalRobust('consigneeModal');
+                } else {
+                    showModalError('ajax_consignee_error_message', 'Could not add the consignee. Please check the details and try again.');
+                }
 
             }
 
 
         } else {
-          console.log('There was a problem with the request.');
+          showModalError('ajax_consignee_error_message', 'There was a problem with the request. (HTTP ' + xhr.status + ')');
 
         }
       }

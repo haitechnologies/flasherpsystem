@@ -63,7 +63,7 @@ class ConsigneesDataTable extends BaseDataTable
             $actions .= ActionButtonHelper::editButton((int)$id, 'consignees.php', $module, 'Edit', false);
         }
         if ($this->isGranted('delete', $module)) {
-            $actions .= ' ' . ActionButtonHelper::deleteButton((int)$id, $module);
+            $actions .= ' ' . ActionButtonHelper::deleteButton((int)$id, $module, 'Are you sure you want to delete this consignee?');
         }
         return $actions;
     }

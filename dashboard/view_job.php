@@ -78,7 +78,7 @@ if ($action == "create_project" && !empty($id)) {
         $error_message = 'Invalid security token.';
     }
 
-    $job = $db->fetchOne("SELECT project_created, customer_id, organization_id FROM `" . DB::JOBS . "` WHERE id = :id", ['id' => $id]);
+    $job = $db->fetchOne("SELECT project_created, customer_id, organization_id, job_no, job_ref_no, job_status FROM `" . DB::JOBS . "` WHERE id = :id", ['id' => $id]);
     if (!$job) {
         $error_message = 'Job not found.';
     }
@@ -94,9 +94,26 @@ if ($action == "create_project" && !empty($id)) {
     } else {
         $projectCustomerId = (int)$job['customer_id'];
 
-        $newProjectId = $db->insert("INSERT INTO `" . DB::PROJECTS . "` (job_id, customer_id) VALUES (:job_id, :customer_id)", [
-            'job_id' => $id,
+        // Fill the project's relevant fields from the job so the project
+        // carries meaningful information (name, status) and is published/active.
+        $jobRefNo = (string)($job['job_ref_no'] ?? '');
+        $jobNo    = (string)($job['job_no'] ?? '');
+        $projectName = $jobRefNo !== '' ? $jobRefNo : ($jobNo !== '' ? $jobNo : 'Project - Job #' . $id);
+
+        $projectStatus = '';
+        if (!empty($job['job_status'])) {
+            $statusName = getTableAttr('job_status', DB::JOB_STATUSES, $job['job_status']);
+            if (!empty($statusName)) {
+                $projectStatus = $statusName;
+            }
+        }
+
+        $newProjectId = $db->insert("INSERT INTO `" . DB::PROJECTS . "` (organization_id, project_name, customer_id, job_id, project_status, publish, is_active) VALUES (:org_id, :project_name, :customer_id, :job_id, :project_status, 1, 1)", [
+            'org_id' => $activeOrganizationId,
+            'project_name' => $projectName,
             'customer_id' => $projectCustomerId,
+            'job_id' => $id,
+            'project_status' => $projectStatus,
         ]);
 
         $db->execute("UPDATE `" . DB::JOBS . "` SET project_created = 1, project_id = :project_id WHERE id = :id", [
@@ -382,7 +399,7 @@ if ($total_rows == 0) $total_rows = 1;
             <div class="my-1 d-flex align-items-center gap-2 flex-wrap">
                 <h5 class="mb-0">JOB# <?php echo htmlspecialchars((string)$job_no); ?></h5>
                 <?php if (!empty($job_ref_no)): ?><span class="text-muted small">(<?php echo htmlspecialchars((string)$job_ref_no); ?>)</span><?php endif; ?>
-                <label class="form-check-label text-muted small mb-0"><?php echo (!empty($job_status) ? strtoupper((string)getTableAttr("job_status", DB::JOB_STATUSES, $job_status)) : ''); ?></label>
+                <label class="form-check-label text-muted small mb-0"><?php echo (!empty($job_status) ? ucwords(str_replace('_', ' ', (string)getTableAttr("job_status", DB::JOB_STATUSES, $job_status))) : ''); ?></label>
             </div>
             <div class="my-1 ms-auto d-flex align-items-center gap-2 flex-wrap">
 
@@ -408,8 +425,8 @@ if ($total_rows == 0) $total_rows = 1;
 
                     <?php if ($job_status == $pending_approval_status_id) { ?>
                         <?php if ($is_accounts) { ?>
-                            <button type="button" onclick="if(confirm('Approve this job?')){ document.getElementById('frmjobs').action='jobs.php?action=approve_job&id=<?php echo $id; ?>'; document.getElementById('frmjobs').submit(); }" class="btn btn-success btn-sm me-2"><i class="ph-check-circle me-1"></i> Approve</button>
-                            <button type="button" onclick="if(confirm('Send back to draft? Operations will be able to edit again.')){ document.getElementById('frmjobs').action='jobs.php?action=reject_job&id=<?php echo $id; ?>'; document.getElementById('frmjobs').submit(); }" class="btn btn-danger btn-sm me-2"><i class="ph-x-circle me-1"></i> Reject</button>
+                            <button type="button" onclick="if(confirm('Approve this job?')){ document.getElementById('action').value='approve_job'; document.getElementById('frmjobs').action='jobs.php?action=approve_job&id=<?php echo $id; ?>'; document.getElementById('frmjobs').submit(); }" class="btn btn-success btn-sm me-2"><i class="ph-check-circle me-1"></i> Approve</button>
+                            <button type="button" onclick="if(confirm('Send back to draft? Operations will be able to edit again.')){ document.getElementById('action').value='reject_job'; document.getElementById('frmjobs').action='jobs.php?action=reject_job&id=<?php echo $id; ?>'; document.getElementById('frmjobs').submit(); }" class="btn btn-danger btn-sm me-2"><i class="ph-x-circle me-1"></i> Reject</button>
                         <?php } else { ?>
                             <span class="badge bg-warning bg-opacity-10 text-warning px-3 py-2"><i class="ph-clock-countdown me-1"></i> Under Review — Awaiting Accounts Approval</span>
                         <?php } ?>
@@ -575,7 +592,7 @@ if ($total_rows == 0) $total_rows = 1;
                                 <div class="row">
                                     <label class="col-lg-2 col-form-label">Job Status: </label>
                                     <div class="col-lg-4 mt-2">
-                                        <?php echo getTableAttr('job_status', DB::JOB_STATUSES, $job_status); ?>
+                                        <?php echo ucwords(str_replace('_', ' ', (string)getTableAttr('job_status', DB::JOB_STATUSES, $job_status))); ?>
                                     </div>
 
                                 </div>

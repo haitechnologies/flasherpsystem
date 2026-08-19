@@ -310,6 +310,17 @@ class PurchaseOrderController extends BaseController
 
         $vendor_id = $orderData['vendor_id'] ?? '0';
         $purchase_order_no = $orderData['purchase_order_no'] ?? '';
+        if (empty($purchase_order_no) && $id > 0) {
+            try {
+                $poRow = $this->db->fetchOne(
+                    "SELECT purchase_order_no FROM `" . DB::PURCHASE_ORDERS . "` WHERE id = :id",
+                    ['id' => $id]
+                );
+                $purchase_order_no = $poRow !== null ? (string)($poRow['purchase_order_no'] ?? '') : '';
+            } catch (\Throwable $e) {
+                $this->logError("PurchaseOrderController::renderFormWithData error: " . $e->getMessage());
+            }
+        }
         $purchase_order_status = $orderData['purchase_order_status'] ?? 'draft';
         $purchase_order_date = DateHelper::toDisplayDate($orderData['purchase_order_date'] ?? '') ?: ($orderData['purchase_order_date'] ?? '');
         $reference_no = $orderData['reference_no'] ?? '';

@@ -157,11 +157,7 @@ include 'admin_elements/admin_header.php';
                                         <div class="col-lg-9">
                                             <select required class="form-select" name="deposit_to" id="deposit_to">
                                                 <option value="0" class="fw-semibold text-black" disabled>Select Deposit Account</option>
-                                                <?php foreach ($depositAccountsList as $row): ?>
-                                                    <option value="<?php echo (int)$row['id']; ?>" <?php if ((string)$row['id'] === $deposit_to) { ?>selected<?php } ?>>
-                                                        <?php echo htmlspecialchars((string)($row['account_name'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>
-                                                    </option>
-                                                <?php endforeach; ?>
+                                                <?php echo fetchAccountsDropdown(array(1), '', $deposit_to); ?>
                                             </select>
                                         </div>
                                     </div>
@@ -212,8 +208,8 @@ include 'admin_elements/admin_header.php';
                                             <?php $invoiceNo = $inv['invoice_no']; ?>
                                             <?php $grandTotal = $inv['grand_total']; ?>
                                             <?php $amountDue = $inv['balance_due']; ?>
-                                            <?php $savedOn = !empty($amount_received_on_arr[$index]) ? $amount_received_on_arr[$index] : ''; ?>
-                                            <?php $defaultAmount = !empty($amount_received_arr[$index]) ? $amount_received_arr[$index] : (!empty($post_invoice_id) ? $amountDue : ''); ?>
+                                            <?php $savedOnRaw = $amount_received_on_arr[$index] ?? ''; $savedOn = (!empty($savedOnRaw) && $savedOnRaw !== '1970-01-01') ? $savedOnRaw : ''; ?>
+                                            <?php $defaultAmount = !empty($amount_received_arr[$index]) ? $amount_received_arr[$index] : '0.00'; ?>
 
                                             <div class="mb-2">
                                                 <div class="row mb-3 pb-3" id="row_<?php echo $payment_item; ?>">
@@ -241,10 +237,15 @@ include 'admin_elements/admin_header.php';
                                                                 <?php echo number_format((float)$amountDue, 2); ?>
                                                             </div>
                                                             <div class="col-lg-2 text-end">
-                                                                <input type="date" name="amount_received_on[]" id="amount_received_on<?php echo $payment_item; ?>" class="form-control text-end" value="<?php echo htmlspecialchars((string)$savedOn, ENT_QUOTES, 'UTF-8'); ?>" onchange="calculateGrand();" onkeyup="calculateGrand();">
+                                                                <div class="form-control-feedback form-control-feedback-start">
+                                                                    <input type="text" name="amount_received_on[]" id="amount_received_on<?php echo $payment_item; ?>" class="form-control text-end datepicker-dd-mm-yy" value="<?php echo htmlspecialchars(!empty($savedOn) ? dd_((string)$savedOn, 'd-m-Y') : date('d-m-Y'), ENT_QUOTES, 'UTF-8'); ?>" onchange="calculateGrand();" onkeyup="calculateGrand();">
+                                                                    <div class="form-control-feedback-icon">
+                                                                        <i class="ph-calendar"></i>
+                                                                    </div>
+                                                                </div>
                                                             </div>
                                                             <div class="col-lg-2 text-end">
-                                                                <input type="number" name="amount_received[]" id="amount_received<?php echo $payment_item; ?>" min="0" step="any" value="<?php echo htmlspecialchars((string)$defaultAmount, ENT_QUOTES, 'UTF-8'); ?>" class="form-control text-end" onchange="calculateGrand();" onkeyup="calculateGrand();">
+                                                                <input type="number" name="amount_received[]" id="amount_received<?php echo $payment_item; ?>" min="0" step="any" value="<?php echo htmlspecialchars(!empty($defaultAmount) ? number_format((float)$defaultAmount, 2, '.', '') : '0.00', ENT_QUOTES, 'UTF-8'); ?>" class="form-control text-end" onchange="calculateGrand();" onkeyup="calculateGrand();">
                                                             </div>
                                                         </div>
                                                     </div>
@@ -257,6 +258,18 @@ include 'admin_elements/admin_header.php';
                                 </div>
 
                                 <script>
+                                    $(function() {
+                                        $('.datepicker-dd-mm-yy').each(function() {
+                                            if (!$(this).hasClass('hasDatepicker')) {
+                                                $(this).datepicker({
+                                                    dateFormat: 'dd-mm-yy',
+                                                    changeMonth: true,
+                                                    changeYear: true
+                                                });
+                                            }
+                                        });
+                                    });
+
                                     function calculateGrand() {
                                         var totalRows = document.getElementById('total_rows').value;
                                         var finalTotal = 0;

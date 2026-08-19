@@ -589,7 +589,7 @@ class JobController extends BaseController
                     $declaration_no = $job->declarationNo;
                     $gross_weight = (string)$job->grossWeight;
                     $volume_weight = (string)$job->volumeWeight;
-                    $cbm = (string)$job->cbm;
+                    $cbm = $job->cbm === null || $job->cbm === '' ? (string)$job->cbm : (string)(float)$job->cbm;
                     $chargeable_weight = (string)$job->chargeableWeight;
                     $no_of_pieces = (string)$job->noOfPieces;
                     $commodity_type = (string)$job->commodityType;

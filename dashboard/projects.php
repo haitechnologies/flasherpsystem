@@ -154,7 +154,7 @@ if ($action == "update_$module" || $action == "add_$module") {
             $error_message = 'Please enter Project Name.';
         } else {
             $update_row = $mysqli->query(
-                "UPDATE `$tbl_name` SET project_name = '" . $project_name . "' WHERE id=$id"
+                "UPDATE `$tbl_name` SET project_name = '" . $project_name . "', publish = 1, is_active = 1 WHERE id=$id"
             );
 
             if ($update_row) {
@@ -212,6 +212,10 @@ if (
         if (empty($job_seq)) {
             $job_seq = s__(getTableAttr('job_seq', DB::JOBS, $job_id));
         }
+        $job_no         = s__(getTableAttr('job_no', DB::JOBS, $job_id));
+        $job_ref_no     = s__(getTableAttr('job_ref_no', DB::JOBS, $job_id));
+        $job_date_raw   = s__(getTableAttr('job_date', DB::JOBS, $job_id));
+        $job_date       = ($job_date_raw === '' || $job_date_raw === '1970-01-01') ? '' : processDateYtoD($job_date_raw);
     }
 
     $currency               = s__($row['currency'] ?? '');
@@ -350,7 +354,9 @@ if (
 |--------------------------------------------------------------------------
 */
 
-$job_id = $customer_id = $project_name = $job_seq = $job_status = '';
+if (empty($id)) {
+    $job_id = $customer_id = $project_name = $job_seq = $job_status = $job_no = $job_ref_no = $job_date = '';
+}
 
 ?>
 
@@ -364,12 +370,6 @@ $job_id = $customer_id = $project_name = $job_seq = $job_status = '';
                 <h5 class="mb-0"><?php if (($action == "edit_$module" || $action == "update_$module" || $action == "change_password") && !empty($id)) { ?>Edit<?php } else { ?>New<?php } ?> <?php echo $module_caption; ?></h5>
             </div>
 
-            <div class="my-1 d-inline-flex align-items-center me-2">
-                <div class="form-check form-check-inline form-switch mb-0">
-                    <input type="checkbox" class="form-check-input form-check-input-success" name="publish" id="publish" <?php if ($publish == '1') { ?>checked="checked" <?php } ?> form="frmprojects">
-                    <label class="form-check-label" for="publish">Publish</label>
-                </div>
-            </div>
             <div class="my-1">
                 <?php if (empty($id) || (isset($module_id) && granted('create', $module_id)) || (isset($module_id) && granted('edit', $module_id)) || $file === 'profile.php' || $file === 'change_password.php') { ?>
                     <button type="submit" form="frmprojects" class="btn btn-primary btn-sm me-2">Save</button>
@@ -464,6 +464,33 @@ $job_id = $customer_id = $project_name = $job_seq = $job_status = '';
                                                 <?php echo !empty($job_seq) ? $job_seq : '—'; ?>
                                             </div>
                                             <input type="hidden" name="job_seq" id="job_seq" value="<?php echo $job_seq; ?>">
+                                        </div>
+                                    </div>
+
+                                    <div class="row mb-2">
+                                        <label class="col-lg-3 col-form-label">Job No:</label>
+                                        <div class="col-lg-9">
+                                            <div class="form-control-plaintext">
+                                                <?php echo !empty($job_no) ? $job_no : '—'; ?>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="row mb-2">
+                                        <label class="col-lg-3 col-form-label">Reference No:</label>
+                                        <div class="col-lg-9">
+                                            <div class="form-control-plaintext">
+                                                <?php echo !empty($job_ref_no) ? $job_ref_no : '—'; ?>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="row mb-2">
+                                        <label class="col-lg-3 col-form-label">Job Date:</label>
+                                        <div class="col-lg-9">
+                                            <div class="form-control-plaintext">
+                                                <?php echo !empty($job_date) ? $job_date : '—'; ?>
+                                            </div>
                                         </div>
                                     </div>
 

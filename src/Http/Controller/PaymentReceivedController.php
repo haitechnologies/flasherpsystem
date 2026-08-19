@@ -262,7 +262,7 @@ class PaymentReceivedController extends BaseController
 
         $total_amount_received = '0.00';
         $bank_charges = '0.00';
-        $payment_date = date('Y-m-d');
+        $payment_date = DateHelper::toInputDate(date('Y-m-d'));
         $payment_method = '';
         $deposit_to = '';
         $reference_no = '';
@@ -299,7 +299,7 @@ class PaymentReceivedController extends BaseController
                     $reference_no = (string)$payment->referenceNo;
                     $is_active = $payment->isActive ? 1 : 0;
 
-                    $payment_date = ($payment_date === '1970-01-01') ? '' : DateHelper::toDisplayDate($payment_date);
+                    $payment_date = ($payment_date === '1970-01-01') ? '' : DateHelper::toInputDate($payment_date);
 
                     $paymentItems = $this->paymentService->getPaymentItems($id, $this->orgId);
                     $total_rows = count($paymentItems);

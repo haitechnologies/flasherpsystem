@@ -166,6 +166,45 @@ if (($action == "update_$module" && !empty($payment_id))) {
 
 /*
 |--------------------------------------------------------------------------
+| REVERSE PAYMENT STATUS - MARK AS UNPAID (remove journal, set to draft)
+|--------------------------------------------------------------------------
+|
+*/
+if (($action == "unmark_$module" && !empty($payment_id))) {
+
+    if (!granted('edit', $module_id) || !$canManageRecord()) {
+        log_error("IDOR attempt: User " . Session::userId() . " tried to unmark payment $payment_id as unpaid without permission", 'WARNING', __FILE__, __LINE__, ['module' => 'payments_received', 'action' => 'mark_unpaid', 'payment_id' => (int)$payment_id]);
+        flash_error('You do not have permission to modify this payment.');
+        header("Location:payment_received_overview.php?payment_received_id=$payment_id");
+        exit;
+    }
+
+    if ($payment->paymentStatus !== 'paid') {
+        flash_error('Payment is not marked as paid.');
+        header("Location:payment_received_overview.php?payment_received_id=$payment_id");
+        exit;
+    }
+
+    try {
+        $paymentService->unmarkPaid((int)$payment_id, (int)$activeOrganizationId, (int)Session::userId());
+        $success_message = "Payment marked as unpaid and journal entry removed.";
+    } catch (\Throwable $e) {
+        log_error('Payment mark-as-unpaid failed: ' . $e->getMessage(), 'ERROR', $e->getFile(), $e->getLine(), ['module' => 'payments_received', 'action' => 'mark_unpaid', 'payment_id' => (int)$payment_id]);
+        $error_message = "Payment marked as unpaid failed: " . $e->getMessage();
+    }
+
+    if (!empty($error_message)) {
+        flash_error($error_message);
+    } else {
+        flash_success($success_message);
+    }
+    header("Location:payment_received_overview.php?payment_received_id=$payment_id");
+    exit;
+}
+
+
+/*
+|--------------------------------------------------------------------------
 | CONVERT TO INVOICE (delegated to InvoiceService::createInvoice)
 |--------------------------------------------------------------------------
 |
@@ -183,6 +222,9 @@ if (($action == "convert_$module" && !empty($payment_id))) {
     $payment_amount = $payment->totalAmountReceived;
     $payment_date = $payment->paymentDate;
     $payment_reference = $payment->referenceNo ?? '';
+    if (trim((string)$payment_reference) === '') {
+        $payment_reference = ($payment->paymentNo ?? '') !== '' ? $payment->paymentNo : 'PAY-' . $payment_id;
+    }
 
     // Get warehouse from the related invoice (default 1)
     $warehouse_id = 1;

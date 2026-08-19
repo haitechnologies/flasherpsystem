@@ -299,6 +299,29 @@ class PaymentReceivedService
     }
 
     /**
+     * Reverse a paid payment back to draft: remove its journal entries and set status to 'draft'.
+     */
+    public function unmarkPaid(int $id, int $orgId, int $userId): PaymentReceived
+    {
+        $payment = $this->getPayment($id, $orgId);
+        if ($payment->paymentStatus !== 'paid') {
+            throw new ValidationException(['payment_status' => 'Payment is not marked as paid.']);
+        }
+
+        $this->db->beginTransaction();
+        try {
+            $this->deletePaymentJournals($id, $orgId);
+            $this->paymentRepo->updateStatus($id, 'draft', $orgId);
+            $this->db->commit();
+
+            return $this->getPayment($id, $orgId);
+        } catch (\Throwable $e) {
+            $this->db->rollBack();
+            throw $e;
+        }
+    }
+
+    /**
      * Update payment status.
      */
     public function updateStatus(int $id, string $status, int $orgId): bool
@@ -505,7 +528,7 @@ class PaymentReceivedService
     {
         $date = trim($date);
         if ($date === '' || $date === '1970-01-01') {
-            return $date;
+            return date('Y-m-d');
         }
         if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
             return $date;

@@ -43,7 +43,7 @@ $deposit_to = (int) getTableAttr('deposit_to', DB::PAYMENTS_RECEIVED, $payment_r
                 <?php if (isset($module_id) && granted('edit', $module_id)) { ?>
                     <a href="<?php echo $module; ?>.php?action=edit_<?php echo $module; ?>&id=<?php echo $payment_received_id; ?>" class="btn btn-light btn-sm"><i class="ph-pencil"></i> Edit</a>
 
-                    <?php if (($display_status === 'draft' || $display_status === 'paid') && !$has_void_entry) { ?>
+                    <?php if ($display_status === 'draft' && !$has_void_entry) { ?>
                         <form method="post" action="payment_received_overview.php" style="display:inline">
                             <?php echo csrf_field(); ?>
                             <input type="hidden" name="payment_received_id" value="<?php echo $payment_received_id; ?>">
@@ -51,7 +51,16 @@ $deposit_to = (int) getTableAttr('deposit_to', DB::PAYMENTS_RECEIVED, $payment_r
                             <input type="hidden" name="payment_status" value="paid">
                             <button type="submit" class="btn btn-light btn-sm" onclick="return confirm('Mark this payment as paid and post the journal entry?');"><i class="ph-check pe-1"></i> Mark As Paid</button>
                         </form>
+                    <?php } elseif ($display_status === 'paid' && !$has_void_entry) { ?>
+                        <form method="post" action="payment_received_overview.php" style="display:inline">
+                            <?php echo csrf_field(); ?>
+                            <input type="hidden" name="payment_received_id" value="<?php echo $payment_received_id; ?>">
+                            <input type="hidden" name="action" value="unmark_<?php echo $module; ?>">
+                            <button type="submit" class="btn btn-light btn-sm" onclick="return confirm('Mark this payment as unpaid and remove the journal entry?');"><i class="ph-x pe-1"></i> Mark as Unpaid</button>
+                        </form>
+                    <?php } ?>
 
+                    <?php if (($display_status === 'draft' || $display_status === 'paid') && !$has_void_entry) { ?>
                         <form method="post" action="payment_received_overview.php" style="display:inline">
                             <?php echo csrf_field(); ?>
                             <input type="hidden" name="payment_received_id" value="<?php echo $payment_received_id; ?>">

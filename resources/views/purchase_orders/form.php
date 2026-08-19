@@ -81,6 +81,12 @@ foreach ($warehouseOptions as $w) {
     <div class="content-inner">
         <div class="content">
             <?php include('admin_elements/breadcrumb.php'); ?>
+            <?php if (!empty($error_message)): ?>
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="ph-warning-circle me-2"></i><?php echo e_s__($error_message); ?>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            <?php endif; ?>
             <div class="alert alert-info alert-dismissible fade show" role="alert">
                 <i class="ph-info me-2"></i>
                 <strong>How this works:</strong> Purchase orders are commitments to buy from vendors. They do not affect accounting until converted to a purchase or bill.
@@ -190,10 +196,10 @@ foreach ($warehouseOptions as $w) {
                                                             <textarea name="description[]" id="description<?php echo $row_i; ?>" rows="2" class="form-control" placeholder="Add a description to your item"><?php echo $description_val; ?></textarea>
                                                         </div>
                                                         <div class="col-lg-1">
-                                                            <input type="number" step="1" name="qty[]" id="qty<?php echo $row_i; ?>" min="0" class="form-control text-center" value="<?php echo $qty_val; ?>" onkeyup="calculateItemAmount('<?php echo $row_i; ?>');" onchange="calculateItemAmount('<?php echo $row_i; ?>');">
+                                                            <input type="number" step="any" name="qty[]" id="qty<?php echo $row_i; ?>" min="0" class="form-control text-center" value="<?php echo $qty_val; ?>" onkeyup="calculateItemAmount('<?php echo $row_i; ?>');" onchange="calculateItemAmount('<?php echo $row_i; ?>');">
                                                         </div>
                                                         <div class="col-lg-1">
-                                                            <input type="number" step="1" name="rate[]" id="rate<?php echo $row_i; ?>" min="0" class="form-control text-center" value="<?php echo $rate_val; ?>" onkeyup="calculateItemAmount('<?php echo $row_i; ?>');" onchange="calculateItemAmount('<?php echo $row_i; ?>');">
+                                                            <input type="number" step="any" name="rate[]" id="rate<?php echo $row_i; ?>" min="0" class="form-control text-center" value="<?php echo $rate_val; ?>" onkeyup="calculateItemAmount('<?php echo $row_i; ?>');" onchange="calculateItemAmount('<?php echo $row_i; ?>');">
                                                         </div>
                                                         <div class="col-lg-1">
                                                             <input readonly type="number" name="sub_total[]" id="sub_total<?php echo $row_i; ?>" min="0" class="form-control bg-light bg-opacity-75 text-end" value="<?php echo $sub_total_val; ?>">
@@ -265,10 +271,10 @@ foreach ($warehouseOptions as $w) {
                                         new_row += "<textarea type=\"text\" name=\"description[]\" id=\"description" + total_rows + "\" rows=\"2\" placeholder=\"Add a description to your item\" class=\"form-control\"></textarea>";
                                         new_row += "</div>";
                                         new_row += "<div class=\"col-lg-1\">";
-                                        new_row += "<input type=\"number\" step=\"1\" name=\"qty[]\" id=\"qty" + total_rows + "\" min=\"0\" class=\"form-control text-center\" value=\"1\" onkeyup=\"calculateItemAmount('" + total_rows + "');\" onchange=\"calculateItemAmount('" + total_rows + "');\">";
+                                        new_row += "<input type=\"number\" step=\"any\" name=\"qty[]\" id=\"qty" + total_rows + "\" min=\"0\" class=\"form-control text-center\" value=\"1\" onkeyup=\"calculateItemAmount('" + total_rows + "');\" onchange=\"calculateItemAmount('" + total_rows + "');\">";
                                         new_row += "</div>";
                                         new_row += "<div class=\"col-lg-1\">";
-                                        new_row += "<input type=\"number\" step=\"1\" name=\"rate[]\" id=\"rate" + total_rows + "\" min=\"0\" class=\"form-control text-center\" value=\"0\" onkeyup=\"calculateItemAmount('" + total_rows + "');\" onchange=\"calculateItemAmount('" + total_rows + "');\">";
+                                        new_row += "<input type=\"number\" step=\"any\" name=\"rate[]\" id=\"rate" + total_rows + "\" min=\"0\" class=\"form-control text-center\" value=\"0\" onkeyup=\"calculateItemAmount('" + total_rows + "');\" onchange=\"calculateItemAmount('" + total_rows + "');\">";
                                         new_row += "</div>";
                                         new_row += "<div class=\"col-lg-1\">";
                                         new_row += "<input readonly type=\"number\" name=\"sub_total[]\" id=\"sub_total" + total_rows + "\" min=\"0\" class=\"form-control bg-light bg-opacity-75 text-end\" value=\"0\">";
@@ -346,17 +352,17 @@ foreach ($warehouseOptions as $w) {
 
                                     function calculateGrand() {
                                         var total_rows = document.getElementById('total_rows').value;
-                                        var final_total = 0;
+                                        var grand_subtotal = 0;
                                         for (var i = 1; i <= total_rows; i++) {
-                                            var total = document.getElementById('total' + i).value;
-                                            final_total += Number(total);
+                                            var sub_total = document.getElementById('sub_total' + i).value;
+                                            grand_subtotal += Number(sub_total);
                                         }
-                                        document.getElementById('grand_subtotal').value = parseFloat(final_total.toFixed(2));
+                                        grand_subtotal = parseFloat(grand_subtotal.toFixed(2));
+                                        document.getElementById('grand_subtotal').value = grand_subtotal;
 
                                         var apply_discount = false;
                                         var e = document.getElementById('grand_discount_type');
                                         var grand_discount_type = e.value;
-                                        var grand_subtotal = parseFloat(document.getElementById('grand_subtotal').value);
                                         var grand_discount_type_value = document.getElementById('grand_discount_type_value').value;
 
                                         if (grand_discount_type_value == '' || grand_discount_type_value == 'undefined') {
@@ -385,20 +391,23 @@ foreach ($warehouseOptions as $w) {
                                             document.getElementById('grand_discount_type_value').value = '';
                                         }
 
+                                        var grand_after_discount = grand_subtotal;
                                         if (apply_discount == true) {
                                             var grand_discount_amount = document.getElementById('grand_discount_amount').value;
-                                            final_total = parseFloat(final_total) - parseFloat(grand_discount_amount);
-                                            document.getElementById('grand_after_discount').value = parseFloat(final_total.toFixed(2));
+                                            grand_after_discount = parseFloat(grand_subtotal) - parseFloat(grand_discount_amount);
                                         }
+                                        grand_after_discount = parseFloat(grand_after_discount.toFixed(2));
+                                        document.getElementById('grand_after_discount').value = grand_after_discount;
 
                                         var total_tax = 0;
                                         for (var i = 1; i <= total_rows; i++) {
                                             var tax_amount = document.getElementById('tax_amount' + i).value;
                                             total_tax += Number(tax_amount);
                                         }
-                                        document.getElementById('grand_tax').value = parseFloat(total_tax.toFixed(2));
+                                        total_tax = parseFloat(total_tax.toFixed(2));
+                                        document.getElementById('grand_tax').value = total_tax;
 
-                                        var grand_total = parseFloat(final_total) + parseFloat(total_tax);
+                                        var grand_total = parseFloat(grand_after_discount) + total_tax;
                                         document.getElementById('grand_total').value = parseFloat(grand_total.toFixed(2));
                                     }
 

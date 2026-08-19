@@ -393,6 +393,7 @@ $mysqli->query("UPDATE `" . tbl_accounts_report_subcategories . "` SET last_visi
                             $payment_method     = $row_payment['payment_method'];
                             $payment_method_name = getTableAttr('payment_method', tbl_payment_methods, $payment_method);
                             $deposit_to         = $row_payment['deposit_to'];
+                            $deposit_to_name    = getTableAttr('account_name', tbl_accounts, $deposit_to);
                             $amount             = number_format($row_payment['amount'], 2);
                             
                             $total_amount += $row_payment['amount'];
@@ -415,7 +416,7 @@ $mysqli->query("UPDATE `" . tbl_accounts_report_subcategories . "` SET last_visi
                                 <td><?php echo $customer_name; ?></td>
                                 <td><?php echo $payment_method_name; ?></td>
                                 <td><?php echo $invoice_numbers; ?></td>
-                                <td><?php echo $deposit_to; ?></td>
+                                <td><?php echo !empty($deposit_to_name) ? $deposit_to_name : $deposit_to; ?></td>
                                 <td class="text-end"><?php echo BASE_CURRENCY['code']; ?> <?php echo $amount; ?></td>
                             </tr>
                         <?php } //while 

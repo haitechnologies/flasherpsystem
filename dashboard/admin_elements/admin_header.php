@@ -931,7 +931,7 @@ if (!function_exists('renderEmailQuickbar')) {
 	<!-- /theme JS files -->
 
 
-	<script src="<?php echo $admin_base_url; ?>/assets/custom_js/ajax.js"></script>
+	<script src="<?php echo $admin_base_url; ?>/assets/custom_js/ajax.js?v=<?php echo @filemtime(__DIR__ . '/../assets/custom_js/ajax.js'); ?>"></script>
 	<script src="<?php echo $admin_base_url; ?>/assets/custom_js/site.js"></script>
 
 	<style>

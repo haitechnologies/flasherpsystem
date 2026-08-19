@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use App\Core\DB;
 use App\Core\Session;
+use App\Core\Container;
+use App\Service\PurchaseOrderService;
 
 include('admin_elements/admin_header.php');
 
@@ -37,20 +39,20 @@ if (!empty($action) && $action == "delete_$module") {
 
 if (($action == "delete_$module" && !empty($id)) && granted('delete', $module_id)) {
     $purchaseOrderId = (int)$id;
-    $uid = (int)Session::userId();
-    if (is_SystemAdmin() || is_SuperAdmin()) {
-        $mysqli->query("DELETE FROM `" . DB::PURCHASE_ORDER_ITEMS . "` WHERE purchase_order_id=$purchaseOrderId");
-        $mysqli->query("DELETE FROM `$tbl_name` WHERE id=$purchaseOrderId AND organization_id=$activeOrganizationId");
-    } else {
-        $mysqli->query("DELETE FROM `" . DB::PURCHASE_ORDER_ITEMS . "` WHERE purchase_order_id=$purchaseOrderId AND created_by='$uid'");
-        $mysqli->query("DELETE FROM `$tbl_name` WHERE id=$purchaseOrderId AND organization_id=$activeOrganizationId AND created_by='$uid'");
-    }
-
-    if ($mysqli->affected_rows > 0) {
+    $orgId = (int)$activeOrganizationId;
+    try {
+        $purchaseOrderService = Container::getInstance()->get(PurchaseOrderService::class);
+        $purchaseOrderService->deletePurchaseOrder($purchaseOrderId, $orgId);
         $success_message = "$module_caption Deleted Successfully.";
         flash_success($success_message);
         header("Location:listing_$module.php?page=$page");
-    } else {
+        exit;
+    } catch (\Throwable $e) {
+        log_error($e->getMessage(), 'ERROR', $e->getFile(), $e->getLine(), backend_runtime_log_context([
+            'module' => 'purchase_orders',
+            'module_slug' => 'purchase_orders',
+            'purchase_order_id' => $purchaseOrderId,
+        ]));
         $error_message = "Sorry! $module Could Not Be Deleted. Only Super Administrator can delete this record.";
     }
 }

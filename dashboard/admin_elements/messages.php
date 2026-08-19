@@ -101,7 +101,7 @@ if (!function_exists('dashboard_render_messages')) {
                 $type = 'info';
             }
 
-            $messageText = trim((string)$msg['message']);
+            $messageText = trim(strip_tags((string)$msg['message']));
             if ($messageText === '') {
                 continue;
             }

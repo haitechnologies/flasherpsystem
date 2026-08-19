@@ -6,6 +6,7 @@ namespace App\Service;
 
 use App\Core\Database;
 use App\Core\DB;
+use App\Model\Purchase;
 use App\Model\PurchaseOrder;
 use App\Model\PurchaseOrderItem;
 use App\Repository\PurchaseOrderRepository;
@@ -14,17 +15,20 @@ use App\Exception\NotFoundException;
 use App\Exception\ValidationException;
 use App\Helper\DateHelper;
 use App\Helper\PdfGeneratorHelper;
+use App\Helper\PdfHelper;
 
 class PurchaseOrderService
 {
     private PurchaseOrderRepository $purchaseOrderRepo;
     private VendorRepository $vendorRepo;
+    private PurchaseService $purchaseService;
     private Database $db;
 
-    public function __construct(PurchaseOrderRepository $purchaseOrderRepo, VendorRepository $vendorRepo, Database $db)
+    public function __construct(PurchaseOrderRepository $purchaseOrderRepo, VendorRepository $vendorRepo, PurchaseService $purchaseService, Database $db)
     {
         $this->purchaseOrderRepo = $purchaseOrderRepo;
         $this->vendorRepo = $vendorRepo;
+        $this->purchaseService = $purchaseService;
         $this->db = $db;
     }
 
@@ -120,6 +124,10 @@ class PurchaseOrderService
         $order = $this->getPurchaseOrder($id, $orgId);
         $this->validatePurchaseOrderData($data, $orgId);
 
+        if (empty($itemsData)) {
+            throw new ValidationException(['items' => "No items added. Please add at least one item."]);
+        }
+
         $this->db->beginTransaction();
         try {
             $purchaseOrderDate = isset($data['purchase_order_date']) ? $this->parseDate((string)$data['purchase_order_date']) : $order->purchaseOrderDate;
@@ -208,10 +216,191 @@ class PurchaseOrderService
         try {
             $result = $this->purchaseOrderRepo->delete($id, $orgId);
             $this->db->commit();
-            return $result;
         } catch (\Throwable $e) {
             $this->db->rollBack();
             throw $e;
+        }
+
+        if ($result) {
+            $this->removePurchaseOrderPdf($id);
+        }
+
+        return $result;
+    }
+
+    public function convertToPurchase(int $poId, int $orgId, int $userId): Purchase
+    {
+        $order = $this->getPurchaseOrder($poId, $orgId);
+
+        if ($order->purchaseOrderStatus === 'purchased' || $this->hasPurchaseId($poId)) {
+            throw new \RuntimeException('This Purchase Order has already been converted to a Purchase.');
+        }
+
+        $itemsData = $this->fetchItemsWithDiscounts($poId);
+
+        if (empty($itemsData)) {
+            throw new ValidationException(['items' => "No items added. Please add at least one item."]);
+        }
+
+        $data = [
+            'vendor_id' => (string)$order->vendorId,
+            'purchase_date' => date('Y-m-d'),
+            'reference_no' => $order->referenceNo,
+            'subject' => $order->subject,
+            'warehouse_id' => (string)$order->warehouseId,
+            'vendor_notes' => $order->vendorNotes,
+            'terms_and_conditions' => $order->termsAndConditions,
+            'grand_subtotal' => (string)$order->grandSubtotal,
+            'grand_discount_type' => $order->grandDiscountType,
+            'grand_discount_type_value' => (string)$order->grandDiscountTypeValue,
+            'grand_discount_amount' => (string)$order->grandDiscountAmount,
+            'grand_after_discount' => (string)$order->grandAfterDiscount,
+            'grand_tax' => (string)$order->grandTax,
+            'grand_total' => (string)$order->grandTotal,
+        ];
+
+        $purchase = $this->purchaseService->createPurchase($data, $itemsData, $orgId, $userId);
+
+        $this->db->execute(
+            "UPDATE `" . DB::PURCHASE_ORDERS . "` SET purchase_id = :purchase_id, purchase_order_status = 'purchased' WHERE id = :po_id AND organization_id = :org_id",
+            ['purchase_id' => (int)$purchase->id, 'po_id' => $poId, 'org_id' => $orgId]
+        );
+
+        return $purchase;
+    }
+
+    public function clonePurchaseOrder(int $poId, int $orgId, int $userId): PurchaseOrder
+    {
+        $order = $this->getPurchaseOrder($poId, $orgId);
+
+        $this->db->beginTransaction();
+        try {
+            $clone = new PurchaseOrder(
+                id: null,
+                organizationId: $orgId,
+                purchaseOrderDate: date('Y-m-d'),
+                vendorId: $order->vendorId,
+                purchaseOrderNo: $this->purchaseOrderRepo->generatePurchaseOrderNo($orgId),
+                purchaseOrderStatus: 'draft',
+                referenceNo: $order->referenceNo,
+                subject: $order->subject,
+                warehouseId: $order->warehouseId,
+                vendorNotes: $order->vendorNotes,
+                termsAndConditions: $order->termsAndConditions,
+                grandSubtotal: $order->grandSubtotal,
+                grandDiscountType: $order->grandDiscountType,
+                grandDiscountTypeValue: $order->grandDiscountTypeValue,
+                grandDiscountAmount: $order->grandDiscountAmount,
+                grandAfterDiscount: $order->grandAfterDiscount,
+                grandTax: $order->grandTax,
+                grandTotal: $order->grandTotal,
+                createdBy: $userId,
+            );
+
+            $savedClone = $this->purchaseOrderRepo->save($clone);
+            $cloneId = $savedClone->id;
+
+            if ($cloneId === null) {
+                throw new \RuntimeException("Failed to insert cloned purchase order header.");
+            }
+
+            $rows = $this->db->fetchAll(
+                "SELECT * FROM `" . DB::PURCHASE_ORDER_ITEMS . "` WHERE purchase_order_id = :po_id ORDER BY id ASC",
+                ['po_id' => $poId]
+            );
+
+            foreach ($rows as $row) {
+                $item = new PurchaseOrderItem(
+                    id: null,
+                    organizationId: $orgId,
+                    purchaseOrderId: $cloneId,
+                    service: (int)$row['service'],
+                    description: $row['description'] !== null ? (string)$row['description'] : null,
+                    qty: (float)($row['qty'] ?? 1.0),
+                    rate: (float)($row['rate'] ?? 0.0),
+                    subTotal: (float)($row['sub_total'] ?? 0.0),
+                    tax: (float)($row['tax'] ?? 0.0),
+                    taxAmount: (float)($row['tax_amount'] ?? 0.0),
+                    total: (float)($row['total'] ?? 0.0),
+                    createdBy: $userId,
+                );
+                $this->purchaseOrderRepo->saveItem($item);
+            }
+
+            $this->db->commit();
+
+            return $savedClone;
+        } catch (\Throwable $e) {
+            $this->db->rollBack();
+            throw $e;
+        }
+    }
+
+    public function updateStatus(int $id, string $status, int $orgId): bool
+    {
+        $allowed = ['draft', 'sent', 'accepted', 'declined', 'expired', 'invoiced', 'purchased'];
+        if (!in_array($status, $allowed, true)) {
+            throw new ValidationException(['purchase_order_status' => "Invalid purchase order status."]);
+        }
+
+        $this->getPurchaseOrder($id, $orgId);
+
+        $stmt = $this->db->execute(
+            "UPDATE `" . DB::PURCHASE_ORDERS . "` SET purchase_order_status = :status WHERE id = :id AND organization_id = :org_id",
+            ['status' => $status, 'id' => $id, 'org_id' => $orgId]
+        );
+
+        return $stmt->rowCount() > 0;
+    }
+
+    private function fetchItemsWithDiscounts(int $purchaseOrderId): array
+    {
+        $rows = $this->db->fetchAll(
+            "SELECT * FROM `" . DB::PURCHASE_ORDER_ITEMS . "` WHERE purchase_order_id = :po_id ORDER BY id ASC",
+            ['po_id' => $purchaseOrderId]
+        );
+
+        $items = [];
+        foreach ($rows as $row) {
+            if (empty($row['service']) || (int)$row['service'] <= 0) {
+                continue;
+            }
+            $items[] = [
+                'service' => (int)$row['service'],
+                'description' => $row['description'],
+                'qty' => (float)($row['qty'] ?? 1.0),
+                'rate' => (float)($row['rate'] ?? 0.0),
+                'discount_type' => $row['discount_type'] ?? null,
+                'discount_type_value' => (float)($row['discount_type_value'] ?? 0.0),
+                'discount_amount' => (float)($row['discount_amount'] ?? 0.0),
+                'sub_total' => (float)($row['sub_total'] ?? 0.0),
+                'tax' => (float)($row['tax'] ?? 0.0),
+                'tax_amount' => (float)($row['tax_amount'] ?? 0.0),
+                'total' => (float)($row['total'] ?? 0.0),
+            ];
+        }
+
+        return $items;
+    }
+
+    private function hasPurchaseId(int $purchaseOrderId): bool
+    {
+        $row = $this->db->fetchOne(
+            "SELECT purchase_id FROM `" . DB::PURCHASE_ORDERS . "` WHERE id = :id",
+            ['id' => $purchaseOrderId]
+        );
+        return $row !== null && !empty($row['purchase_id']);
+    }
+
+    private function removePurchaseOrderPdf(int $id): void
+    {
+        try {
+            $path = PdfHelper::storageDirFor('purchase_orders') . '/' . PdfHelper::filenameWithExt($id);
+            if (is_file($path)) {
+                unlink($path);
+            }
+        } catch (\Throwable $e) {
+            // Ignore PDF removal failure; record deletion already succeeded.
         }
     }
 

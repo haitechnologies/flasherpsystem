@@ -131,7 +131,7 @@ $services_display = !empty($services_names) ? implode(', ', $services_names) : '
 $d_job_no           = s__((string)($row['job_no'] ?? ''));
 $d_job_ref          = s__((string)($row['job_ref_no'] ?? ''));
 $d_job_date         = $job_date;
-$d_status           = s__($status_label);
+$d_status           = ucwords(str_replace('_', ' ', s__($status_label)));
 $d_job_seq          = nz((string)($row['job_seq'] ?? ''));
 $d_customer         = s__($customer_name);
 $d_carrier          = s__($carrier_name);
@@ -260,7 +260,8 @@ if ($row_warehouse) {
 $tbl = <<<EOD
 <table cellpadding="0" cellspacing="2" border="0">
 <tr>
-    <td width="392" style="background-color:#fff;" align="center"> <br /><br /><br />
+    <td width="392" style="background-color:#fff;">
+        <img src="../images/images.jfif" height="55" alt="Logo" /><br />
         <span style="font-size:18px; color:#102B44"> $company_name </span>
     </td>
     <td width="272" align="right">

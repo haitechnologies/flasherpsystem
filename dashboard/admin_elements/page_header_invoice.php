@@ -116,7 +116,7 @@ if (!empty($invoice_id)) {
                                 </a>
                             <?php } ?>
                             <?php if (!$has_void_entry && !$has_writeoff_entry) { ?>
-                            <a href="listing_<?php echo $module; ?>.php?action=delete_<?php echo $module; ?>&id=<?php echo $invoice_id; ?>" class="dropdown-item">
+                            <a href="listing_<?php echo $module; ?>.php?action=delete_<?php echo $module; ?>&id=<?php echo $invoice_id; ?>&csrf_token=<?php echo urlencode(csrf_token()); ?>" class="dropdown-item">
                                 <i class="ph-trash me-2"></i> Delete
                             </a>
                             <?php } ?>
